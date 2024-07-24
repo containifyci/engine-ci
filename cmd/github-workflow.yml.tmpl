@@ -1,0 +1,17 @@
+name: Reusable containifyci workflow
+
+on:
+  workflow_call:
+
+jobs:
+  build-with-engine-ci:
+    name: Build engine-ci
+    uses: containifyci/engine-ci/.github/workflows/engine-ci-workflow.yml@v1
+    secrets: inherit
+    with:
+      dockerhub_user: "containifyci"
+      runs_on: ubuntu-latest
+    permissions:
+      contents: write # for checkout
+      id-token: write # for authenticating to Google Cloud Platform
+      pull-requests: write # for updating pr

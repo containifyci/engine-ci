@@ -1,0 +1,176 @@
+name: Reusable ContainifyCI workflow
+
+on:
+  workflow_call:
+    inputs:
+      dockerhub_user:
+        description: "The Docker Hub username"
+        required: true
+        default: "fr123k"
+        type: string
+      version:
+        description: "The engine version to use"
+        required: false
+        # This value has to be adjusted during the release process
+        default: "v1.0.12"
+        type: string
+      engine_file:
+        description: "The engine file to use"
+        required: false
+        default: ".engine/engine.go"
+        type: string
+      runs_on:
+        description: "The runner vm image to use for example ubuntu-24.04"
+        required: false
+        default: "ubuntu-24.04"
+        type: string
+      remote_debug:
+        description: "Enable remote debugging. Also pass the NGROK_AUTH_TOKEN"
+        required: false
+        default: false
+        type: boolean
+      remote_debug_user:
+        description: "Github user account used for fetching the public key to setup ssh access"
+        required: false
+        default: ""
+        type: string
+      runtime:
+        description: "Configure the container runtime to use (docker or podman)"
+        required: false
+        default: "docker"
+        type: string
+      engine_command:
+        description: "The engine command to run"
+        required: false
+        default: "engine"
+        type: string
+      install_binary:
+        description: "Install the engine binary"
+        required: false
+        default: true
+        type: boolean
+    secrets:
+      DOCKERHUB_TOKEN:
+        required: true
+      CONTAINIFYCI_RELEASE_TOKEN:
+        required: true
+      CONTAINIFYCI_CI_SSH_PRIVATE_KEY:
+        required: true
+      SONAR_TOKEN:
+        required: false
+      NGROK_AUTH_TOKEN:
+        required: false
+
+env:
+  CONTAINER_RUNTIME: ${{ inputs.runtime }}
+  ENGINE_CACHE: /home/runner/go/pkg/mod
+  ENGINE_COMMAND: ${{ inputs.engine_command }}
+  ENGINE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  ENGINE_FILE: ${{ inputs.engine_file }}
+  GOMODCACHE: /home/runner/go/pkg/mod
+  GOCACHE: /home/runner/go/pkg/mod/build-cache
+  SERVICE_ACCOUNT: ${{ inputs.service_account }}
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+jobs:
+  build-go:
+    name: Build with ContainifyCI ${{ inputs.runtime }}
+    runs-on: ${{ inputs.runs_on }}
+    permissions:
+      contents: write # for checkout
+      id-token: write # for authenticating to Google Cloud Platform
+      pull-requests: write # for updating pr
+
+    env:
+      go_version: 1.22.4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set COMMIT_SHA environment variable
+        run: echo "COMMIT_SHA=$(if [ '${{ github.event_name }}' == 'pull_request' ]; then echo '${{ github.event.pull_request.head.sha }}'; else echo '${{ github.sha }}'; fi)" >> $GITHUB_ENV
+
+      - name: Setup SSH agent for retrieving (private) Github dependencies
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CONTAINIFYCI_CI_SSH_PRIVATE_KEY }}
+
+      - name: Force access to Github repositories using SSH
+        run: git config --global url.ssh://git@github.com/.insteadOf https://github.com/
+
+      - run: mkdir -p ~/image-cache
+
+      - id: image-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/image-cache
+          key: image-cache-${{ runner.os }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ inputs.dockerhub_user }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Install go ${{ env.go_version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.go_version }}
+          cache: false
+
+      - name: Cache Go Mod
+        uses: actions/cache@v4
+        if: always()
+        with:
+          path: /home/runner/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install Engine CI
+        uses: jaxxstorm/action-install-gh-release@v1
+        if: ${{ inputs.install_binary }}
+        with:
+          repo: containifyci/engine-ci
+          # At the moment fetch latest release
+          # version: ${{ inputs.version }}
+          cache: true
+          extension-matching: disable
+          rename-to: engine
+          chmod: 0755
+          token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
+
+      - name: Install libbtrfs-dev needed by podman go module
+        if: ${{ !inputs.install_binary }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install libbtrfs-dev
+
+      - name: Prepare Github Action
+        run: |
+          ${{ env.ENGINE_COMMAND }} github_actions
+
+      - if: steps.image-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          ${{ env.ENGINE_COMMAND }} cache save
+
+      - if: steps.image-cache.outputs.cache-hit == 'true'
+        continue-on-error: true
+        run: |
+          ${{ env.ENGINE_COMMAND }} cache load
+
+      - name: Run engine
+        run: |
+          ${{ env.ENGINE_COMMAND }} engine
+        env:
+          DOCKER_TOKEN: ${{ steps.auth.outputs.access_token }}
+
+      - name: SSH Access
+        uses: containifyci/.github/github-actions/remote-access-ssh@v1
+        if: ${{ (failure()) && (inputs.remote_debug) }}
+        with:
+          github_user: ${{ remote_debug_user }}
+          ngrok_auth_token: ${{ secrets.NGROK_AUTH_TOKEN }}
+          timeout: 30m
