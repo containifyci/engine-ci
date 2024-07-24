@@ -1,0 +1,11 @@
+FROM golang:1.22.4
+
+RUN apt-get update && \
+  apt-get install -y git openssh-client && \
+  apt-get clean -y && \
+  apt-get autoremove -y && \
+  rm -rf /tmp/* /var/tmp/* && \
+  rm -rf /var/lib/apt/lists/*
+
+RUN go install github.com/pact-foundation/pact-go/v2@2.x.x && \
+  pact-go -l DEBUG install
