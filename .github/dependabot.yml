@@ -1,0 +1,108 @@
+---
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "[PF-2]"
+      include: "scope"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "pkg/golang"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "[PF-2]"
+      include: "scope"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "pkg/maven"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "[PF-2]"
+      include: "scope"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "pkg/protobuf"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "[PF-2]"
+      include: "scope"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "pkg/python"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "[PF-2]"
+      include: "scope"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "gomod"
+    directory: ".containifyci"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "[PF-2]"
+      include: "scope"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "gomod"
+    directory: "."
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "[PF-2]"
+      include: "scope"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

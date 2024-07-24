@@ -1,0 +1,33 @@
+name: Go service workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  # Grouped by ref (branch/tag name) not to cancel other jobs running for other feature branches
+  group: engine_ci_service_${{ github.ref }}
+  # > cancel any currently running job or workflow in the same concurrency group
+  # in case of multiple pushes to the same branch, we just need the latest, so cancel all previous
+  cancel-in-progress: true
+
+permissions:
+  contents: write # for checkout
+  id-token: write # for authenticating to Google Cloud Platform
+  pull-requests: write # for updating pr
+
+jobs:
+  build-engine-ci:
+    uses: ./.github/workflows/engine-ci.yml
+    secrets: inherit
+  check:
+    if: always()
+    needs:
+      - build-engine-ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}

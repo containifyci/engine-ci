@@ -1,0 +1,67 @@
+name: Publish Artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag to release"
+        required: true
+        default: ""
+        type: string
+  workflow_call:
+    inputs:
+      tag_name:
+        description: "Tag to release"
+        required: true
+        default: ""
+        type: string
+env:
+  GOMODCACHE: /home/runner/go/pkg/mod
+  GOCACHE: /home/runner/go/pkg/mod/build-cache
+  CONTAINIFYCI_CACHE: /home/runner/go/pkg/mod
+  CONTAINIFYCI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CONTAINIFYCI_FILE: .containifyci/containifyci.go
+  CONTAINIFYCI_GITHUB_REF: refs/tags/${{ inputs.tag_name }}
+  GORELEASER_CURRENT_TAG: ${{ inputs.tag_name }}
+
+jobs:
+  publish:
+    name: Publish Artifact
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name }}
+          fetch-depth: 0
+
+      - name: Update major and minor release tags
+        uses: rickstaa/action-update-semver@v1
+        with:
+          tag: ${{ inputs.tag_name }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install libbtrfs-dev needed by podman go module
+        run: |
+          sudo apt-get update
+          sudo apt-get install libbtrfs-dev
+
+      - name: Install go ${{ env.go_version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.go_version }}
+          cache: false
+
+      - name: Cache Go Mod
+        uses: actions/cache@v4
+        if: always()
+        with:
+          path: /home/runner/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+          save-always: true
+
+      - name: Release
+        run: |
+          go run --tags containers_image_openpgp main.go engine -t release

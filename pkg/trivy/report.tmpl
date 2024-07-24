@@ -1,0 +1,32 @@
+### Container Security Risks
+> Trivy found possible vulnerabilities in your container image. Please **update** your container to use the latest image version & all the application dependencies (such as nodejs, go, jvm etc…).
+
+**Metadata:**
+- OS Version: {{ .Metadata.OS.Name }}
+- Image ID: {{ .Metadata.ImageID }}
+- Docker Image: {{ index .Metadata.RepoTags 0 }}
+
+**Vulnerabilities:**
+{{ range .Results }}
+{{ if .Vulnerabilities }}
+#### {{ .Target }}
+**Class**: {{ .Class }}
+**Type**: {{ .Type }}
+{{ range .Vulnerabilities }}
+**CVE ID:** [{{ .VulnerabilityID }}]({{ .PrimaryURL }})
+- **Severity:** {{ .Severity }}
+{{if .PkgName -}}
+- **PkgName:** {{ .PkgName }}
+{{end -}}
+{{if .PkgPath -}}
+- **PkgPath:** {{ .PkgPath }}
+{{end -}}
+{{if .PkgID -}}
+- **PkgID:** {{ .PkgID }}
+{{end -}}
+- **Installed Version:** {{ .InstalledVersion }}
+- **Fixed Version:** {{ .FixedVersion }}
+- **Published Date:** {{ formatDate .PublishedDate }}
+{{ end }}
+{{ end }}
+{{ end }}

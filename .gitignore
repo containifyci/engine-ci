@@ -1,0 +1,28 @@
+#
+# IDE/editors
+#
+.idea
+
+# VisualStudioCode
+.vscode/*
+**.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+#
+# OS
+#
+.DS_Store
+
+#
+# Project files
+#
+cover.out
+
+# build
+coverage.txt
+
+dist/

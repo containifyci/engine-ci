@@ -1,0 +1,25 @@
+name: Reusable ContainifyCI workflow
+
+on:
+  workflow_call:
+
+jobs:
+  build-go:
+    name: Build Go ${{ matrix.runtime }}
+    uses: ./.github/workflows/engine-ci-workflow.yml
+    secrets: inherit
+    # runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        runtime: [docker, podman]
+    permissions:
+      contents: write # for checkout
+      id-token: write # for authenticating to Google Cloud Platform
+      pull-requests: write # for updating pr
+    with:
+      dockerhub_user: "containifyci"
+      runtime: ${{ matrix.runtime }}
+      engine_command: "go run --tags containers_image_openpgp main.go "
+      install_binary: false
+      remote_debug: true
+      remote_debug_user: "fr12k"

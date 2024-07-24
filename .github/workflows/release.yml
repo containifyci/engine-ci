@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  # Grouped by ref (branch/tag name) not to cancel other jobs running for other feature branches
+  group: engine_ci_service_${{ github.ref }}
+  # > cancel any currently running job or workflow in the same concurrency group
+  # in case of multiple pushes to the same branch, we just need the latest, so cancel all previous
+  cancel-in-progress: true
+
+permissions:
+  contents: write # for checkout
+  id-token: write # for authenticating to Google Cloud Platform
+  pull-requests: write # for updating pr
+
+jobs:
+  build-engine-ci:
+    uses: ./.github/workflows/engine-ci.yml
+    secrets: inherit
+  release-engine-ci:
+    runs-on: ubuntu-latest
+    needs: build-engine-ci
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Get Next Version
+        id: semver
+        uses: ietf-tools/semver-action@v1
+        with:
+          token: ${{ github.token }}
+          branch: main
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          generateReleaseNotes: true
+          makeLatest: true
+          tag: ${{ steps.semver.outputs.next }}
+          token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}

@@ -1,0 +1,23 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+concurrency:
+  # Grouped by ref (branch/tag name) not to cancel other jobs running for other feature branches
+  group: engine_ci_publish_${{ github.ref_name }}
+  # > cancel any currently running job or workflow in the same concurrency group
+  # in case of multiple pushes to the same branch, we just need the latest, so cancel all previous
+  cancel-in-progress: true
+
+permissions:
+  contents: write # for checkout
+
+jobs:
+  publish:
+    uses: ./.github/workflows/artifact.yaml
+    secrets: inherit
+    with:
+      tag_name: ${{ github.event.release.tag_name }}

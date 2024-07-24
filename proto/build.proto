@@ -1,0 +1,53 @@
+syntax = "proto3";
+package protos2;
+option go_package = "../protos2";
+
+import "google/protobuf/struct.proto";
+
+enum EnvType {
+    local = 0;
+    build = 1;
+    production = 2;
+}
+
+enum BuildType {
+    GoLang = 0;
+    Maven = 1;
+    Python = 2;
+    Generic = 3;
+}
+
+enum RuntimeType {
+    Docker = 0;
+    Podman = 1;
+}
+
+message BuildArgs {
+    string Application = 1;
+    EnvType Environment = 2;
+    map<string,  google.protobuf.ListValue> Properties = 3;
+    string File = 4;
+    string Folder = 5;
+    string Image = 6;
+    string ImageTag = 7;
+    BuildType BuildType = 8;
+    RuntimeType RuntimeType = 9;
+    string Organization = 10;
+    string Platform = 11;
+    string Repository = 12;
+    string Registry = 13;
+    repeated string SourcePackages = 14;
+    repeated string SourceFiles = 15;
+	bool Verbose = 16;
+}
+
+message Empty {
+}
+
+message BuildArgsResponse {
+    repeated BuildArgs args = 1;
+}
+
+service ContainifyCIEngine {
+    rpc GetBuild(Empty) returns (BuildArgsResponse);
+}
