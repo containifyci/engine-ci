@@ -10,7 +10,7 @@ require (
 	github.com/containers/buildah v1.36.0
 	github.com/containers/common v0.59.2
 	github.com/containers/podman/v5 v5.1.2
-	github.com/docker/docker v27.1.0+incompatible
+	github.com/docker/docker v27.1.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/dusted-go/logging v1.2.2
 	github.com/gorilla/mux v1.8.1
