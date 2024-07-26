@@ -4,8 +4,6 @@ go 1.22.4
 
 replace github.com/containifyci/engine-ci/protos2 => ./protos2
 
-// replace github.com/dagger/dagger/engine/distconsts => ./engine/distconsts
-
 require (
 	github.com/containers/buildah v1.36.0
 	github.com/containers/common v0.59.2
