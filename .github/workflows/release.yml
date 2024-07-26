@@ -18,12 +18,12 @@ permissions:
   pull-requests: write # for updating pr
 
 jobs:
-  build-engine-ci:
-    uses: ./.github/workflows/engine-ci.yml
-    secrets: inherit
+  # build-engine-ci:
+  #   uses: ./.github/workflows/engine-ci.yml
+  #   secrets: inherit
   release-engine-ci:
     runs-on: ubuntu-latest
-    needs: build-engine-ci
+    # needs: build-engine-ci
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -34,12 +34,48 @@ jobs:
         with:
           token: ${{ github.token }}
           branch: main
+          noVersionBumpBehavior: silent
+          skipInvalidTags: true
 
       - name: Create Release
         uses: ncipollo/release-action@v1
+        if: steps.semver.outputs.next
         with:
           allowUpdates: true
+          draft: true
           generateReleaseNotes: true
           makeLatest: true
           tag: ${{ steps.semver.outputs.next }}
           token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
+
+      # - name: Create Release for the sub modules
+      #   run: |
+      #     git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+      #     git config --global user.email "username@users.noreply.github.com"
+      #     git tag -a "$module/$tag" -m "Release $module version $tag"
+      #     git push origin "$module/$tag"
+      #   env:
+      #     # tag: ${{ steps.semver.outputs.next }}
+      #     tag: v0.1.0
+      #     module: protos2
+      #     CI_COMMIT_AUTHOR: Github Action
+
+      # - name: Create Release for the sub modules
+      #   run: |
+      #     git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+      #     git config --global user.email "username@users.noreply.github.com"
+      #     git tag -a "$module/$tag" -m "Release $module version $tag"
+      #     git push origin "$module/$tag"
+      #   env:
+      #     # tag: ${{ steps.semver.outputs.next }}
+      #     tag: v0.1.0
+      #     module: client
+      #     CI_COMMIT_AUTHOR: Github Action
+
+      - name: Update major and minor release tags
+        uses: containifyci/.github/github-actions/update-semver@main
+        with:
+          tag_name: client/v0.1.0
+          prefix: client/v
+        env:
+          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
