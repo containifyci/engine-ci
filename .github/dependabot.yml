@@ -8,7 +8,6 @@ updates:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "[PF-2]"
       include: "scope"
     groups:
       minor:
@@ -23,7 +22,6 @@ updates:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "[PF-2]"
       include: "scope"
     groups:
       minor:
@@ -38,7 +36,6 @@ updates:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "[PF-2]"
       include: "scope"
     groups:
       minor:
@@ -53,7 +50,6 @@ updates:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "[PF-2]"
       include: "scope"
     groups:
       minor:
@@ -68,7 +64,6 @@ updates:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "[PF-2]"
       include: "scope"
     groups:
       minor:
@@ -82,7 +77,6 @@ updates:
     schedule:
       interval: "daily"
     commit-message:
-      prefix: "[PF-2]"
       include: "scope"
     groups:
       minor:
@@ -97,7 +91,6 @@ updates:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "[PF-2]"
       include: "scope"
     groups:
       minor:
