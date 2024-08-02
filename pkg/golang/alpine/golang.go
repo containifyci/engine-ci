@@ -127,9 +127,9 @@ set -x
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
-GOOS=%s GOARCH=%s golangci-lint --out-format colored-line-number -v run %s --timeout=5m
+golangci-lint --out-format colored-line-number -v run %s --timeout=5m
 ls -lha /
-`, container.GetBuild().Platform.Container.OS, container.GetBuild().Platform.Container.Architecture, tags)
+`, tags)
 	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)
