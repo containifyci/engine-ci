@@ -3,6 +3,9 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"math/rand"
+	"net"
+	"net/http"
 	"os"
 	"slices"
 	"strings"
@@ -15,6 +18,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/golang"
 	"github.com/containifyci/engine-ci/pkg/goreleaser"
 	"github.com/containifyci/engine-ci/pkg/maven"
+	"github.com/containifyci/engine-ci/pkg/network"
 	"github.com/containifyci/engine-ci/pkg/protobuf"
 	"github.com/containifyci/engine-ci/pkg/python"
 	"github.com/containifyci/engine-ci/pkg/sonarcloud"
@@ -176,8 +180,66 @@ func (c *Command) AddTarget(name string, fnc func() error) {
 	}
 }
 
+func getRandomPort() (*Server, error) {
+	//TODO define maximal retries
+	for {
+		port := rand.Intn(65535-1024) + 1024 // Random port between 1024 and 65535
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			return &Server{
+				listener: l,
+				port:     port,
+			}, nil
+		}
+	}
+}
+
+type Server struct {
+	listener net.Listener
+	port int
+}
+
+func (c *Command) startHttpServer() (error, *Server, func()) {
+	srv, err := getRandomPort()
+	if err != nil {
+		slog.Error("Failed to find available port", "error", err)
+		return err, nil, nil
+	}
+
+	handler := http.NewServeMux()
+
+	handler.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "okay")
+	})
+
+	return nil, srv, func() {
+		if err := http.Serve(srv.listener, handler); err != nil &&
+			!strings.HasSuffix(err.Error(), "use of closed network connection"){
+			slog.Error("Failed to start http server", "error", err)
+		}
+	}
+}
+
 func (c *Command) Run(target string, arg *container.Build) {
+	err, srv, fnc := c.startHttpServer()
+	if err != nil {
+		slog.Error("Failed to start http server", "error", err)
+		os.Exit(1)
+	}
+	go fnc()
+	defer func () {
+		slog.Info("Stopping http server")
+		srv.listener.Close()
+
+		buildSteps = build.NewBuildSteps()
+	} ()
+	slog.Info("Started http server", "address", srv.listener.Addr().String())
+	addr := network.Address{Host: "localhost"}
 	bs := Pre(arg)
+	if container.GetBuild().Custom == nil {
+		container.GetBuild().Custom = make(map[string][]string)
+	}
+	container.GetBuild().Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(), srv.port)}
 	switch arg.BuildType {
 	case container.GoLang:
 		c.AddTarget("lint", func() error {
