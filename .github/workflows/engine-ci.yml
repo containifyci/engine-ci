@@ -19,7 +19,7 @@ jobs:
     with:
       dockerhub_user: "containifyci"
       runtime: ${{ matrix.runtime }}
-      engine_command: "go run --tags containers_image_openpgp main.go "
+      engine_command: "go run --tags containers_image_openpgp main.go"
       install_binary: false
       remote_debug: true
       remote_debug_user: "fr12k"
