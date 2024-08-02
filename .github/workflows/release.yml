@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'proto/**'
+      - 'protos2/**'
+      - 'client/**'
+      - '.github/**'
 
 concurrency:
   # Grouped by ref (branch/tag name) not to cancel other jobs running for other feature branches
@@ -18,36 +23,7 @@ permissions:
   pull-requests: write # for updating pr
 
 jobs:
-  sub-module-release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      - name: Get Next Version
-        id: semver
-        uses: ietf-tools/semver-action@v1
-        with:
-          token: ${{ github.token }}
-          branch: main
-          noVersionBumpBehavior: silent
-          skipInvalidTags: true
-          maxTagsToFetch: 50
-      - name: Update major and minor release tags
-        uses: containifyci/.github/github-actions/update-semver@main
-        with:
-          tag_name: client/${{ steps.semver.outputs.next }}
-          prefix: client/v
-        env:
-          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
-      - name: Update major and minor release tags
-        uses: containifyci/.github/github-actions/update-semver@main
-        with:
-          tag_name: protos2/${{ steps.semver.outputs.next }}
-          prefix: protos2/v
-        env:
-          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
   build-engine-ci:
-    needs: sub-module-release
     uses: ./.github/workflows/engine-ci.yml
     secrets: inherit
   release-engine-ci:

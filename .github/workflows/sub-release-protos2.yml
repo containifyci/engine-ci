@@ -1,0 +1,31 @@
+name: Release Protos2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - proto/**
+      - protos2/**
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "tag to be released"
+        required: true
+        default: ""
+
+concurrency:
+  group: engine_ci_service_protos2${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # for checkout
+  id-token: write # for authenticating to Google Cloud Platform
+  pull-requests: write # for updating pr
+
+jobs:
+  sub-module-release:
+    uses: ./.github/workflows/sub-module.yml
+    with:
+      tag: ${{ inputs.tag }}
+      module: protos2
