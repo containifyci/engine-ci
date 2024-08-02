@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.22.4"
+	DEFAULT_GO = "1.22.5"
 	PROJ_MOUNT = "/src"
 	LINT_IMAGE = "golangci/golangci-lint:v1.59.1"
 	OUT_DIR    = "/out/"
@@ -52,6 +52,10 @@ func New() *GoContainer {
 	}
 }
 
+func (c *GoContainer) IsAsync() bool {
+	return false
+}
+
 func (c *GoContainer) Name() string {
 	return "golang"
 }
@@ -82,19 +86,13 @@ type GoBuild struct {
 	rf     build.RunFunc
 	name   string
 	images []string
+	async	 bool
 }
 
-func (g GoBuild) Run() error {
-	return g.rf()
-}
-
-func (g GoBuild) Name() string {
-	return g.name
-}
-
-func (g GoBuild) Images() []string {
-	return g.images
-}
+func (g GoBuild) Run() error { return g.rf() }
+func (g GoBuild) Name() string { return g.name }
+func (g GoBuild) Images() []string { return g.images}
+func (g GoBuild) IsAsync() bool { return g.async }
 
 func NewLinter() build.Build {
 	return GoBuild{
@@ -110,6 +108,7 @@ func NewLinter() build.Build {
 		},
 		name:   "golangci-lint",
 		images: []string{LINT_IMAGE},
+		async: false,
 	}
 }
 
@@ -220,13 +219,12 @@ func GoImage() string {
 		os.Exit(1)
 	}
 	tag := container.ComputeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().Registry, "golang-1.22.4-alpine", tag)
-	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "golang-1.22.4-alpine", tag)
-	// return "golang-1.22.4-alpine:" + tag
+	image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	return utils.ImageURI(container.GetBuild().Registry, image, tag)
 }
 
 func (c *GoContainer) Images() []string {
-	imageTag := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
+	imageTag := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
 
 	return []string{imageTag, "alpine:latest", GoImage()}
 }
@@ -313,6 +311,7 @@ func NewProd() build.Build {
 		},
 		name: "golang-prod",
 		// images: []string{"alpine"},
+		async: false,
 	}
 }
 

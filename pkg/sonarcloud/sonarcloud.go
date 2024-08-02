@@ -31,6 +31,10 @@ func New() *SonarcloudContainer {
 	}
 }
 
+func (c *SonarcloudContainer) IsAsync() bool {
+	return true
+}
+
 func (c *SonarcloudContainer) Name() string {
 	return "sonarcloud"
 }

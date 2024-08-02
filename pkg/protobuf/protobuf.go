@@ -48,6 +48,10 @@ func New() *ProtogufContainer {
 	}
 }
 
+func (c *ProtogufContainer) IsAsync() bool {
+	return false
+}
+
 func (c *ProtogufContainer) Images() []string {
 	return []string{Image()}
 }

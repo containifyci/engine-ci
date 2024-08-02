@@ -12,7 +12,6 @@ func TestVerboseScript(t *testing.T) {
 	bs := NewBuildScript("test", "/src/main.go", []string{"build_tag"}, true, types.ParsePlatform("linux/amd64"), types.ParsePlatform("darwin/arm64"))
 	expected := `#!/bin/sh
 set -xe
-. /tmp/secrets.sh
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
@@ -29,7 +28,6 @@ func TestSimpleScript(t *testing.T) {
 
 	expected := `#!/bin/sh
 set -xe
-. /tmp/secrets.sh
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
