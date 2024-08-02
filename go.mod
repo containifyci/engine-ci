@@ -1,11 +1,12 @@
 module github.com/containifyci/engine-ci
 
-go 1.22.4
+go 1.22.5
 
 require (
 	github.com/containers/buildah v1.37.0
 	github.com/containers/common v0.60.0
 	github.com/containers/podman/v5 v5.1.2
+	github.com/containifyci/engine-ci/protos2 v0.2.1
 	github.com/docker/docker v27.1.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/dusted-go/logging v1.2.2
@@ -21,7 +22,6 @@ require (
 )
 
 require (
-	github.com/containifyci/engine-ci/protos2 v0.2.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.1
 )
