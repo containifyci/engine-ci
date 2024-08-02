@@ -1,0 +1,53 @@
+name: Release Go Sub Module
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "tag to be released"
+        required: true
+        default: ""
+        type: string
+    module:
+      description: "module to be released"
+      required: true
+      default: ""
+      type: string
+
+jobs:
+  sub-module-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Get Next Version
+        id: semver
+        if: inputs.tag == ''
+        uses: ietf-tools/semver-action@v1
+        with:
+          token: ${{ github.token }}
+          branch: main
+          prefix: ${{ inputs.module }}/
+          noVersionBumpBehavior: silent
+          skipInvalidTags: true
+          maxTagsToFetch: 50
+      - name: Create Tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {TAG} = process.env
+            github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `refs/tags/${TAG}`,
+                sha: context.sha
+            })
+        env:
+          TAG: ${{ inputs.tag == '' && steps.semver.outputs.next || inputs.tag }}
+      - name: Update major and minor release tags
+        uses: containifyci/.github/github-actions/update-semver@main
+        with:
+          tag_name: ${{ inputs.tag == '' && steps.semver.outputs.next || inputs.tag }}
+          semver_prefix: ${{ inputs.module }}/v
+        env:
+          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
