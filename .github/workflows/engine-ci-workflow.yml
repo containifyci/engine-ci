@@ -138,7 +138,7 @@ jobs:
           # version: ${{ inputs.version }}
           cache: true
           extension-matching: disable
-          rename-to: engine
+          rename-to: engine-ci
           chmod: 0755
           token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
 
