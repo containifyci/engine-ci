@@ -41,8 +41,8 @@ func SSHForward() (*Forward, error) {
 	case "linux":
 		sshAuthSocket := os.Getenv("SSH_AUTH_SOCK")
 		if sshAuthSocket == "" {
-			slog.Error("SSH_AUTH_SOCK is not set")
-			os.Exit(1)
+			slog.Warn("SSH_AUTH_SOCK is not set")
+			return nil, nil
 		}
 		return &Forward{
 			Source: sshAuthSocket,
@@ -57,7 +57,7 @@ func SSHForward() (*Forward, error) {
 	case "darwin":
 		if container.GetBuild().Runtime == "podman" {
 			slog.Warn("SSH forwarding is not supported on macOS with Podman")
-			return &Forward{}, nil
+			return nil, nil
 		}
 		// _, err := os.Stat(DARWIN_SSH_AUTH_SOCK)
 		// if err != nil {
