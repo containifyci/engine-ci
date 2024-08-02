@@ -18,12 +18,12 @@ permissions:
   pull-requests: write # for updating pr
 
 jobs:
-  # build-engine-ci:
-  #   uses: ./.github/workflows/engine-ci.yml
-  #   secrets: inherit
+  build-engine-ci:
+    uses: ./.github/workflows/engine-ci.yml
+    secrets: inherit
   release-engine-ci:
     runs-on: ubuntu-latest
-    # needs: build-engine-ci
+    needs: build-engine-ci
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -36,6 +36,7 @@ jobs:
           branch: main
           noVersionBumpBehavior: silent
           skipInvalidTags: true
+          maxTagsToFetch: 50
 
       - name: Create Release
         uses: ncipollo/release-action@v1

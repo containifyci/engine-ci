@@ -2,8 +2,6 @@ module github.com/containifyci/engine-ci
 
 go 1.22.4
 
-replace github.com/containifyci/engine-ci/protos2 => ./protos2
-
 require (
 	github.com/containers/buildah v1.37.0
 	github.com/containers/common v0.60.0
@@ -23,7 +21,7 @@ require (
 )
 
 require (
-	github.com/containifyci/engine-ci/protos2 v0.0.0-00010101000000-000000000000
+	github.com/containifyci/engine-ci/protos2 v0.2.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.1
 )

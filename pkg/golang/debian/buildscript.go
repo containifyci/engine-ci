@@ -41,7 +41,6 @@ func script(bs *BuildScript) string {
 	goBuildCmd := goBuildCmds(bs)
 	script := fmt.Sprintf(`#!/bin/sh
 set -xe
-. /tmp/secrets.sh
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"

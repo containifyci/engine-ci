@@ -12,11 +12,20 @@ import (
 
 func main() {
 	os.Chdir("..")
-	opts := build.NewGoServiceBuild("engine-ci")
-	opts.Verbose = false
-	opts.File = "main.go"
-	opts.Properties = map[string]*build.ListValue{
+	opts1 := build.NewGoServiceBuild("engine-ci")
+	opts1.Verbose = false
+	opts1.File = "main.go"
+	opts1.Properties = map[string]*build.ListValue{
 		"tags": build.NewList("containers_image_openpgp"),
 	}
-	build.Serve(opts)
+
+	opts2 := build.NewGoServiceBuild("engine-ci")
+	opts2.Verbose = false
+	opts2.File = "main.go"
+	opts2.Properties = map[string]*build.ListValue{
+		"tags": build.NewList("containers_image_openpgp"),
+		"from": build.NewList("debian"),
+		"goreleaser": build.NewList("false"),
+	}
+	build.Serve(opts1, opts2)
 }

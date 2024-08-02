@@ -3,6 +3,9 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"math/rand"
+	"net"
+	"net/http"
 	"os"
 	"slices"
 	"strings"
@@ -15,6 +18,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/golang"
 	"github.com/containifyci/engine-ci/pkg/goreleaser"
 	"github.com/containifyci/engine-ci/pkg/maven"
+	"github.com/containifyci/engine-ci/pkg/network"
 	"github.com/containifyci/engine-ci/pkg/protobuf"
 	"github.com/containifyci/engine-ci/pkg/python"
 	"github.com/containifyci/engine-ci/pkg/sonarcloud"
@@ -27,6 +31,8 @@ import (
 )
 
 var buildArgs = &container.Build{}
+
+var buildSteps = build.NewBuildSteps()
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
@@ -103,37 +109,40 @@ func Init(args ...*container.Build) {
 
 func Pre(arg ...*container.Build) *build.BuildSteps {
 	Init(arg...)
-	bs := build.NewBuildSteps()
+	bs := buildSteps
 
 	var from string
 	if v, ok := container.GetBuild().Custom["from"]; ok {
-		slog.Info("Using custom build", "from", from)
+		slog.Info("Using custom build", "from", v[0])
 		from = v[0]
 	}
 
-	switch container.GetBuild().BuildType {
-	case container.GoLang:
-		protobuf := protobuf.New()
-		bs.Add(protobuf)
-		bs.AddAsync(golang.NewLinter())
-		//TODO: register different build images automatically or at least in the build implementation itself
-		if from == "debian" {
-			bs.Add(golang.NewDebian())
-		} else {
-			bs.Add(golang.New())
+	if bs.IsNotInit() {
+		switch container.GetBuild().BuildType {
+		case container.GoLang:
+			protobuf := protobuf.New()
+			bs.Add(protobuf)
+			bs.AddAsync(golang.NewLinter())
+			//TODO: register different build images automatically or at least in the build implementation itself
+			if from == "debian" {
+				bs.Add(golang.NewDebian())
+			} else {
+				bs.Add(golang.New())
+			}
+			bs.Add(golang.NewProd())
+			bs.Add(goreleaser.New())
+		case container.Maven:
+			bs.Add(maven.New())
+			bs.Add(maven.NewProd())
+		case container.Python:
+			bs.Add(python.New())
+			bs.Add(python.NewProd())
 		}
-		bs.Add(golang.NewProd())
-		bs.Add(goreleaser.New())
-	case container.Maven:
-		bs.Add(maven.New())
-		bs.Add(maven.NewProd())
-	case container.Python:
-		bs.Add(python.New())
-		bs.Add(python.NewProd())
+		bs.AddAsync(sonarcloud.New())
+		bs.Add(trivy.New())
+		bs.AddAsync(github.New())
+		bs.Init()
 	}
-	bs.AddAsync(sonarcloud.New())
-	bs.Add(trivy.New())
-	bs.AddAsync(github.New())
 
 	bs.PrintSteps()
 	return bs
@@ -171,8 +180,66 @@ func (c *Command) AddTarget(name string, fnc func() error) {
 	}
 }
 
+func getRandomPort() (*Server, error) {
+	//TODO define maximal retries
+	for {
+		port := rand.Intn(65535-1024) + 1024 // Random port between 1024 and 65535
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			return &Server{
+				listener: l,
+				port:     port,
+			}, nil
+		}
+	}
+}
+
+type Server struct {
+	listener net.Listener
+	port int
+}
+
+func (c *Command) startHttpServer() (error, *Server, func()) {
+	srv, err := getRandomPort()
+	if err != nil {
+		slog.Error("Failed to find available port", "error", err)
+		return err, nil, nil
+	}
+
+	handler := http.NewServeMux()
+
+	handler.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "okay")
+	})
+
+	return nil, srv, func() {
+		if err := http.Serve(srv.listener, handler); err != nil &&
+			!strings.HasSuffix(err.Error(), "use of closed network connection"){
+			slog.Error("Failed to start http server", "error", err)
+		}
+	}
+}
+
 func (c *Command) Run(target string, arg *container.Build) {
+	err, srv, fnc := c.startHttpServer()
+	if err != nil {
+		slog.Error("Failed to start http server", "error", err)
+		os.Exit(1)
+	}
+	go fnc()
+	defer func () {
+		slog.Info("Stopping http server")
+		srv.listener.Close()
+
+		buildSteps = build.NewBuildSteps()
+	} ()
+	slog.Info("Started http server", "address", srv.listener.Addr().String())
+	addr := network.Address{Host: "localhost"}
 	bs := Pre(arg)
+	if container.GetBuild().Custom == nil {
+		container.GetBuild().Custom = make(map[string][]string)
+	}
+	container.GetBuild().Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(), srv.port)}
 	switch arg.BuildType {
 	case container.GoLang:
 		c.AddTarget("lint", func() error {
@@ -266,5 +333,11 @@ func (c *Command) Main(arg container.Build) {
 	c.Run(os.Args[1], buildArgs)
 }
 
-type Plugin struct {
+// InitBuildSteps can be used to set the build steps for the build command
+// This is useful for registering a new build step as part of a extension
+// of the engine-ci with to support new build types for different languages
+// or to customize the build steps for a specific project.
+func InitBuildSteps(_buildSteps *build.BuildSteps) *build.BuildSteps {
+	buildSteps = _buildSteps
+	return buildSteps
 }

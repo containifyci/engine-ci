@@ -105,7 +105,6 @@ func GetBuild() []*container.Build {
 
 	resp := containifyci.GetBuild()
 	opts := resp.Args
-	fmt.Println(opts)
 
 	args := []*container.Build{}
 	for _, opt := range opts {
@@ -146,7 +145,7 @@ func GetBuild() []*container.Build {
 		}
 		arg.Defaults()
 		args = append(args, &arg)
+		fmt.Printf("Builds: %v\n", arg)
 	}
-	fmt.Printf("Builds: %v\n", args)
 	return args
 }

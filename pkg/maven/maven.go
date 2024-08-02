@@ -49,6 +49,10 @@ func New() *MavenContainer {
 	}
 }
 
+func (c *MavenContainer) IsAsync () bool {
+	return false
+}
+
 func (c *MavenContainer) Name() string {
 	return "maven"
 }
@@ -201,19 +205,13 @@ type MavenBuild struct {
 	rf     build.RunFunc
 	name   string
 	images []string
+	async bool
 }
 
-func (g MavenBuild) Run() error {
-	return g.rf()
-}
-
-func (g MavenBuild) Name() string {
-	return g.name
-}
-
-func (g MavenBuild) Images() []string {
-	return g.images
-}
+func (g MavenBuild) Run() error { return g.rf() }
+func (g MavenBuild) Name() string { return g.name }
+func (g MavenBuild) Images() []string { return g.images }
+func (g MavenBuild) IsAsync() bool { return g.async }
 
 func NewProd() build.Build {
 	container := New()
@@ -223,6 +221,7 @@ func NewProd() build.Build {
 		},
 		name:   "maven-prod",
 		images: []string{ProdImage},
+		async: false,
 	}
 }
 

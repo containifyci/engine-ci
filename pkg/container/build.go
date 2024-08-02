@@ -60,13 +60,14 @@ type Build struct {
 	// docker or podman
 	Runtime utils.RuntimeType
 
-	Organization   string
-	Platform       types.Platform
-	Registry       string
-	Repository     string
-	SourcePackages []string
-	SourceFiles    []string
-	Verbose        bool
+	Organization       string
+	Platform           types.Platform
+	Registry           string
+	ContainifyRegistry string
+	Repository         string
+	SourcePackages     []string
+	SourceFiles        []string
+	Verbose            bool
 
 	defaults bool
 }
@@ -157,6 +158,10 @@ func (b *Build) Defaults() *Build {
 
 	if b.Registry == "" {
 		b.Registry = "containifyci"
+	}
+
+	if b.ContainifyRegistry == "" {
+		b.ContainifyRegistry = "containifyci"
 	}
 
 	if b.Organization == "" {

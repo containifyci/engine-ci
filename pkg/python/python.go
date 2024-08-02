@@ -48,6 +48,10 @@ func New() *PythonContainer {
 	}
 }
 
+func (c *PythonContainer) IsAsync() bool {
+	return false
+}
+
 func (c *PythonContainer) Name() string {
 	return "python"
 }
@@ -195,19 +199,13 @@ type PythonBuild struct {
 	rf     build.RunFunc
 	name   string
 	images []string
+	async  bool
 }
 
-func (g PythonBuild) Run() error {
-	return g.rf()
-}
-
-func (g PythonBuild) Name() string {
-	return g.name
-}
-
-func (g PythonBuild) Images() []string {
-	return g.images
-}
+func (g PythonBuild) Run() error { return g.rf() }
+func (g PythonBuild) Name() string { return g.name }
+func (g PythonBuild) Images() []string { return g.images }
+func (g PythonBuild) IsAsync() bool { return g.async }
 
 func NewProd() build.Build {
 	container := New()
@@ -217,6 +215,7 @@ func NewProd() build.Build {
 		},
 		name:   "python-prod",
 		images: []string{PythonImage()},
+		async: false,
 	}
 }
 

@@ -29,6 +29,10 @@ func New() *GoReleaserContainer {
 	}
 }
 
+func (c *GoReleaserContainer) IsAsync() bool {
+	return false
+}
+
 func (c *GoReleaserContainer) Name() string {
 	return "gorelease"
 }
@@ -77,6 +81,12 @@ func (c *GoReleaserContainer) ApplyEnvs(envs []string) []string {
 }
 
 func (c *GoReleaserContainer) Release(env container.EnvType) error {
+	if v, ok := container.GetBuild().Custom["goreleaser"]; ok {
+		if v[0] == "false" {
+			slog.Info("Skip goreleaser")
+			return nil
+		}
+	}
 	token := container.GetEnv("CONTAINIFYCI_GITHUB_TOKEN")
 	if token == "" {
 		slog.Warn("Skip goreleaser missing CONTAINIFYCI_GITHUB_TOKEN")
