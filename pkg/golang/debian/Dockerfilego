@@ -1,11 +1,14 @@
-FROM golang:1.22.4
+FROM golang:1.22.5
 
+# libbtrfs-dev is needed by podman go module
 RUN apt-get update && \
-  apt-get install -y git openssh-client && \
+  apt-get install -y git openssh-client libbtrfs-dev && \
   apt-get clean -y && \
   apt-get autoremove -y && \
   rm -rf /tmp/* /var/tmp/* && \
   rm -rf /var/lib/apt/lists/*
 
 RUN go install github.com/pact-foundation/pact-go/v2@2.x.x && \
-  pact-go -l DEBUG install
+  pact-go -l DEBUG install && \
+  go clean -cache && \
+  go clean -modcache
