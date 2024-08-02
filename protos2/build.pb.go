@@ -173,22 +173,23 @@ type BuildArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Application    string                         `protobuf:"bytes,1,opt,name=Application,proto3" json:"Application,omitempty"`
-	Environment    EnvType                        `protobuf:"varint,2,opt,name=Environment,proto3,enum=protos2.EnvType" json:"Environment,omitempty"`
-	Properties     map[string]*structpb.ListValue `protobuf:"bytes,3,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	File           string                         `protobuf:"bytes,4,opt,name=File,proto3" json:"File,omitempty"`
-	Folder         string                         `protobuf:"bytes,5,opt,name=Folder,proto3" json:"Folder,omitempty"`
-	Image          string                         `protobuf:"bytes,6,opt,name=Image,proto3" json:"Image,omitempty"`
-	ImageTag       string                         `protobuf:"bytes,7,opt,name=ImageTag,proto3" json:"ImageTag,omitempty"`
-	BuildType      BuildType                      `protobuf:"varint,8,opt,name=BuildType,proto3,enum=protos2.BuildType" json:"BuildType,omitempty"`
-	RuntimeType    RuntimeType                    `protobuf:"varint,9,opt,name=RuntimeType,proto3,enum=protos2.RuntimeType" json:"RuntimeType,omitempty"`
-	Organization   string                         `protobuf:"bytes,10,opt,name=Organization,proto3" json:"Organization,omitempty"`
-	Platform       string                         `protobuf:"bytes,11,opt,name=Platform,proto3" json:"Platform,omitempty"`
-	Repository     string                         `protobuf:"bytes,12,opt,name=Repository,proto3" json:"Repository,omitempty"`
-	Registry       string                         `protobuf:"bytes,13,opt,name=Registry,proto3" json:"Registry,omitempty"`
-	SourcePackages []string                       `protobuf:"bytes,14,rep,name=SourcePackages,proto3" json:"SourcePackages,omitempty"`
-	SourceFiles    []string                       `protobuf:"bytes,15,rep,name=SourceFiles,proto3" json:"SourceFiles,omitempty"`
-	Verbose        bool                           `protobuf:"varint,16,opt,name=Verbose,proto3" json:"Verbose,omitempty"`
+	Application        string                         `protobuf:"bytes,1,opt,name=Application,proto3" json:"Application,omitempty"`
+	Environment        EnvType                        `protobuf:"varint,2,opt,name=Environment,proto3,enum=protos2.EnvType" json:"Environment,omitempty"`
+	Properties         map[string]*structpb.ListValue `protobuf:"bytes,3,rep,name=Properties,proto3" json:"Properties,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	File               string                         `protobuf:"bytes,4,opt,name=File,proto3" json:"File,omitempty"`
+	Folder             string                         `protobuf:"bytes,5,opt,name=Folder,proto3" json:"Folder,omitempty"`
+	Image              string                         `protobuf:"bytes,6,opt,name=Image,proto3" json:"Image,omitempty"`
+	ImageTag           string                         `protobuf:"bytes,7,opt,name=ImageTag,proto3" json:"ImageTag,omitempty"`
+	BuildType          BuildType                      `protobuf:"varint,8,opt,name=BuildType,proto3,enum=protos2.BuildType" json:"BuildType,omitempty"`
+	RuntimeType        RuntimeType                    `protobuf:"varint,9,opt,name=RuntimeType,proto3,enum=protos2.RuntimeType" json:"RuntimeType,omitempty"`
+	Organization       string                         `protobuf:"bytes,10,opt,name=Organization,proto3" json:"Organization,omitempty"`
+	Platform           string                         `protobuf:"bytes,11,opt,name=Platform,proto3" json:"Platform,omitempty"`
+	Repository         string                         `protobuf:"bytes,12,opt,name=Repository,proto3" json:"Repository,omitempty"`
+	Registry           string                         `protobuf:"bytes,13,opt,name=Registry,proto3" json:"Registry,omitempty"`
+	SourcePackages     []string                       `protobuf:"bytes,14,rep,name=SourcePackages,proto3" json:"SourcePackages,omitempty"`
+	SourceFiles        []string                       `protobuf:"bytes,15,rep,name=SourceFiles,proto3" json:"SourceFiles,omitempty"`
+	Verbose            bool                           `protobuf:"varint,16,opt,name=Verbose,proto3" json:"Verbose,omitempty"`
+	ContainifyRegistry string                         `protobuf:"bytes,17,opt,name=ContainifyRegistry,proto3" json:"ContainifyRegistry,omitempty"`
 }
 
 func (x *BuildArgs) Reset() {
@@ -335,6 +336,13 @@ func (x *BuildArgs) GetVerbose() bool {
 	return false
 }
 
+func (x *BuildArgs) GetContainifyRegistry() string {
+	if x != nil {
+		return x.ContainifyRegistry
+	}
+	return ""
+}
+
 type Empty struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -426,7 +434,7 @@ var file_build_proto_rawDesc = []byte{
 	0x0a, 0x0b, 0x62, 0x75, 0x69, 0x6c, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x07, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x73, 0x32, 0x1a, 0x1c, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2f, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x22, 0xa8, 0x05, 0x0a, 0x09, 0x42, 0x75, 0x69, 0x6c, 0x64, 0x41, 0x72,
+	0x72, 0x6f, 0x74, 0x6f, 0x22, 0xd8, 0x05, 0x0a, 0x09, 0x42, 0x75, 0x69, 0x6c, 0x64, 0x41, 0x72,
 	0x67, 0x73, 0x12, 0x20, 0x0a, 0x0b, 0x41, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f,
 	0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x41, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61,
 	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x32, 0x0a, 0x0b, 0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d,
@@ -463,7 +471,10 @@ var file_build_proto_rawDesc = []byte{
 	0x63, 0x65, 0x46, 0x69, 0x6c, 0x65, 0x73, 0x18, 0x0f, 0x20, 0x03, 0x28, 0x09, 0x52, 0x0b, 0x53,
 	0x6f, 0x75, 0x72, 0x63, 0x65, 0x46, 0x69, 0x6c, 0x65, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x56, 0x65,
 	0x72, 0x62, 0x6f, 0x73, 0x65, 0x18, 0x10, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x56, 0x65, 0x72,
-	0x62, 0x6f, 0x73, 0x65, 0x1a, 0x59, 0x0a, 0x0f, 0x50, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x74, 0x69,
+	0x62, 0x6f, 0x73, 0x65, 0x12, 0x2e, 0x0a, 0x12, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x69,
+	0x66, 0x79, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79, 0x18, 0x11, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x12, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x69, 0x66, 0x79, 0x52, 0x65, 0x67, 0x69,
+	0x73, 0x74, 0x72, 0x79, 0x1a, 0x59, 0x0a, 0x0f, 0x50, 0x72, 0x6f, 0x70, 0x65, 0x72, 0x74, 0x69,
 	0x65, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x30, 0x0a, 0x05, 0x76, 0x61, 0x6c,
 	0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,

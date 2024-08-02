@@ -27,6 +27,10 @@ func New() *TrivyContainer {
 	}
 }
 
+func (c *TrivyContainer) IsAsync() bool {
+	return false
+}
+
 func (c *TrivyContainer) Name() string {
 	return "trivy"
 }

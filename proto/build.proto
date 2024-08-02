@@ -39,6 +39,7 @@ message BuildArgs {
     repeated string SourcePackages = 14;
     repeated string SourceFiles = 15;
 	bool Verbose = 16;
+    string ContainifyRegistry = 17;
 }
 
 message Empty {
