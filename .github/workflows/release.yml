@@ -18,16 +18,11 @@ permissions:
   pull-requests: write # for updating pr
 
 jobs:
-  build-engine-ci:
-    uses: ./.github/workflows/engine-ci.yml
-    secrets: inherit
-  release-engine-ci:
+  sub-module-release:
     runs-on: ubuntu-latest
-    needs: build-engine-ci
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Get Next Version
         id: semver
         uses: ietf-tools/semver-action@v1
@@ -37,7 +32,39 @@ jobs:
           noVersionBumpBehavior: silent
           skipInvalidTags: true
           maxTagsToFetch: 50
-
+      - name: Update major and minor release tags
+        uses: containifyci/.github/github-actions/update-semver@main
+        with:
+          tag_name: client/${{ steps.semver.outputs.next }}
+          prefix: client/v
+        env:
+          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
+      - name: Update major and minor release tags
+        uses: containifyci/.github/github-actions/update-semver@main
+        with:
+          tag_name: protos2/${{ steps.semver.outputs.next }}
+          prefix: protos2/v
+        env:
+          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
+  build-engine-ci:
+    needs: sub-module-release
+    uses: ./.github/workflows/engine-ci.yml
+    secrets: inherit
+  release-engine-ci:
+    runs-on: ubuntu-latest
+    needs: build-engine-ci
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Get Next Version
+        id: semver
+        uses: ietf-tools/semver-action@v1
+        with:
+          token: ${{ github.token }}
+          branch: main
+          noVersionBumpBehavior: silent
+          skipInvalidTags: true
+          maxTagsToFetch: 50
       - name: Create Release
         uses: ncipollo/release-action@v1
         if: steps.semver.outputs.next
@@ -48,19 +75,3 @@ jobs:
           makeLatest: true
           tag: ${{ steps.semver.outputs.next }}
           token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
-
-      - name: Update major and minor release tags
-        uses: containifyci/.github/github-actions/update-semver@main
-        with:
-          tag_name: client/${{ steps.semver.outputs.next }}
-          prefix: client/v
-        env:
-          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
-
-      - name: Update major and minor release tags
-        uses: containifyci/.github/github-actions/update-semver@main
-        with:
-          tag_name: protos2/${{ steps.semver.outputs.next }}
-          prefix: protos2/v
-        env:
-          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
