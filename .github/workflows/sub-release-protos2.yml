@@ -26,6 +26,7 @@ permissions:
 jobs:
   sub-module-release:
     uses: ./.github/workflows/sub-module.yml
+    secrets: inherit
     with:
       tag: ${{ inputs.tag }}
       module: protos2

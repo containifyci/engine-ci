@@ -1,4 +1,4 @@
-name: Release Protos2
+name: Release Client
 
 on:
   push:
@@ -25,6 +25,7 @@ permissions:
 jobs:
   sub-module-release:
     uses: ./.github/workflows/sub-module.yml
+    secrets: inherit
     with:
       tag: ${{ inputs.tag }}
       module: client
