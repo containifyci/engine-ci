@@ -235,11 +235,11 @@ func (c *Command) Run(target string, arg *container.Build) {
 	} ()
 	slog.Info("Started http server", "address", srv.listener.Addr().String())
 	addr := network.Address{Host: "localhost"}
-	bs := Pre(arg)
-	if container.GetBuild().Custom == nil {
-		container.GetBuild().Custom = make(map[string][]string)
+	if arg.Custom == nil {
+		arg.Custom = make(map[string][]string)
 	}
-	container.GetBuild().Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(), srv.port)}
+	arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), srv.port)}
+	bs := Pre(arg)
 	switch arg.BuildType {
 	case container.GoLang:
 		c.AddTarget("lint", func() error {
