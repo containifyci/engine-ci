@@ -3,14 +3,13 @@ module github.com/containifyci/engine-ci/client
 go 1.22.4
 
 require (
-	github.com/containifyci/engine-ci/protos2 v0.0.0-00010101000000-000000000000
+	github.com/containifyci/engine-ci/protos2 v0.2.1
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.1
 	github.com/stretchr/testify v1.9.0
+	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
 )
-
-replace github.com/containifyci/engine-ci/protos2 => ../protos2
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -27,5 +26,4 @@ require (
 	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
 	google.golang.org/grpc v1.65.0 // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
 )

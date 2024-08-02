@@ -8,11 +8,15 @@ on:
         required: true
         default: ""
         type: string
-    module:
-      description: "module to be released"
-      required: true
-      default: ""
-      type: string
+      module:
+        description: "module to be released"
+        required: true
+        default: ""
+        type: string
+    secrets:
+      CONTAINIFYCI_RELEASE_TOKEN:
+        description: "GitHub token for release"
+        required: true
 
 jobs:
   sub-module-release:
