@@ -52,6 +52,10 @@ func New() *GoContainer {
 	}
 }
 
+func (c *GoContainer) IsAsync() bool {
+	return false
+}
+
 func (c *GoContainer) Name() string {
 	return "golang"
 }
@@ -82,19 +86,13 @@ type GoBuild struct {
 	rf     build.RunFunc
 	name   string
 	images []string
+	async  bool
 }
 
-func (g GoBuild) Run() error {
-	return g.rf()
-}
-
-func (g GoBuild) Name() string {
-	return g.name
-}
-
-func (g GoBuild) Images() []string {
-	return g.images
-}
+func (g GoBuild) Run() error { return g.rf() }
+func (g GoBuild) Name() string { return g.name }
+func (g GoBuild) Images() []string { return g.images }
+func (g GoBuild) IsAsync() bool { return g.async }
 
 func NewLinter() build.Build {
 	return GoBuild{
@@ -110,6 +108,7 @@ func NewLinter() build.Build {
 		},
 		name:   "golangci-lint",
 		images: []string{LINT_IMAGE},
+		async: false,
 	}
 }
 
