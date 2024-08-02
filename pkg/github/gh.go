@@ -33,6 +33,10 @@ func New() *GithubContainer {
 	}
 }
 
+func (c *GithubContainer) IsAsync() bool {
+	return true
+}
+
 func (c *GithubContainer) Name() string {
 	return "github"
 }

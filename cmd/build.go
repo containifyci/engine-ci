@@ -28,6 +28,8 @@ import (
 
 var buildArgs = &container.Build{}
 
+var buildSteps = build.NewBuildSteps()
+
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
 	Use:   "build",
@@ -103,37 +105,40 @@ func Init(args ...*container.Build) {
 
 func Pre(arg ...*container.Build) *build.BuildSteps {
 	Init(arg...)
-	bs := build.NewBuildSteps()
+	bs := buildSteps
 
 	var from string
 	if v, ok := container.GetBuild().Custom["from"]; ok {
-		slog.Info("Using custom build", "from", from)
+		slog.Info("Using custom build", "from", v[0])
 		from = v[0]
 	}
 
-	switch container.GetBuild().BuildType {
-	case container.GoLang:
-		protobuf := protobuf.New()
-		bs.Add(protobuf)
-		bs.AddAsync(golang.NewLinter())
-		//TODO: register different build images automatically or at least in the build implementation itself
-		if from == "debian" {
-			bs.Add(golang.NewDebian())
-		} else {
-			bs.Add(golang.New())
+	if bs.IsNotInit() {
+		switch container.GetBuild().BuildType {
+		case container.GoLang:
+			protobuf := protobuf.New()
+			bs.Add(protobuf)
+			bs.AddAsync(golang.NewLinter())
+			//TODO: register different build images automatically or at least in the build implementation itself
+			if from == "debian" {
+				bs.Add(golang.NewDebian())
+			} else {
+				bs.Add(golang.New())
+			}
+			bs.Add(golang.NewProd())
+			bs.Add(goreleaser.New())
+		case container.Maven:
+			bs.Add(maven.New())
+			bs.Add(maven.NewProd())
+		case container.Python:
+			bs.Add(python.New())
+			bs.Add(python.NewProd())
 		}
-		bs.Add(golang.NewProd())
-		bs.Add(goreleaser.New())
-	case container.Maven:
-		bs.Add(maven.New())
-		bs.Add(maven.NewProd())
-	case container.Python:
-		bs.Add(python.New())
-		bs.Add(python.NewProd())
+		bs.AddAsync(sonarcloud.New())
+		bs.Add(trivy.New())
+		bs.AddAsync(github.New())
+		bs.Init()
 	}
-	bs.AddAsync(sonarcloud.New())
-	bs.Add(trivy.New())
-	bs.AddAsync(github.New())
 
 	bs.PrintSteps()
 	return bs
@@ -266,5 +271,11 @@ func (c *Command) Main(arg container.Build) {
 	c.Run(os.Args[1], buildArgs)
 }
 
-type Plugin struct {
+// InitBuildSteps can be used to set the build steps for the build command
+// This is useful for registering a new build step as part of a extension
+// of the engine-ci with to support new build types for different languages
+// or to customize the build steps for a specific project.
+func InitBuildSteps(_buildSteps *build.BuildSteps) *build.BuildSteps {
+	buildSteps = _buildSteps
+	return buildSteps
 }

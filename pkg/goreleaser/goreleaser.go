@@ -29,6 +29,10 @@ func New() *GoReleaserContainer {
 	}
 }
 
+func (c *GoReleaserContainer) IsAsync() bool {
+	return false
+}
+
 func (c *GoReleaserContainer) Name() string {
 	return "gorelease"
 }

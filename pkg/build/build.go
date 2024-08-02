@@ -17,19 +17,22 @@ type Build interface {
 	Run() error
 	Name() string
 	Images() []string
+	IsAsync() bool
 }
 
 type RunFunc func() error
 
 type BuildSteps struct {
+	init  bool
 	Steps []*BuildContext
 }
 
-func toBuildContexts(steps ...Build) []*BuildContext {
+func ToBuildContexts(steps ...Build) []*BuildContext {
 	contexts := make([]*BuildContext, len(steps))
 	for i, step := range steps {
 		contexts[i] = &BuildContext{
 			build: step,
+			async: step.IsAsync(),
 		}
 	}
 	return contexts
@@ -37,17 +40,15 @@ func toBuildContexts(steps ...Build) []*BuildContext {
 
 func NewBuildSteps(steps ...Build) *BuildSteps {
 	return &BuildSteps{
-		Steps: toBuildContexts(steps...),
+		init: len(steps) > 0,
+		Steps: ToBuildContexts(steps...),
 	}
 }
 
-func (bs *BuildSteps) Add(step Build) {
-	bs.Steps = append(bs.Steps, &BuildContext{step, false})
-}
-
-func (bs *BuildSteps) AddAsync(step Build) {
-	bs.Steps = append(bs.Steps, &BuildContext{build: step, async: true})
-}
+func (bs *BuildSteps) IsNotInit() bool { return !bs.init }
+func (bs *BuildSteps) Init() { bs.init = true }
+func (bs *BuildSteps) Add(step Build) { bs.Steps = append(bs.Steps, &BuildContext{step, false}) }
+func (bs *BuildSteps) AddAsync(step Build) { bs.Steps = append(bs.Steps, &BuildContext{build: step, async: true}) }
 
 func (bs *BuildSteps) String() string {
 	names := make([]string, len(bs.Steps))
@@ -63,10 +64,6 @@ func (bs *BuildSteps) String() string {
 
 func (bs *BuildSteps) PrintSteps() {
 	slog.Info("Build step", "steps", bs.String())
-	// for _, bctx := range bs.Steps {
-	// 	slog.Info("Build steps", "Name", bctx.build.Name(), "Async", bctx.async)
-	// }
-	// return nil
 }
 
 func (bs *BuildSteps) Run(step ...string) error {
