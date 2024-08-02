@@ -17,7 +17,7 @@ type Address struct {
 	InternalHost string
 }
 
-func (a *Address) NewAddress() {
+func (a *Address) NewAddress(arg *container.Build) {
 	parsedURL, err := url.Parse(a.InternalHost)
 	slog.Info("Parsed URL", "parsedURL", parsedURL, "url", a.InternalHost)
 	if err != nil {
@@ -33,9 +33,9 @@ func (a *Address) NewAddress() {
 	case "windows":
 		internalHost = hostname(scheme, "host.docker.internal", port)
 	case "darwin":
-		if container.GetBuild().Runtime == utils.Docker {
+		if arg.Runtime == utils.Docker {
 			internalHost = hostname(scheme, "host.docker.internal", port)
-		} else if container.GetBuild().Runtime == utils.Podman {
+		} else if arg.Runtime == utils.Podman {
 			internalHost = hostname(scheme, "host.containers.internal", port)
 		} else {
 			internalHost = hostname(scheme, "host.docker.internal", port)
@@ -63,7 +63,7 @@ func hostname(scheme, host, port string) string {
 }
 
 func (a *Address) ForContainer(env container.EnvType) string {
-	a.NewAddress()
+	a.NewAddress(container.GetBuild())
 
 	switch env {
 	case container.LocalEnv:
@@ -75,8 +75,12 @@ func (a *Address) ForContainer(env container.EnvType) string {
 	}
 }
 
-func (a *Address) ForContainerDefault() string {
-	a.NewAddress()
+func (a *Address) ForContainerDefault(arg ...*container.Build) string {
+	if len(arg) > 0 {
+		a.NewAddress(arg[0])
+	} else {
+		a.NewAddress(container.GetBuild())
+	}
 
 	return a.InternalHost
 }
