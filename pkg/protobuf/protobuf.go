@@ -63,7 +63,7 @@ func Image() string {
 		os.Exit(1)
 	}
 	tag := computeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().Registry, "protobuf", tag)
+	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "protobuf", tag)
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "protobuf", tag)
 }
 

@@ -11,6 +11,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type rootCmdArgs struct {
+	Verbose bool
+	Target  string
+}
+
+var RootArgs = &rootCmdArgs{}
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "engine-ci",
@@ -21,14 +28,31 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		logOpts := slog.HandlerOptions{
+			Level:       slog.LevelInfo,
+			AddSource:   false,
+			ReplaceAttr: nil,
+		}
+
+		if RootArgs.Verbose {
+			logOpts.Level = slog.LevelDebug
+			logOpts.AddSource = true
+		}
+
+		prettyHandler := prettylog.NewHandler(&logOpts)
+		logger := slog.New(prettyHandler)
+		slog.SetDefault(logger)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() error {
+	return rootCmd.Execute()
+}
+
+func init() {
 	logOpts := slog.HandlerOptions{
 		Level:       slog.LevelInfo,
 		AddSource:   false,
@@ -38,20 +62,8 @@ func Execute() error {
 	prettyHandler := prettylog.NewHandler(&logOpts)
 	logger := slog.New(prettyHandler)
 	slog.SetDefault(logger)
-
-	return rootCmd.Execute()
-}
-
-func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.fuild.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().BoolVarP(&RootArgs.Verbose, "verbose", "v", false, "Enable verbose logging")
+	rootCmd.PersistentFlags().StringVarP(&RootArgs.Target, "target", "t", "all", "The build target to run")
 }
 
 func All(opts *container.Build) error {
@@ -60,6 +72,7 @@ func All(opts *container.Build) error {
 	return Execute()
 }
 
-func SetVersionInfo(version, commit, date, repo string) {
+func SetVersionInfo(version, commit, date, repo string) string {
 	rootCmd.Version = fmt.Sprintf("%s (Built on %s from Git SHA %s of %s)", version, date, commit, repo)
+	return rootCmd.Version
 }
