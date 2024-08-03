@@ -220,7 +220,7 @@ func GoImage() string {
 	}
 	tag := container.ComputeChecksum(dockerFile)
 	image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
-	return utils.ImageURI(container.GetBuild().Registry, image, tag)
+	return utils.ImageURI(container.GetBuild().ContainifyRegistry, image, tag)
 }
 
 func (c *GoContainer) Images() []string {

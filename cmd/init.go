@@ -11,20 +11,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:embed mage.go.tmpl
+//go:embed containifyci.go.tmpl
 var mage []byte
 
 // buildCmd represents the build command
-var mageCmd = &cobra.Command{
-	Use:   "mage",
-	Short: "Command to generate mage.go file for gflip usage",
-	Long: `Command to generate mage.go file for gflip usage.
-`,
+var initCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Command to generate containifyci.go file for containifyci usage",
+	Long: `Command to generate containifyci.go file for containifyci usage`,
 	Run: RunMage,
 }
 
 func init() {
-	rootCmd.AddCommand(mageCmd)
+	rootCmd.AddCommand(initCmd)
 }
 
 func RunMage(cmd *cobra.Command, args []string) {
@@ -42,7 +41,7 @@ func RunMage(cmd *cobra.Command, args []string) {
 }
 
 func createContainifyCIFile() error {
-	fileName := ".containifyc/containifyci.go"
+	fileName := ".containifyci/containifyci.go"
 	// Check if the file exists
 	if _, err := os.Stat(fileName); err == nil {
 		slog.Debug("File already exists", "file", fileName)
@@ -54,7 +53,7 @@ func createContainifyCIFile() error {
 
 	var buf bytes.Buffer
 
-	err := template.Must(template.New("mage-go").Delims("~~~", "~~~").Parse(string(mage))).
+	err := template.Must(template.New("containifyci-go").Delims("~~~", "~~~").Parse(string(mage))).
 		Execute(&buf, nil)
 	if err != nil {
 		slog.Error("Failed to render mage go file", "error", err)
