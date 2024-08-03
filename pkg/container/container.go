@@ -604,12 +604,12 @@ func (c *Container) BuildingContainer(opts types.ContainerConfig) error {
 	return err
 }
 
-func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, platform ...string) error {
-	if len(platform) == 0 {
-		platform = []string{GetBuild().Platform.Container.String()}
+func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, platforms ...string) error {
+	if len(platforms) == 0 {
+		platforms = []string{GetBuild().Platform.Container.String()}
 	}
 
-	exists, err := c.ImageExists(image, platform...)
+	exists, err := c.ImageExists(image, platforms...)
 	if err != nil {
 		slog.Error("Failed to check if image exists", "error", err)
 		os.Exit(1)
@@ -619,17 +619,17 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 		return nil
 	}
 
-	err = c.PullByPlatform(platform[0], image)
+	err = c.PullByPlatform(platforms[0], image)
 	if err != nil {
-		slog.Warn("Failed to pull intermediate image. Has to build now then", "error", err, "image", image, "platform", platform[0])
+		slog.Warn("Failed to pull intermediate image. Has to build now then", "error", err, "image", image, "platform", platforms[0])
 	}
 
 	if err == nil {
-		slog.Info("Image successfully pulled", "image", image, "platform", platform[0])
+		slog.Info("Image successfully pulled", "image", image, "platforms", platforms)
 		return nil
 	}
 
-	if len(platform) == 1 {
+	if len(platforms) == 1 {
 		slog.Info("Start building intermediate container image", "image", image)
 		err = c.BuildImage(dockerFile, image)
 		if err != nil {
@@ -663,7 +663,7 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 		// err = c.Container.BuildImage(dockerFile, image)
 		// TODO get list of platforms
 		// Multi-platform builds are already pushed otherwise there are not usable by podman or docker
-		_, err = c.BuildImageByPlatforms(dockerFile, image, []string{"linux/arm64", "linux/amd64"})
+		_, err = c.BuildImageByPlatforms(dockerFile, image, platforms)
 		if err != nil {
 			slog.Error("Failed to build image", "error", err)
 			os.Exit(1)
