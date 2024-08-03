@@ -179,7 +179,7 @@ func (b *Build) AsFlags() []string {
 		"--app", b.App,
 		"--env", string(b.Env),
 		"--image", b.Image,
-		"--imageTag", b.ImageTag,
+		"--tag", b.ImageTag,
 		"--repo", b.Registry,
 		"--file", b.File,
 		"--folder", b.Folder,

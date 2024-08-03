@@ -91,7 +91,7 @@ func PythonImage() string {
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().Registry, "python-3.11-slim-bookworm", tag)
+	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "python-3.11-slim-bookworm", tag)
 
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "python-3.11-slim-bookworm", tag)
 }

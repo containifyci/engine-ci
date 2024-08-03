@@ -1,15 +1,56 @@
 # engine-ci
 
-Tool that build containerized applications based on Pipeline implemented in golang.
+Welcome to the **engine-ci** project, a key component of the **containifyci** organization. **engine-ci** is a robust CI/CD pipeline engine designed to operate in a containerized environment. It supports both Docker and Podman as container runtimes and is implemented in Go.
 
-## Todo:
+## Getting Started
 
-- [x] work also with podman https://github.com/containers/podman/tree/main/pkg/bindings
-- [x] to find an easier way to run the pipelines then maybe also consider to compile the pipeline into a binary and run that instead.
-      go run -C .containifyci/containifyci.go build
-- [ ] There is still a lot of code duplication for all the different pipelines like golang, maven, python, … . Implement a easier to use container pipeline abstraction to reduce the code for providing new pipelines.
-- [ ] Working on the rest api endpoint and maybe implement a first Pipeline in
-- [ ] python by using this rest api endpoint (similar to Dagger Engine)
-- [ ] Implement the next Pipeline for npm based repositories.
-- [ ] Fixing progress logging in podman
-- [ ] Add docker build for sonar-scanner-cli multi architecture image see hack/soanrcloud folder
+To start using **engine-ci**, you need to install the binary. The installation can be done via the following command:
+
+```bash
+go install github.com/containifyci/engine-ci@latest
+```
+
+Alternatively, you can download the pre-built binary from the [releases page](https://github.com/containifyci/engine-ci/releases).
+
+## Usage
+
+Once the binary is installed, initialize your project by creating a `.containifyci` directory with the necessary `containifyci.go` file:
+
+```bash
+engine-ci init
+```
+
+This command generates the `.containifyci` directory with the `containifyci.go` file, which is the core configuration for your pipelines.
+
+To execute the pipeline defined in `containifyci.go`, use:
+
+```bash
+engine-ci run
+```
+
+## Example
+
+For a practical example of how **engine-ci** is used, check out the [containifyci.go](./.containifyci/containifyci.go) file within this repository. It demonstrates how the **engine-ci** project is self-hosted using its own pipeline.
+
+## Roadmap
+
+### Completed Tasks:
+- [x] **Podman Support**: Integrate with Podman through the [Podman bindings](https://github.com/containers/podman/tree/main/pkg/bindings).
+- [x] **Pipeline Execution**: Explore alternatives to running pipelines, such as compiling the pipeline into a binary for execution with `go run -C .containifyci/containifyci.go build`.
+- [x] **Pipeline Abstraction**: Simplify pipeline code by implementing a container pipeline abstraction layer to reduce redundancy across different languages like Go, Maven, Python, etc.
+
+### Ongoing and Upcoming Tasks:
+- [ ] **REST API Endpoint**: Develop and integrate a REST API endpoint, potentially implementing the first pipeline using Python (low priority).
+- [ ] **NPM Pipeline**: Add support for pipelines targeting npm-based repositories (medium priority).
+- [ ] **Podman Logging**: Improve progress logging functionality within Podman (high priority).
+- [ ] **Multi-Architecture Docker Image**: Add Docker build support for the `sonar-scanner-cli` multi-architecture image (low priority).
+- [ ] **Golang Libraries Support**: Enable builds for Go libraries that do not include a `main` package (high priority).
+- [ ] **Golang Submodule Support**: Allow Go submodules to be built as part of the main module build (high priority).
+- [ ] **Container Image Push**: Provide an option to opt out of pushing container images (enabled by default).
+- [ ] **Goreleaser Integration**: Provide an option to opt out of using Goreleaser (enabled by default).
+
+## Contribution
+
+We welcome contributions from the community! If you're interested in contributing to **engine-ci**, please create a fork and open a pull request with your changes.
+
+We appreciate your contributions and look forward to your involvement in improving **engine-ci**!
