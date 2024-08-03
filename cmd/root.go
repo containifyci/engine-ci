@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -12,7 +13,7 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "fuild",
+	Use:   "engine-ci",
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
@@ -57,4 +58,8 @@ func All(opts *container.Build) error {
 	os.Args[1] = "build"
 	os.Args = append(os.Args, opts.AsFlags()...)
 	return Execute()
+}
+
+func SetVersionInfo(version, commit, date, repo string) {
+	rootCmd.Version = fmt.Sprintf("%s (Built on %s from Git SHA %s of %s)", version, date, commit, repo)
 }
