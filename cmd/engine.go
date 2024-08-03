@@ -16,12 +16,6 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
-type engineArgs struct {
-	Target string
-}
-
-var engineArg = engineArgs{}
-
 // buildCmd represents the build command
 var engineCmd = &cobra.Command{
 	Use:   "engine",
@@ -32,8 +26,6 @@ var engineCmd = &cobra.Command{
 }
 
 func init() {
-	engineCmd.PersistentFlags().StringVarP(&engineArg.Target, "target", "t", "all", "The build target to run")
-
 	rootCmd.AddCommand(engineCmd)
 }
 
@@ -41,7 +33,7 @@ func Engine(cmd *cobra.Command, args []string) error {
 	arg := GetBuild()
 	for _, a := range arg {
 		c := NewCommand(*a)
-		c.Run(engineArg.Target, a)
+		c.Run(RootArgs.Target, a)
 	}
 	return nil
 }

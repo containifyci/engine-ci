@@ -97,7 +97,7 @@ func MavenImage() string {
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().Registry, "maven-3-eclipse-temurin-17-alpine", tag)
+	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "maven-3-eclipse-temurin-17-alpine", tag)
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "maven-3-eclipse-temurin-17-alpine", tag)
 }
 

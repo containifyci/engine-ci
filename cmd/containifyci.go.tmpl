@@ -15,6 +15,8 @@ func main() {
 	os.Chdir("../")
 	opts := build.NewGoServiceBuild("containifyci-example")
 	opts.Verbose = false
-	opts.File = "cmd/containifyci-example/main.go"
+	opts.File = "main.go"
+	//TODO: adjust the registry to your own container registry
+	opts.Registry = "containifyci"
 	build.Serve(opts)
 }

@@ -58,7 +58,7 @@ func init() {
 	buildCmd.PersistentFlags().VarP(&buildArgs.Env, "env", "e", "Set the environment the build runs in")
 
 	buildCmd.PersistentFlags().StringVarP(&buildArgs.Image, "image", "i", "", "Image to build")
-	buildCmd.PersistentFlags().StringVarP(&buildArgs.ImageTag, "imageTag", "t", "", "Image tag to build")
+	buildCmd.PersistentFlags().StringVar(&buildArgs.ImageTag, "tag", "", "Image tag to build")
 	buildCmd.PersistentFlags().StringVarP(&buildArgs.Registry, "repo", "r", "containifyci", "the image repository to use")
 
 	// golang
@@ -89,7 +89,7 @@ func Init(args ...*container.Build) {
 		AddSource:   false,
 		ReplaceAttr: nil,
 	}
-	if bld.Verbose {
+	if bld.Verbose || RootArgs.Verbose {
 		logOpts.Level = slog.LevelDebug
 		logOpts.AddSource = true
 	}
