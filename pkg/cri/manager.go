@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"sync"
 
+	"github.com/containifyci/engine-ci/pkg/cri/critest"
 	"github.com/containifyci/engine-ci/pkg/cri/docker"
 	"github.com/containifyci/engine-ci/pkg/cri/podman"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
@@ -65,12 +66,14 @@ func getRuntime() (ContainerManager, error) {
 	case utils.Podman:
 		fmt.Println("Using Podman")
 		return podman.NewPodmanManager()
+	case utils.Test:
+		fmt.Println("Using Test")
+		return critest.NewMockContainerManager()
 	default:
 		slog.Error("unknown container runtime stop")
 		os.Exit(1)
 	}
 	return nil, fmt.Errorf("unknown container runtime stop")
-
 }
 
 func DetectContainerRuntime() utils.RuntimeType {
@@ -83,6 +86,9 @@ func DetectContainerRuntime() utils.RuntimeType {
 		case "podman":
 			fmt.Println("Detect Podman")
 			return utils.Podman
+		case "test":
+			fmt.Println("Detect Test")
+			return utils.Test
 		default:
 			slog.Error("unknown container runtime", "runtime", runtime)
 			os.Exit(1)
