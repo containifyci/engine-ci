@@ -345,7 +345,11 @@ func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageName
 					return err
 				}
 				defer out.Close()
-				io.Copy(os.Stdout, out)
+				_, err = io.Copy(os.Stdout, out)
+				if err != nil {
+					slog.Error("Failed to copy stdout", "error", err)
+					return err
+				}
 				return nil
 			}
 			slog.Info("Image found locally.\n", "image", imageName, "platform", info.Platform.String())

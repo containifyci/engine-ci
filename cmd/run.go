@@ -11,14 +11,14 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Command to start the containifyci pipeline execution",
 	Long: `Command to start the containifyci pipeline execution`,
-	Run: RunCommand,
+	RunE: RunCommand,
 }
 
 func init() {
 	rootCmd.AddCommand(runCmd)
 }
 
-func RunCommand(cmd *cobra.Command, args []string) {
+func RunCommand(cmd *cobra.Command, args []string) error {
 	os.Setenv("CONTAINIFYCI_FILE", ".containifyci/containifyci.go")
-	Engine(cmd, args)
+	return Engine(cmd, args)
 }

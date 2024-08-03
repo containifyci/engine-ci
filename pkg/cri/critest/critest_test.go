@@ -50,7 +50,8 @@ func TestMockContainer_ContainerLifecycle(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, cnt)
 	var b bytes.Buffer
-	io.Copy(&b, cnt)
+	_, err = io.Copy(&b, cnt)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, b.String())
 	assert.Equal(t, "container starting\ncontainer running\ncontainer stopped", b.String())
 
@@ -73,7 +74,8 @@ func TestMockContainer_ImageLifecycle(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, cnt)
 	var b bytes.Buffer
-	io.Copy(&b, cnt)
+	_, err = io.Copy(&b, cnt)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, b.String())
 	assert.Equal(t, "mock_build_output", b.String())
 
@@ -87,7 +89,8 @@ func TestMockContainer_ImageLifecycle(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, cnt)
 	b.Reset()
-	io.Copy(&b, cnt)
+	_, err = io.Copy(&b, cnt)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, b.String())
 	assert.Equal(t, "test-pull-image pulled", b.String())
 	assert.Len(t, m.Images, 2)
