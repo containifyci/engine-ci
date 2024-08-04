@@ -10,7 +10,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 )
 
-var runtimeOS = runtime.GOOS
+var RuntimeOS = runtime.GOOS
 
 type Address struct {
 	Host         string
@@ -29,7 +29,7 @@ func (a *Address) NewAddress(arg *container.Build) {
 	port := parsedURL.Port()
 	var internalHost string
 
-	switch runtimeOS {
+	switch RuntimeOS {
 	case "windows":
 		internalHost = hostname(scheme, "host.docker.internal", port)
 	case "darwin":

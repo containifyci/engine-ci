@@ -76,7 +76,7 @@ func TestAddress_ForContainer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name+" os "+tt.os+" cri "+string(tt.cri), func(t *testing.T) {
-			runtimeOS = tt.os
+			RuntimeOS = tt.os
 			container.NewBuild(&container.Build{
 				Runtime: tt.cri,
 			})
