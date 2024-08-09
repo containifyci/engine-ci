@@ -14,6 +14,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/gcloud"
 	"github.com/containifyci/engine-ci/pkg/github"
 	"github.com/containifyci/engine-ci/pkg/golang"
 	"github.com/containifyci/engine-ci/pkg/goreleaser"
@@ -118,10 +119,10 @@ func Pre(arg ...*container.Build) *build.BuildSteps {
 	}
 
 	if bs.IsNotInit() {
+		bs.Add(gcloud.New())
 		switch container.GetBuild().BuildType {
 		case container.GoLang:
-			protobuf := protobuf.New()
-			bs.Add(protobuf)
+			bs.Add(protobuf.New())
 			bs.AddAsync(golang.NewLinter())
 			//TODO: register different build images automatically or at least in the build implementation itself
 			if from == "debian" {
@@ -280,6 +281,9 @@ func (c *Command) Run(target string, arg *container.Build) {
 	})
 	c.AddTarget("trivy", func() error {
 		return bs.Run("trivy")
+	})
+	c.AddTarget("gcloud_oidc", func() error {
+		return bs.Run("gcloud_oidc")
 	})
 	c.AddTarget("github", func() error {
 		return bs.Run("github")
