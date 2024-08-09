@@ -72,6 +72,18 @@ type Build struct {
 	defaults bool
 }
 
+func (b *Build) CustomString(key string) string {
+	if v, ok := b.Custom[key]; ok {
+		if len(v) == 1 {
+			return v[0]
+		} else if len(v) > 1 {
+			slog.Warn("Custom key has multiple values", "key", key, "values", v)
+			return v[0]
+		}
+	}
+	return ""
+}
+
 func (b *Build) ImageURI() string {
 	return b.Image + ":" + b.ImageTag
 }
