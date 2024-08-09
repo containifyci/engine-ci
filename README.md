@@ -48,6 +48,10 @@ For a practical example of how **engine-ci** is used, check out the [containifyc
 - [ ] **Golang Submodule Support**: Allow Go submodules to be built as part of the main module build (high priority).
 - [ ] **Container Image Push**: Provide an option to opt out of pushing container images (enabled by default).
 - [ ] **Goreleaser Integration**: Provide an option to opt out of using Goreleaser (enabled by default).
+- [ ] **Dependabot**: Update DependaBot configuration also to run daily (high priority).
+- [ ] **Github Action**: Change release process to create draft a release and to publish it after all artifacts are uploaded by goreleaser.
+  - https://goreleaser.com/customization/release/#github
+
 
 ## Contribution
 
