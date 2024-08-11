@@ -9,7 +9,7 @@ require (
 	github.com/containifyci/engine-ci/protos2 v0.2.4
 	github.com/docker/docker v27.1.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/dusted-go/logging v1.2.2
+	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
 	//CVE-2024-37298 fix
 	github.com/gorilla/schema v1.4.1 // indirect
