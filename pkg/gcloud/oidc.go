@@ -16,7 +16,7 @@ import (
 //go:embed Dockerfile*
 var f embed.FS
 
-//go:embed auth_provider.go
+//go:embed auth_provider.go.tmpl
 var authProvider string
 
 const (
