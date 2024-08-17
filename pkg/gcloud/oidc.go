@@ -1,17 +1,26 @@
 package gcloud
 
 import (
+	"embed"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
+	"github.com/containifyci/engine-ci/pkg/cri/utils"
 )
 
+//go:embed Dockerfile*
+var f embed.FS
+
+//go:embed auth_provider.go
+var authProvider string
+
 const (
-	CI_IMAGE = "google/cloud-sdk:slim"
+	CI_IMAGE = "golang:1.22.5-alpine"
 )
 
 type GCloudContainer struct {
@@ -29,11 +38,26 @@ func (c *GCloudContainer) Name() 		string  { return "gcloud_oidc" }
 func (c *GCloudContainer) Pull()    error   { return c.Container.Pull(CI_IMAGE) }
 func (c *GCloudContainer) Images() []string { return []string{CI_IMAGE} }
 
+func (c *GCloudContainer) BuildImage() error {
+	image := Image()
+
+	dockerFile, err := f.ReadFile("Dockerfile")
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
+		os.Exit(1)
+	}
+
+	platforms := types.GetPlatforms(container.GetBuild().Platform)
+	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
+
+	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
+}
+
 func (c *GCloudContainer) Auth() error {
 	opts := types.ContainerConfig{}
-	opts.Image = CI_IMAGE
+	opts.Image = 	Image()
 
-	opts.WorkingDir = "/src"
+	// opts.WorkingDir = "/src"
 
 	dir, _ := filepath.Abs(".")
 	opts.Volumes = []types.Volume{
@@ -44,75 +68,40 @@ func (c *GCloudContainer) Auth() error {
 		},
 	}
 
-	opts.Script = `
-#!/bin/sh
-env | sort
-gcloud auth list
-gcloud auth application-default print-access-token > /src/.gcloud_token`
+	opts.Env = []string{
+		// "GOOGLE_APPLICATION_CREDENTIALS=/tmp/creds.json"
+		fmt.Sprintf("WORKLOAD_IDENTITY_PROVIDER=%s", os.Getenv("WORKLOAD_IDENTITY_PROVIDER")),
+		fmt.Sprintf("ACTIONS_ID_TOKEN_REQUEST_URL=%s", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")),
+		fmt.Sprintf("ACTIONS_ID_TOKEN_REQUEST_TOKEN=%s", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")),
+	}
 
-	opts.Env = []string{"GOOGLE_APPLICATION_CREDENTIALS=/src/creds.json"}
-	opts.Cmd = []string{"sh", "/tmp/script.sh"}
-
-	aud := os.Getenv("WORKLOAD_IDENTITY_PROVIDER")
-	url := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
-	token := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+	// opts.Cmd = []string{"/src/oidc"}
 
 	err := c.Container.Create(opts)
-	slog.Info("Container created", "containerId", c.Container.ID)
 	if err != nil {
-		slog.Error("Failed to create container: %s", "error", err)
-		os.Exit(1)
-	}
-
-	err = c.Container.CopyContentTo(c.CredScript(aud, url, token), "/src/creds.json")
-	if err != nil {
-		slog.Error("Failed to copy cred.json", "error", err)
-		os.Exit(1)
-	}
-
-	//TODO: maybe define a general entrypoint for all containers
-	//only the containers can then define a script that is called by the entrypoint
-	err = c.Container.CopyContentTo(opts.Script, "/tmp/script.sh")
-	if err != nil {
-		slog.Error("Failed to copy script to container: %s", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	err = c.Container.Start()
 	if err != nil {
-		slog.Error("Failed to start container: %s", "error", err)
-		os.Exit(1)
+		return err
 	}
 
-	err = c.Container.Wait()
+	return c.Container.Wait()
+}
+
+func (c *GCloudContainer) Code() string {
+	return strings.ReplaceAll(authProvider, "package gcloud", "package main")
+}
+
+func Image() string {
+	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
-		slog.Error("Failed to wait for container: %s", "error", err)
+		slog.Error("Failed to read Dockerfile.go", "error", err)
 		os.Exit(1)
 	}
-
-	return err
-}
-
-func (c *GCloudContainer) CredScript(audiens, url, token string) string {
-	script := fmt.Sprintf(`
-{
-	"type": "external_account",
-	"audience": "%s",
-	"subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
-	"token_url": "https://sts.googleapis.com/v1/token",
-	"credential_source": {
-		"url": "%s&audience=%s",
-		"headers": {
-			"Authorization": "Bearer %s"
-		},
-		"format": {
-			"type": "json",
-			"subject_token_field_name": "value"
-		}
-	}
-}
-`, audiens, url, audiens, token)
-	return script
+	tag := container.ComputeChecksum(dockerFile)
+	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "gcloud", tag)
 }
 
 func (c *GCloudContainer) Run() error {
@@ -122,9 +111,9 @@ func (c *GCloudContainer) Run() error {
 		return nil
 	}
 
-	err := c.Pull()
+	err := c.BuildImage()
 	if err != nil {
-		slog.Error("Failed to pull base images: %s", "error", err)
+		slog.Error("Failed to build go image: %s", "error", err)
 		return err
 	}
 
