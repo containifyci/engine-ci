@@ -47,6 +47,7 @@ func TestGetEnv(t *testing.T) {
 	t.Setenv("key", "value")
 	t.Setenv("key_env", "env:key")
 	t.Setenv("key_cmd", "cmd:echo value")
+	t.Setenv("key_cmd_default", "cmd:cat file || echo value")
 	tests := []struct {
 		key  string
 		want string
@@ -61,6 +62,10 @@ func TestGetEnv(t *testing.T) {
 		},
 		{
 			key:  "key_cmd",
+			want: "value",
+		},
+		{
+			key:  "key_cmd_default",
 			want: "value",
 		},
 	}
