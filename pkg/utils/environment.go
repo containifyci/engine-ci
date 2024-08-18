@@ -49,7 +49,7 @@ func GetEnv(key string, envType string) string {
 }
 
 func RunCommand(cmd string) (*string, error) {
-	out, err := exec.Command("sh", "-c", cmd).CombinedOutput()
+	out, err := exec.Command("sh", "-c", cmd).Output()
 	if err != nil {
 		slog.Error("Error running command", "error", err, "command", cmd)
 		return nil, err
