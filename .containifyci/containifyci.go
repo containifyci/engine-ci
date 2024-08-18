@@ -18,7 +18,6 @@ func main() {
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
 		"tags": build.NewList("containers_image_openpgp"),
-		"gcloud_oidc": build.NewList("true"),
 	}
 
 	opts2 := build.NewGoServiceBuild("engine-ci")

@@ -71,7 +71,6 @@ func gcpAuth() (idToken string, accessToken string) {
 		Timeout: 10 * time.Second,
 	}
 
-	slog.Info("cred", "credFile", credBytes)
 	raw := []byte(credBytes)
 
 	c, err := credentials.NewIamCredentialsClient(ctx, option.WithCredentialsJSON(raw))
