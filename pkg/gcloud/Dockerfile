@@ -46,6 +46,7 @@ func gcpAuth() (idToken string, accessToken string) {
 	aud := os.Getenv("WORKLOAD_IDENTITY_PROVIDER")
 	url := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
 	token := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+	account := os.Getenv("ACCOUNT_EMAIL_OR_UNIQUEID")
 	credBytes := fmt.Sprintf(\`{
   	"universe_domain": "googleapis.com",
 		"type": "external_account",
@@ -80,8 +81,10 @@ func gcpAuth() (idToken string, accessToken string) {
 	}
 	defer c.Close()
 
+	accountName := fmt.Sprintf("projects/-/serviceAccounts/%s", account)
+
 	req := &credentialspb.GenerateIdTokenRequest{
-		Name:         "projects/-/serviceAccounts/xxxx",
+		Name:         accountName,
 		Audience:     aud,
 		IncludeEmail: true,
 	}
@@ -94,8 +97,8 @@ func gcpAuth() (idToken string, accessToken string) {
 	idToken = resp.Token
 
 	acReq := credentialspb.GenerateAccessTokenRequest{
-		Name:  "projects/-/serviceAccounts/xxxx",
-		Scope: []string{"https://www.googleapis.com/auth/cloud-platform.read-only"},
+		Name:  accountName,
+		Scope: []string{"https://www.googleapis.com/auth/cloud-platform"},
 	}
 
 	resp3, err := c.GenerateAccessToken(ctx, &acReq)
