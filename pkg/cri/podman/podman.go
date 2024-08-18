@@ -875,7 +875,7 @@ func DecodeRegistryAuth(authBase64 string) (*registry.AuthConfig, error) {
 		return nil, err
 	}
 
-	var authCfg *registry.AuthConfig
+	authCfg := &registry.AuthConfig{}
 
 	err = json.Unmarshal(base64Decoded, authCfg)
 	if err != nil {
