@@ -23,19 +23,19 @@ import (
 func main() {
 	idToken, accessToken := gcpAuth()
 
-	err := os.Mkdir("/src/.gcloud", 0644)
+	err := os.Mkdir("/src/.gcloud", 0744)
 	if err != nil {
 		slog.Error("error create dir", "error", err)
 		os.Exit(1)
 	}
 
-	err = os.WriteFile("/src/.gcloud/idtoken", []byte(idToken), 0644)
+	err = os.WriteFile("/src/.gcloud/idtoken", []byte(idToken), 0744)
 	if err != nil {
 		slog.Error("error write id token", "error", err)
 		os.Exit(1)
 	}
 
-	err = os.WriteFile("/src/.gcloud/accesstoken", []byte(accessToken), 0644)
+	err = os.WriteFile("/src/.gcloud/accesstoken", []byte(accessToken), 0744)
 	if err != nil {
 		slog.Error("error write access token", "error", err)
 		os.Exit(1)
