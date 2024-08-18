@@ -878,12 +878,13 @@ func DecodeRegistryAuth(authBase64 string) (*registry.AuthConfig, error) {
 	authCfg := &registry.AuthConfig{}
 
 	if len(base64Decoded) <= 0 {
+		slog.Debug("Empty registry auth config")
 		return &registry.AuthConfig{}, nil
 	}
 
 	err = json.Unmarshal(base64Decoded, authCfg)
 	if err != nil {
-		slog.Error("Failed to unmarshal auth config", "error", err, "base64", string(base64Decoded))
+		slog.Error("Failed to unmarshal auth config", "error", err, "auth", string(base64Decoded))
 		return nil, err
 	}
 
