@@ -34,8 +34,8 @@ func New() *GCloudContainer {
 }
 
 func (c *GCloudContainer) IsAsync() bool    { return false }
-func (c *GCloudContainer) Name() 		string  { return "gcloud_oidc" }
-func (c *GCloudContainer) Pull()    error   { return c.Container.Pull(CI_IMAGE) }
+func (c *GCloudContainer) Name() string     { return "gcloud_oidc" }
+func (c *GCloudContainer) Pull() error      { return c.Container.Pull(CI_IMAGE) }
 func (c *GCloudContainer) Images() []string { return []string{CI_IMAGE} }
 
 func (c *GCloudContainer) BuildImage() error {
@@ -55,7 +55,7 @@ func (c *GCloudContainer) BuildImage() error {
 
 func (c *GCloudContainer) Auth() error {
 	opts := types.ContainerConfig{}
-	opts.Image = 	Image()
+	opts.Image = Image()
 
 	// opts.WorkingDir = "/src"
 
@@ -73,6 +73,7 @@ func (c *GCloudContainer) Auth() error {
 		fmt.Sprintf("WORKLOAD_IDENTITY_PROVIDER=%s", os.Getenv("WORKLOAD_IDENTITY_PROVIDER")),
 		fmt.Sprintf("ACTIONS_ID_TOKEN_REQUEST_URL=%s", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")),
 		fmt.Sprintf("ACTIONS_ID_TOKEN_REQUEST_TOKEN=%s", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")),
+		fmt.Sprintf("ACCOUNT_EMAIL_OR_UNIQUEID=%s", os.Getenv("ACCOUNT_EMAIL_OR_UNIQUEID")),
 	}
 
 	// opts.Cmd = []string{"/src/oidc"}
