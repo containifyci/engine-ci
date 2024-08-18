@@ -22,6 +22,11 @@ enum RuntimeType {
     Podman = 1;
 }
 
+message ContainerRegistry {
+    string Username = 1;
+    string Password = 2;
+}
+
 message BuildArgs {
     string Application = 1;
     EnvType Environment = 2;
@@ -40,6 +45,7 @@ message BuildArgs {
     repeated string SourceFiles = 15;
 	bool Verbose = 16;
     string ContainifyRegistry = 17;
+    map<string, ContainerRegistry> Registries = 18;
 }
 
 message Empty {
