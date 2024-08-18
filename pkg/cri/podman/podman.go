@@ -834,8 +834,8 @@ func (p *PodmanManager) PullImage(ctx context.Context, image string, authBase64 
 	platformSpec := types.ParsePlatform(platform)
 
 	opts := images.PullOptions{
-		Username: &authCfg.Username,
-		Password: &authCfg.Password,
+		Username:       &authCfg.Username,
+		Password:       &authCfg.Password,
 		ProgressWriter: &progressWriter,
 		Quiet:          &unwahr,
 	}
@@ -878,12 +878,12 @@ func DecodeRegistryAuth(authBase64 string) (*registry.AuthConfig, error) {
 	authCfg := &registry.AuthConfig{}
 
 	if len(base64Decoded) <= 0 {
-		slog.Debug("Empty registry auth config")
-		return &registry.AuthConfig{}, nil
+		return authCfg, nil
 	}
 
 	err = json.Unmarshal(base64Decoded, authCfg)
 	if err != nil {
+		//TODO mask possible password leak in error message
 		slog.Error("Failed to unmarshal auth config", "error", err, "auth", string(base64Decoded))
 		return nil, err
 	}

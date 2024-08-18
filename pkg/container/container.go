@@ -429,9 +429,6 @@ func (c *Container) Push(source, target string, opts ...PushOption) error {
 // encodeAuthToBase64 encodes the authentication configuration to base64.
 func encodeAuthToBase64(auth registry.AuthConfig) string {
 	authJSON, _ := json.Marshal(auth)
-	if GetBuild().Verbose {
-		slog.Debug("Container Auth config", "auth", string(authJSON))
-	}
 	return base64.URLEncoding.EncodeToString(authJSON)
 }
 
