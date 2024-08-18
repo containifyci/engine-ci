@@ -9,16 +9,28 @@ import (
 	"os"
 
 	"github.com/containifyci/engine-ci/client/pkg/build"
+	"github.com/containifyci/engine-ci/protos2"
 )
+
+func registryAuth() map[string]*protos2.ContainerRegistry {
+	return map[string]*protos2.ContainerRegistry{
+		"docker.io": {
+			Username: "env:DOCKER_USER",
+			Password: "env:DOCKER_TOKEN",
+		},
+	}
+}
 
 func main() {
 	os.Chdir("..")
 	opts1 := build.NewGoServiceBuild("engine-ci")
-	opts1.Verbose = false
+	opts1.Verbose = true
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
 		"tags": build.NewList("containers_image_openpgp"),
 	}
+
+	opts1.Registries = registryAuth()
 
 	opts2 := build.NewGoServiceBuild("engine-ci")
 	opts2.Verbose = false
@@ -28,5 +40,6 @@ func main() {
 		"from": build.NewList("debian"),
 		"goreleaser": build.NewList("false"),
 	}
+	opts2.Registries = registryAuth()
 	build.Serve(opts1, opts2)
 }

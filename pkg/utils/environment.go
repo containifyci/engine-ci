@@ -29,23 +29,29 @@ func GetEnvs(key []string, envType string) string {
 	return ""
 }
 
+
+
 func GetEnv(key string, envType string) string {
 	env := Getenv(key, envType)
-	if strings.HasPrefix(env, "env:") {
-		return Getenv(strings.TrimPrefix(env, "env:"), envType)
+	return GetValue(env, envType)
+}
+
+func GetValue(value string, envType string) string {
+	if strings.HasPrefix(value, "env:") {
+		return Getenv(strings.TrimPrefix(value, "env:"), envType)
 	}
 
-	if strings.HasPrefix(env, "cmd:") {
-		cmd := strings.TrimPrefix(env, "cmd:")
+	if strings.HasPrefix(value, "cmd:") {
+		cmd := strings.TrimPrefix(value, "cmd:")
 		env2, err := RunCommand(cmd)
 		if err != nil {
-			slog.Error("Error running command", "error", err)
+			slog.Error("Error running command", "error", err, "command", cmd)
 			os.Exit(1)
 		}
-		slog.Info("Retrieved environment variable from command", "command", cmd, "key", key)
+		slog.Info("Retrieved environment variable from command", "command", cmd)
 		return *env2
 	}
-	return env
+	return value
 }
 
 func RunCommand(cmd string) (*string, error) {
