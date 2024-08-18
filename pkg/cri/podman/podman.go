@@ -5,6 +5,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +16,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/docker/docker/api/types/registry"
 
 	nettypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/podman/v5/libpod/define"
@@ -818,6 +822,11 @@ func (CustomReadCloser) Close() error {
 
 // PullImage pulls an image
 func (p *PodmanManager) PullImage(ctx context.Context, image string, authBase64 string, platform string) (io.ReadCloser, error) {
+	authCfg, err := DecodeRegistryAuth(authBase64)
+	if err != nil {
+		return nil, err
+	}
+
 	buf := new(bytes.Buffer)
 	unwahr := false
 	var progressWriter io.Writer = buf
@@ -825,6 +834,8 @@ func (p *PodmanManager) PullImage(ctx context.Context, image string, authBase64 
 	platformSpec := types.ParsePlatform(platform)
 
 	opts := images.PullOptions{
+		Username: &authCfg.Username,
+		Password: &authCfg.Password,
 		ProgressWriter: &progressWriter,
 		Quiet:          &unwahr,
 	}
@@ -834,7 +845,7 @@ func (p *PodmanManager) PullImage(ctx context.Context, image string, authBase64 
 	}
 
 	// TODO progress writer is not working
-	_, err := images.Pull(p.conn, image, &opts)
+	_, err = images.Pull(p.conn, image, &opts)
 	if err != nil {
 		return nil, err
 	}
@@ -857,13 +868,37 @@ func (p *PodmanManager) TagImage(ctx context.Context, source, target string) err
 	return images.Tag(p.conn, source, target, repo, &images.TagOptions{})
 }
 
+func DecodeRegistryAuth(authBase64 string) (*registry.AuthConfig, error) {
+	base64Decoded, err := base64.StdEncoding.DecodeString(authBase64)
+	if err != nil {
+		slog.Error("Failed to decode base64", "error", err)
+		return nil, err
+	}
+
+	authCfg := &registry.AuthConfig{}
+
+	err = json.Unmarshal(base64Decoded, authCfg)
+	if err != nil {
+		slog.Error("Failed to unmarshal auth config", "error", err)
+		return nil, err
+	}
+
+	return authCfg, nil
+}
+
 // PushImage pushes an image
 func (p *PodmanManager) PushImage(ctx context.Context, target string, authBase64 string) (io.ReadCloser, error) {
+
+	authCfg, err := DecodeRegistryAuth(authBase64)
+	if err != nil {
+		return nil, err
+	}
+
 	buf := new(bytes.Buffer)
 	var progressWriter io.Writer = buf
-	err := images.Push(p.conn, target, target, &images.PushOptions{
-
-		Password:       &authBase64,
+	err = images.Push(p.conn, target, target, &images.PushOptions{
+		Username:       &authCfg.Username,
+		Password:       &authCfg.Password,
 		ProgressWriter: &progressWriter,
 	})
 	if err != nil {
