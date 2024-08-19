@@ -360,28 +360,25 @@ func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageName
 
 // TODO: make registry authentification configurable and support multiple registries
 func registryAuthBase64(imageName string) string {
-	token := GetEnv("DOCKER_TOKEN")
-	if token == "" {
-		slog.Info("Skip image Push DOCKER_TOKEN environment variable not set")
+
+	imgInfo, err := utils.ParseDockerImage(imageName)
+	slog.Debug("Auth for image", "info", imgInfo)
+	if err != nil {
+		slog.Error("Failed to parse image", "error", err, "image", imageName)
 		return ""
 	}
 
-	if !strings.HasPrefix(imageName, "europe-west3-docker.pkg.dev") {
-		// Push the image to Google Cloud Artifact Registry
+	if reg, ok := GetBuild().Registries[imgInfo.Server]; ok {
 		authConfig := registry.AuthConfig{
-			Username: GetEnv("DOCKER_USER"), // Username for dockerhub
-			Password: token,
+			Username:      u.GetValue(reg.Username, GetBuild().Env.String()), // Username for GCR
+			Password:      u.GetValue(reg.Password, GetBuild().Env.String()),
+			ServerAddress: imgInfo.Server, // Server address for GCR
 		}
 		return encodeAuthToBase64(authConfig)
 	}
 
-	// Push the image to Google Cloud Artifact Registry
-	authConfig := registry.AuthConfig{
-		Username:      "oauth2accesstoken", // Username for GCR
-		Password:      token,
-		ServerAddress: "europe-west3-docker.pkg.dev", // Server address for GCR
-	}
-	return encodeAuthToBase64(authConfig)
+	slog.Warn("No registry auth found for image", "image", imageName, "server", imgInfo.Server)
+	return ""
 }
 
 func (c *Container) Tag(source, target string) error {
@@ -429,6 +426,9 @@ func (c *Container) Push(source, target string, opts ...PushOption) error {
 // encodeAuthToBase64 encodes the authentication configuration to base64.
 func encodeAuthToBase64(auth registry.AuthConfig) string {
 	authJSON, _ := json.Marshal(auth)
+	if GetBuild().Verbose {
+		slog.Debug("Auth config", "auth", string(authJSON))
+	}
 	return base64.URLEncoding.EncodeToString(authJSON)
 }
 
