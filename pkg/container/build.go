@@ -9,6 +9,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/protos2"
 
 	"github.com/containifyci/engine-ci/pkg/filesystem"
 )
@@ -68,6 +69,7 @@ type Build struct {
 	SourcePackages     []string
 	SourceFiles        []string
 	Verbose            bool
+	Registries 				 map[string]*protos2.ContainerRegistry
 
 	defaults bool
 }
@@ -178,6 +180,15 @@ func (b *Build) Defaults() *Build {
 
 	if b.Organization == "" {
 		b.Organization = "containifyci"
+	}
+
+	if b.Registries == nil {
+		b.Registries = map[string]*protos2.ContainerRegistry{
+			"docker.io": {
+				Username: os.Getenv("DOCKER_USERNAME"),
+				Password: os.Getenv("DOCKER_PASSWORD"),
+			},
+		}
 	}
 
 	if (b.Platform == types.Platform{}) {

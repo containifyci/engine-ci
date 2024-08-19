@@ -108,6 +108,7 @@ func GetBuild() []*container.Build {
 			Image:          opt.Image,
 			ImageTag:       opt.ImageTag,
 			Registry:       opt.Registry,
+			Registries:   	opt.Registries,
 			Repository:     opt.Repository,
 			File:           opt.File,
 			Folder:         opt.Folder,
