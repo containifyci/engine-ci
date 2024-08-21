@@ -24,7 +24,7 @@ func registryAuth() map[string]*protos2.ContainerRegistry {
 func main() {
 	os.Chdir("..")
 	opts1 := build.NewGoServiceBuild("engine-ci")
-	opts1.Verbose = true
+	opts1.Verbose = false
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
 		"tags": build.NewList("containers_image_openpgp"),
