@@ -6,6 +6,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGetEnvWithDefault(t *testing.T) {
+	t.Setenv("key", "value")
+	tests := []struct {
+		key  string
+		def func() string
+		want string
+	}{
+		{
+			key:  "key",
+			def: func() string { return "default" },
+			want: "value",
+		},
+		{
+			key:  "key",
+			def: nil,
+			want: "value",
+		},
+		{
+			key:  "key2",
+			def: func() string { return "default" },
+			want: "default",
+		},
+		{
+			key:  "key2",
+			def: nil,
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			value := GetEnvWithDefault(tt.key, tt.def)
+			assert.Equal(t, tt.want, value)
+		})
+	}
+}
+
 func TestGetenv(t *testing.T) {
 	t.Setenv("key", "value")
 	t.Setenv("key_LOCAL", "value_LOCAL")
