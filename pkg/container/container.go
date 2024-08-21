@@ -362,15 +362,16 @@ func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageName
 func registryAuthBase64(imageName string) string {
 
 	imgInfo, err := utils.ParseDockerImage(imageName)
-	slog.Debug("Auth for image", "info", imgInfo)
 	if err != nil {
 		slog.Error("Failed to parse image", "error", err, "image", imageName)
 		return ""
 	}
 
 	if reg, ok := GetBuild().Registries[imgInfo.Server]; ok {
+		username := u.GetValue(reg.Username, GetBuild().Env.String())
+		slog.Debug("Registry auth found for image", "image", imageName, "server", imgInfo.Server, "username", username)
 		authConfig := registry.AuthConfig{
-			Username:      u.GetValue(reg.Username, GetBuild().Env.String()), // Username for GCR
+			Username:      username,
 			Password:      u.GetValue(reg.Password, GetBuild().Env.String()),
 			ServerAddress: imgInfo.Server, // Server address for GCR
 		}

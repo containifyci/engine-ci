@@ -146,3 +146,12 @@ func (fc *FileCache) SaveResultsAsYAML(fileSuffix string, files []string) error 
 
 	return nil
 }
+
+func HomeDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		slog.Error("Error getting home directory", "error", err)
+		os.Exit(1)
+	}
+	return home
+}
