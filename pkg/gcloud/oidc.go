@@ -11,6 +11,9 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/filesystem"
+
+	u "github.com/containifyci/engine-ci/pkg/utils"
 )
 
 //go:embed Dockerfile*
@@ -24,6 +27,7 @@ const (
 )
 
 type GCloudContainer struct {
+	applicationCredentials string
 	*container.Container
 }
 
@@ -57,8 +61,6 @@ func (c *GCloudContainer) Auth() error {
 	opts := types.ContainerConfig{}
 	opts.Image = Image()
 
-	// opts.WorkingDir = "/src"
-
 	dir, _ := filepath.Abs(".")
 	opts.Volumes = []types.Volume{
 		{
@@ -68,19 +70,44 @@ func (c *GCloudContainer) Auth() error {
 		},
 	}
 
-	opts.Env = []string{
-		// "GOOGLE_APPLICATION_CREDENTIALS=/tmp/creds.json"
-		fmt.Sprintf("WORKLOAD_IDENTITY_PROVIDER=%s", os.Getenv("WORKLOAD_IDENTITY_PROVIDER")),
-		fmt.Sprintf("ACTIONS_ID_TOKEN_REQUEST_URL=%s", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")),
-		fmt.Sprintf("ACTIONS_ID_TOKEN_REQUEST_TOKEN=%s", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")),
-		fmt.Sprintf("ACCOUNT_EMAIL_OR_UNIQUEID=%s", os.Getenv("ACCOUNT_EMAIL_OR_UNIQUEID")),
+	opts.Env = []string{}
+
+	googleADC := u.GetEnvWithDefault("GOOGLE_APPLICATION_CREDENTIALS", func() string {
+		//TODO support multiple os (its only for macos)
+		homeDir := filesystem.HomeDir()
+		return filepath.Join(homeDir, ".config/gcloud/application_default_credentials.json")
+	})
+
+	if filesystem.FileExists(googleADC) {
+		cnt, err := os.ReadFile(googleADC)
+		if err != nil {
+			return err
+		}
+		c.applicationCredentials = string(cnt)
+		opts.Env = append(opts.Env,
+			fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", "/tmp/.gcloud/adc.json"),
+			"ACCOUNT_EMAIL_OR_UNIQUEID=xxxx",
+		)
+	} else {
+		opts.Env = append(opts.Env,
+			fmt.Sprintf("WORKLOAD_IDENTITY_PROVIDER=%s", os.Getenv("WORKLOAD_IDENTITY_PROVIDER")),
+			fmt.Sprintf("ACTIONS_ID_TOKEN_REQUEST_URL=%s", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")),
+			fmt.Sprintf("ACTIONS_ID_TOKEN_REQUEST_TOKEN=%s", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")),
+			fmt.Sprintf("ACCOUNT_EMAIL_OR_UNIQUEID=%s", os.Getenv("ACCOUNT_EMAIL_OR_UNIQUEID")),
+		)
 	}
 
-	// opts.Cmd = []string{"/src/oidc"}
+	// opts.Cmd = []string{"sleep", "300"}
 
 	err := c.Container.Create(opts)
 	if err != nil {
 		return err
+	}
+
+	err = c.Container.CopyContentTo(c.applicationCredentials, "/tmp/.gcloud/adc.json")
+	if err != nil {
+		slog.Error("Failed to start container", "error", err)
+		os.Exit(1)
 	}
 
 	err = c.Container.Start()
@@ -106,8 +133,8 @@ func Image() string {
 }
 
 func (c *GCloudContainer) Run() error {
-	if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" ||
-		container.GetBuild().CustomString("gcloud_oidc") == "" {
+	// if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" ||
+	if container.GetBuild().CustomString("gcloud_oidc") == "" {
 		slog.Info("No ACTIONS_ID_TOKEN_REQUEST_URL found and Custom property gcloud_oidc not set, skipping gcloud_oidc container", "ACTIONS_ID_TOKEN_REQUEST_URL", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), "gcloud_oidc", container.GetBuild().CustomString("gcloud_oidc"))
 		return nil
 	}

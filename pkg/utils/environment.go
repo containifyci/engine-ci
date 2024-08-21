@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+func GetEnvWithDefault(key string, def func() string ) string {
+	env := os.Getenv(key)
+	if env == "" && def != nil {
+		return def()
+	}
+	return env
+}
+
 func Getenv(key string, envType string) string {
 	switch envType {
 	case "local":

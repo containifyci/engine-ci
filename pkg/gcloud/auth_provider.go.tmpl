@@ -1,12 +1,22 @@
 package gcloud
 
+//go:generate go mod init gcloud
+//go:generate go mod tidy
+
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
+
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iam/v1"
 
 	credentials "cloud.google.com/go/iam/credentials/apiv1"
 	credentialspb "cloud.google.com/go/iam/credentials/apiv1/credentialspb"
@@ -16,19 +26,19 @@ import (
 func main() {
 	idToken, accessToken := gcpAuth()
 
-	err := os.Mkdir("/src/.gcloud", 0644)
+	err := os.Mkdir("/src/.gcloud", 0744)
 	if err != nil {
 		slog.Error("error create dir", "error", err)
 		os.Exit(1)
 	}
 
-	err = os.WriteFile("/src/.gcloud/idtoken", []byte(idToken), 0644)
+	err = os.WriteFile("/src/.gcloud/idtoken", []byte(idToken), 0744)
 	if err != nil {
 		slog.Error("error write id token", "error", err)
 		os.Exit(1)
 	}
 
-	err = os.WriteFile("/src/.gcloud/accesstoken", []byte(accessToken), 0644)
+	err = os.WriteFile("/src/.gcloud/accesstoken", []byte(accessToken), 0744)
 	if err != nil {
 		slog.Error("error write access token", "error", err)
 		os.Exit(1)
@@ -40,7 +50,52 @@ func gcpAuth() (idToken string, accessToken string) {
 	url := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
 	token := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
 	account := os.Getenv("ACCOUNT_EMAIL_OR_UNIQUEID")
-	credBytes := fmt.Sprintf(`{
+	adc := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+	ctx := context.Background()
+
+	if adc != "" {
+		creds, err := google.FindDefaultCredentials(ctx, iam.CloudPlatformScope)
+		if err != nil {
+			log.Fatalf("Failed to find default credentials: %v", err)
+		}
+
+		// Extract the email of the service account or user
+		tokenSource := creds.TokenSource
+		token, err := tokenSource.Token()
+		if err != nil {
+			log.Fatalf("Failed to get token: %v", err)
+		}
+
+		if idtoken, ok := token.Extra("id_token").(string); ok {
+			idToken = idtoken
+
+			// ID Token is present, this usually means a service account is used
+			fmt.Println("Running as a service account")
+			// Decode the ID token to get the email
+			segments := strings.Split(idToken, ".")
+			if len(segments) < 2 {
+				log.Fatalf("Invalid ID token format")
+			}
+
+			payload, err := base64.RawURLEncoding.DecodeString(segments[1])
+			if err != nil {
+				log.Fatalf("Failed to decode ID token payload: %v", err)
+			}
+
+			var claims struct {
+				Email string `json:"email"`
+			}
+			if err := json.Unmarshal(payload, &claims); err != nil {
+				log.Fatalf("Failed to unmarshal ID token payload: %v", err)
+			}
+
+			fmt.Printf("Authenticated as: %s (service account)\n", claims.Email)
+		}
+
+		accessToken = token.AccessToken
+	} else {
+		credBytes := fmt.Sprintf(`{
   	"universe_domain": "googleapis.com",
 		"type": "external_account",
 		"audience": "%s",
@@ -58,46 +113,44 @@ func gcpAuth() (idToken string, accessToken string) {
 		}
 	}`, aud, url, aud, token)
 
-	ctx := context.Background()
+		http.DefaultClient = &http.Client{
+			Timeout: 10 * time.Second,
+		}
 
-	http.DefaultClient = &http.Client{
-		Timeout: 10 * time.Second,
+		c, err := credentials.NewIamCredentialsClient(ctx, option.WithCredentialsJSON([]byte(credBytes)))
+		if err != nil {
+			slog.Error("error iam credentials client", "error", err)
+			os.Exit(1)
+		}
+		defer c.Close()
+
+		accountName := fmt.Sprintf("projects/-/serviceAccounts/%s", account)
+		req := &credentialspb.GenerateIdTokenRequest{
+			Name:         accountName,
+			Audience:     aud,
+			IncludeEmail: true,
+		}
+		resp, err := c.GenerateIdToken(ctx, req)
+		if err != nil {
+			slog.Error("error generate id token", "error", err)
+			os.Exit(1)
+		}
+
+		idToken = resp.Token
+
+		acReq := credentialspb.GenerateAccessTokenRequest{
+			Name:  accountName,
+			Scope: []string{"https://www.googleapis.com/auth/cloud-platform.read-only"},
+		}
+
+		resp3, err := c.GenerateAccessToken(ctx, &acReq)
+		if err != nil {
+			slog.Error("error generate access token", "error", err)
+			os.Exit(1)
+		}
+
+		accessToken = resp3.AccessToken
+		return
 	}
-
-	raw := []byte(credBytes)
-
-	c, err := credentials.NewIamCredentialsClient(ctx, option.WithCredentialsJSON(raw))
-	if err != nil {
-		slog.Error("error iam credentials client", "error", err)
-		os.Exit(1)
-	}
-	defer c.Close()
-
-	accountName := fmt.Sprintf("projects/-/serviceAccounts/%s", account)
-	req := &credentialspb.GenerateIdTokenRequest{
-		Name: 				accountName,
-		Audience:     aud,
-		IncludeEmail: true,
-	}
-	resp, err := c.GenerateIdToken(ctx, req)
-	if err != nil {
-		slog.Error("error generate id token", "error", err)
-		os.Exit(1)
-	}
-
-	idToken = resp.Token
-
-	acReq := credentialspb.GenerateAccessTokenRequest{
-		Name:  accountName,
-		Scope: []string{"https://www.googleapis.com/auth/cloud-platform.read-only"},
-	}
-
-	resp3, err := c.GenerateAccessToken(ctx, &acReq)
-	if err != nil {
-		slog.Error("error generate access token", "error", err)
-		os.Exit(1)
-	}
-
-	accessToken = resp3.AccessToken
 	return
 }
