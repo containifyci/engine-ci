@@ -1,6 +1,6 @@
 module github.com/containifyci/engine-ci
 
-go 1.22.5
+go 1.22.7
 
 require (
 	github.com/containers/buildah v1.37.1
