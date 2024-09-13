@@ -653,7 +653,7 @@ func (p *PodmanManager) BuildImage(ctx context.Context, dockerfile []byte, image
 }
 
 // BuildImage builds an image
-func (p *PodmanManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, imageName string, platforms []string, _ string) (io.ReadCloser, []string, error) {
+func (p *PodmanManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, dockerCtx *bytes.Buffer, imageName string, platforms []string, _ string) (io.ReadCloser, []string, error) {
 	imageIDs := []struct {
 		ID       *string
 		Image    string
@@ -666,6 +666,15 @@ func (p *PodmanManager) BuildMultiArchImage(ctx context.Context, dockerfile []by
 		os.Exit(1)
 	}
 	defer os.RemoveAll(dir) // Clean up
+
+	if dockerCtx != nil {
+		// Extract the tar archive
+		err := utils.ExtractTar(dockerCtx, dir)
+		if err != nil {
+			slog.Error("Error extracting tar archive", "error", err)
+			os.Exit(1)
+		}
+	}
 
 	// Write the Dockerfile
 	dockerfilePath := dir + "/Dockerfile"
@@ -696,8 +705,9 @@ func (p *PodmanManager) BuildMultiArchImage(ctx context.Context, dockerfile []by
 		Log: func(format string, args ...interface{}) {
 			buf.WriteString(fmt.Sprintf(format, args...))
 		},
-		PullPolicy: buildahDefine.PullAlways,
-		Out:        os.Stdout,
+		PullPolicy:       buildahDefine.PullAlways,
+		Out:              os.Stdout,
+		ContextDirectory: dir,
 	}
 
 	if len(platforms) > 0 {
