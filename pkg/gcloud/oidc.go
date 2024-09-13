@@ -126,7 +126,7 @@ func (c *GCloudContainer) Auth() error {
 		c.applicationCredentials = string(cnt)
 		opts.Env = append(opts.Env,
 			fmt.Sprintf("GOOGLE_APPLICATION_CREDENTIALS=%s", "/tmp/.gcloud/adc.json"),
-			"ACCOUNT_EMAIL_OR_UNIQUEID=xxxx",
+			fmt.Sprintf("ACCOUNT_EMAIL_OR_UNIQUEID=%s", u.GetEnv("ACCOUNT_EMAIL_OR_UNIQUEID", "build")),
 		)
 	} else {
 		opts.Env = append(opts.Env,
@@ -165,7 +165,7 @@ func Image() string {
 		os.Exit(1)
 	}
 
-	fsCheckSum, err := calculateDirChecksum(f)
+	fsCheckSum, err := calculateDirChecksum(d)
 	if err != nil {
 		slog.Error("Failed to calculate embed.FS checksum", "error", err)
 		os.Exit(1)

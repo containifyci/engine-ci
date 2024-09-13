@@ -106,6 +106,13 @@ func New(env EnvType) *Container {
 	return &Container{t: t{client: _client, ctx: context.TODO()}, Env: env}
 }
 
+func getContainifyHost() string {
+	if v, ok := GetBuild().Custom["CONTAINIFYCI_HOST"]; ok {
+		return v[0]
+	}
+	return ""
+}
+
 func (c *Container) Create(opts types.ContainerConfig) error {
 	c.Opts = opts
 
@@ -131,6 +138,14 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 				return nil
 			}
 		}
+	}
+
+	if opts.Env == nil {
+		opts.Env = []string{}
+	}
+
+	if getContainifyHost() != "" {
+		opts.Env = append(opts.Env, fmt.Sprintf("CONTAINIFYCI_HOST=%s", getContainifyHost()))
 	}
 
 	if opts.Platform == types.AutoPlatform {
