@@ -3,9 +3,6 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"math/rand"
-	"net"
-	"net/http"
 	"os"
 	"slices"
 	"strings"
@@ -18,6 +15,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/github"
 	"github.com/containifyci/engine-ci/pkg/golang"
 	"github.com/containifyci/engine-ci/pkg/goreleaser"
+	"github.com/containifyci/engine-ci/pkg/kv"
 	"github.com/containifyci/engine-ci/pkg/maven"
 	"github.com/containifyci/engine-ci/pkg/network"
 	"github.com/containifyci/engine-ci/pkg/protobuf"
@@ -181,48 +179,8 @@ func (c *Command) AddTarget(name string, fnc func() error) {
 	}
 }
 
-func getRandomPort() (*Server, error) {
-	//TODO define maximal retries
-	for {
-		port := rand.Intn(65535-1024) + 1024 // Random port between 1024 and 65535
-		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-		if err == nil {
-			return &Server{
-				listener: l,
-				port:     port,
-			}, nil
-		}
-	}
-}
-
-type Server struct {
-	listener net.Listener
-	port int
-}
-
-func (c *Command) startHttpServer() (error, *Server, func()) {
-	srv, err := getRandomPort()
-	if err != nil {
-		slog.Error("Failed to find available port", "error", err)
-		return err, nil, nil
-	}
-
-	handler := http.NewServeMux()
-
-	handler.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "okay")
-	})
-
-	return nil, srv, func() {
-		if err := http.Serve(srv.listener, handler); err != nil &&
-			!strings.HasSuffix(err.Error(), "use of closed network connection"){
-			slog.Error("Failed to start http server", "error", err)
-		}
-	}
-}
-
 func (c *Command) Run(target string, arg *container.Build) {
-	err, srv, fnc := c.startHttpServer()
+	err, srv, fnc := kv.StartHttpServer(kv.NewKeyValueStore())
 	if err != nil {
 		slog.Error("Failed to start http server", "error", err)
 		os.Exit(1)
@@ -230,16 +188,16 @@ func (c *Command) Run(target string, arg *container.Build) {
 	go fnc()
 	defer func () {
 		slog.Info("Stopping http server")
-		srv.listener.Close()
+		srv.Listener.Close()
 
 		buildSteps = build.NewBuildSteps()
 	} ()
-	slog.Info("Started http server", "address", srv.listener.Addr().String())
+	slog.Info("Started http server", "address", srv.Listener.Addr().String())
 	addr := network.Address{Host: "localhost"}
 	if arg.Custom == nil {
 		arg.Custom = make(map[string][]string)
 	}
-	arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), srv.port)}
+	arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), srv.Port)}
 	bs := Pre(arg)
 	switch arg.BuildType {
 	case container.GoLang:

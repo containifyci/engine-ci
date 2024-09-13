@@ -6,6 +6,7 @@ package main
 //go:generate go mod tidy
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -35,27 +36,53 @@ func folderExists(path string) bool {
 	return info.IsDir() // Returns true if it exists and is a directory, false otherwise
 }
 
+// SetKeyValue sets a key-value pair in the store
+func setValue(key, value string) error {
+	baseURL := fmt.Sprintf("http://%s", os.Getenv("CONTAINIFYCI_HOST"))
+	url := fmt.Sprintf("%s/mem/%s", baseURL, key)
+
+	fmt.Printf("Store in mem %s", url)
+
+	resp, err := http.Post(url, "text/plain", bytes.NewBuffer([]byte(value)))
+	if err != nil {
+		slog.Error("error post request", "error", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to set key-value pair: %s", resp.Status)
+	}
+
+	return nil
+}
+
 func main() {
 	idToken, accessToken := gcpAuth()
 
-	if !folderExists("/src/.gcloud") {
-		err := os.Mkdir("/src/.gcloud", 0744)
+	if os.Getenv("CONTAINIFYCI_HOST") != "" {
+		setValue("idtoken", idToken)
+		setValue("accesstoken", accessToken)
+
+	} else {
+		if !folderExists("/src/.gcloud") {
+			err := os.Mkdir("/src/.gcloud", 0744)
+			if err != nil {
+				slog.Error("error create dir", "error", err)
+				os.Exit(1)
+			}
+		}
+		err := os.WriteFile("/src/.gcloud/idtoken", []byte(idToken), 0744)
 		if err != nil {
-			slog.Error("error create dir", "error", err)
+			slog.Error("error write id token", "error", err)
 			os.Exit(1)
 		}
-	}
 
-	err := os.WriteFile("/src/.gcloud/idtoken", []byte(idToken), 0744)
-	if err != nil {
-		slog.Error("error write id token", "error", err)
-		os.Exit(1)
-	}
-
-	err = os.WriteFile("/src/.gcloud/accesstoken", []byte(accessToken), 0744)
-	if err != nil {
-		slog.Error("error write access token", "error", err)
-		os.Exit(1)
+		err = os.WriteFile("/src/.gcloud/accesstoken", []byte(accessToken), 0744)
+		if err != nil {
+			slog.Error("error write access token", "error", err)
+			os.Exit(1)
+		}
 	}
 }
 
