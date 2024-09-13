@@ -1,6 +1,8 @@
-package gcloud
+//go:build submodule
+package main
 
-//go:generate go mod init gcloud
+//go:generate mv go.mod.embed go.mod
+//go:generate mv go.sum.embed go.sum
 //go:generate go mod tidy
 
 import (
@@ -23,16 +25,28 @@ import (
 	"google.golang.org/api/option"
 )
 
+// folderExists checks if a folder exists at the given path.
+func folderExists(path string) bool {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false // Folder does not exist
+	}
+
+	return info.IsDir() // Returns true if it exists and is a directory, false otherwise
+}
+
 func main() {
 	idToken, accessToken := gcpAuth()
 
-	err := os.Mkdir("/src/.gcloud", 0744)
-	if err != nil {
-		slog.Error("error create dir", "error", err)
-		os.Exit(1)
+	if !folderExists("/src/.gcloud") {
+		err := os.Mkdir("/src/.gcloud", 0744)
+		if err != nil {
+			slog.Error("error create dir", "error", err)
+			os.Exit(1)
+		}
 	}
 
-	err = os.WriteFile("/src/.gcloud/idtoken", []byte(idToken), 0744)
+	err := os.WriteFile("/src/.gcloud/idtoken", []byte(idToken), 0744)
 	if err != nil {
 		slog.Error("error write id token", "error", err)
 		os.Exit(1)

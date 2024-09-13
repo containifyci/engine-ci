@@ -535,7 +535,8 @@ func (d *DockerManager) ensureBuilderExists(ctx context.Context, builderName str
 }
 
 // BuildMultiArchImage builds a multi-architecture image using docker cli because the golang client doesn't support it yet
-func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error) {
+func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, dockerCtx *bytes.Buffer, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error) {
+// func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error) {
 	err := d.ensureBuilderExists(ctx, "containifyci-builder")
 	if err != nil {
 		slog.Error("Error ensuring builder exists", "error", err)
@@ -547,7 +548,16 @@ func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []by
 		slog.Error("Error creating temp directory", "error", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(dir) // Clean up
+	// defer os.RemoveAll(dir) // Clean up
+
+	if dockerCtx != nil {
+		// Extract the tar archive
+		err := utils.ExtractTar(dockerCtx, dir)
+		if err != nil {
+			slog.Error("Error extracting tar archive", "error", err)
+			os.Exit(1)
+		}
+	}
 
 	// Write the Dockerfile
 	dockerfilePath := dir + "/Dockerfile"
@@ -625,6 +635,8 @@ func (d *DockerManager) BuildImage(ctx context.Context, dockerfile []byte, image
 		Tags:       []string{imageName},
 		Platform:   platform,
 		Dockerfile: "Dockerfile",
+		//TODO add docker context that contains the folders and files that are referenced in the Dockerfile
+		// Context: ,
 		BuildArgs: map[string]*string{
 			"TARGETPLATFORM": &platform,
 			"TARGETOS":       &platformSpec.OS,

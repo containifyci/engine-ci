@@ -1,0 +1,50 @@
+name: Go Sub Module service workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - pkg/gcloud/src/**
+
+concurrency:
+  group: engine_ci_service_sub_mod_${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # for checkout
+  id-token: write # for authenticating to Google Cloud Platform
+  pull-requests: write # for updating pr
+
+jobs:
+  build-engine-ci:
+    runs-on: ubuntu-latest
+    env:
+      go_version: 1.23.0
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - pkg/gcloud/src/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH agent for retrieving (private) Github dependencies
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CONTAINIFYCI_CI_SSH_PRIVATE_KEY }}
+
+      - name: Force access to Github repositories using SSH
+        run: git config --global url.ssh://git@github.com/.insteadOf https://github.com/
+
+      - name: Install go ${{ env.go_version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.go_version }}
+
+      - name: Build Go
+        working-directory: ${{ matrix.target }}
+        run: |
+          go generate -tags=submodule ./...
+          go build -tags=submodule ./...

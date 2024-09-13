@@ -1,6 +1,7 @@
 package cri
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -33,7 +34,7 @@ type ContainerManager interface {
 	WaitContainer(ctx context.Context, id string, waitCondition string) (*int64, error)
 
 	BuildImage(ctx context.Context, dockerfile []byte, imageName string, platform string) (io.ReadCloser, error)
-	BuildMultiArchImage(ctx context.Context, dockerfile []byte, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error)
+	BuildMultiArchImage(ctx context.Context, dockerfile []byte, dockerCtx *bytes.Buffer, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error)
 
 	ListImage(ctx context.Context, image string) ([]string, error)
 	PullImage(ctx context.Context, image string, authBase64 string, platform string) (io.ReadCloser, error)
