@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/containifyci/engine-ci/pkg/kv"
 )
 
 func GetEnvWithDefault(key string, def func() string ) string {
@@ -58,6 +60,16 @@ func GetValue(value string, envType string) string {
 		}
 		slog.Info("Retrieved environment variable from command", "command", cmd)
 		return *env2
+	}
+	if strings.HasPrefix(value, "mem:") {
+		key := strings.TrimPrefix(value, "mem:")
+
+		val, ok := kv.NewKeyValueStore().GetVal(key)
+		if !ok {
+			slog.Warn("Key not found in memory", "key", key)
+			Getenv(key, envType)
+		}
+		return val
 	}
 	return value
 }

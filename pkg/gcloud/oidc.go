@@ -165,7 +165,7 @@ func Image() string {
 		os.Exit(1)
 	}
 
-	fsCheckSum, err := calculateDirChecksum(f)
+	fsCheckSum, err := calculateDirChecksum(d)
 	if err != nil {
 		slog.Error("Failed to calculate embed.FS checksum", "error", err)
 		os.Exit(1)
