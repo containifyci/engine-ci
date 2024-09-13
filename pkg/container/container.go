@@ -1,6 +1,7 @@
 package container
 
 import (
+	"archive/tar"
 	"bufio"
 	"bytes"
 	"context"
@@ -11,10 +12,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -68,6 +71,8 @@ type Container struct {
 	Image   string
 	Env     EnvType
 	Verbose bool
+
+	Source fs.ReadDirFS
 
 	Opts types.ContainerConfig
 	t
@@ -477,9 +482,9 @@ func GetBuild() *Build {
 	return _build
 }
 
-func (c *Container) BuildImageByPlatforms(dockerfile []byte, imageName string, platforms []string) ([]string, error) {
+func (c *Container) BuildImageByPlatforms(dockerfile []byte, dockerCtx *bytes.Buffer, imageName string, platforms []string) ([]string, error) {
 	authConfig := registryAuthBase64(imageName)
-	reader, imageIds, err := c.client().BuildMultiArchImage(c.ctx, dockerfile, imageName, platforms, authConfig)
+	reader, imageIds, err := c.client().BuildMultiArchImage(c.ctx, dockerfile, dockerCtx, imageName, platforms, authConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -562,6 +567,16 @@ func ComputeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
+func SumChecksum(sums ...[]byte) string {
+	hasher := sha256.New()
+
+	for _, sum := range sums {
+		hasher.Write(sum)
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
 func (c *Container) BuildingContainer(opts types.ContainerConfig) error {
 	opts.Cmd = []string{"sh", "/tmp/script.sh"}
 
@@ -635,6 +650,8 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 	}
 
 	if len(platforms) == 1 {
+
+		//TODO: implement providing the src folder for the docker build
 		slog.Info("Start building intermediate container image", "image", image)
 		err = c.BuildImage(dockerFile, image)
 		if err != nil {
@@ -665,10 +682,18 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 			return nil
 		}
 
-		// err = c.Container.BuildImage(dockerFile, image)
-		// TODO get list of platforms
+		var buf *bytes.Buffer
+
+		if c.Source != nil {
+			buf, err = TarDir(c.Source)
+			if err != nil {
+				slog.Error("Failed to tar source", "error", err)
+				os.Exit(1)
+			}
+		}
+
 		// Multi-platform builds are already pushed otherwise there are not usable by podman or docker
-		_, err = c.BuildImageByPlatforms(dockerFile, image, platforms)
+		_, err = c.BuildImageByPlatforms(dockerFile, buf, image, platforms)
 		if err != nil {
 			slog.Error("Failed to build image", "error", err)
 			os.Exit(1)
@@ -676,6 +701,75 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 	}
 
 	return err
+}
+
+func TarDir(src fs.ReadDirFS) (*bytes.Buffer, error) {
+	// Create a buffer to write our archive to
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	// Walk the directory and write each file to the tar writer
+	err := fs.WalkDir(src, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		fi, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		// Create a tar header
+		header, err := tar.FileInfoHeader(fi, fi.Name())
+		if err != nil {
+			return err
+		}
+
+		// srcPath := "."
+
+		// if srcPath == "." ||
+		// 	srcPath == "./" {
+		// 	srcPath = ""
+		// }
+		// Ensure the header has the correct name
+		header.Name = filepath.ToSlash(path)
+
+		// Write the header to the tar writer
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		// If the file is not a directory, write the file content
+		if !fi.IsDir() {
+			data, err := src.Open(path)
+			if err != nil {
+				return err
+			}
+			defer data.Close()
+
+			if _, err := io.Copy(tw, data); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		slog.Error("Error walking the directory", "error", err)
+		return nil, err
+	}
+
+	// Close the tar writer
+	if err := tw.Close(); err != nil {
+		slog.Error("Error closing the tar writer", "error", err)
+		return nil, err
+	}
+	return buf, nil
 }
 
 func (c *Container) Apply(opts *types.ContainerConfig) {

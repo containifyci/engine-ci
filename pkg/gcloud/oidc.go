@@ -1,12 +1,14 @@
 package gcloud
 
 import (
+	"crypto/sha256"
 	"embed"
 	"fmt"
+	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
@@ -19,8 +21,8 @@ import (
 //go:embed Dockerfile*
 var f embed.FS
 
-//go:embed auth_provider.go.tmpl
-var authProvider string
+//go:embed src/*
+var d embed.FS
 
 const (
 	CI_IMAGE = "golang:1.22.5-alpine"
@@ -42,6 +44,42 @@ func (c *GCloudContainer) Name() string     { return "gcloud_oidc" }
 func (c *GCloudContainer) Pull() error      { return c.Container.Pull(CI_IMAGE) }
 func (c *GCloudContainer) Images() []string { return []string{CI_IMAGE} }
 
+// calculateDirChecksum computes a combined SHA-256 checksum for all files in the specified directory within the embed.FS.
+func calculateDirChecksum(_fs embed.FS) ([]byte, error) {
+	// Initialize a SHA-256 hasher.
+	hasher := sha256.New()
+
+	// Walk through the directory in the embedded filesystem.
+	err := fs.WalkDir(_fs, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("error accessing path %s: %w", path, err)
+		}
+
+		// Only process regular files (skip directories)
+		if !d.IsDir() {
+			// Open the embedded file.
+			file, err := _fs.Open(path)
+			if err != nil {
+				return fmt.Errorf("failed to open file %s: %w", path, err)
+			}
+			defer file.Close()
+
+			// Hash the content of the file.
+			if _, err := io.Copy(hasher, file); err != nil {
+				return fmt.Errorf("failed to hash content of file %s: %w", path, err)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the combined checksum.
+	return hasher.Sum(nil), nil
+}
+
 func (c *GCloudContainer) BuildImage() error {
 	image := Image()
 
@@ -53,6 +91,8 @@ func (c *GCloudContainer) BuildImage() error {
 
 	platforms := types.GetPlatforms(container.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
+
+	c.Container.Source = d
 
 	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
@@ -118,23 +158,28 @@ func (c *GCloudContainer) Auth() error {
 	return c.Container.Wait()
 }
 
-func (c *GCloudContainer) Code() string {
-	return strings.ReplaceAll(authProvider, "package gcloud", "package main")
-}
-
 func Image() string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
 		os.Exit(1)
 	}
-	tag := container.ComputeChecksum(dockerFile)
+
+	fsCheckSum, err := calculateDirChecksum(f)
+	if err != nil {
+		slog.Error("Failed to calculate embed.FS checksum", "error", err)
+		os.Exit(1)
+	}
+
+	dckCheckSum := sha256.Sum256(dockerFile)
+	tag := container.SumChecksum(fsCheckSum, dckCheckSum[:])
+	// tag := container.ComputeChecksum(dockerFile)
 	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "gcloud", tag)
 }
 
 func (c *GCloudContainer) Run() error {
-	// if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" ||
-	if container.GetBuild().CustomString("gcloud_oidc") == "" {
+	if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" ||
+		container.GetBuild().CustomString("gcloud_oidc") == "" {
 		slog.Info("No ACTIONS_ID_TOKEN_REQUEST_URL found and Custom property gcloud_oidc not set, skipping gcloud_oidc container", "ACTIONS_ID_TOKEN_REQUEST_URL", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), "gcloud_oidc", container.GetBuild().CustomString("gcloud_oidc"))
 		return nil
 	}
