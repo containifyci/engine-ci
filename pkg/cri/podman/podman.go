@@ -885,20 +885,20 @@ func DecodeRegistryAuth(authBase64 string) (*registry.AuthConfig, error) {
 		return nil, err
 	}
 
-	var authCfg *registry.AuthConfig
+	var authCfg registry.AuthConfig
 
 	if len(base64Decoded) <= 0 {
-		return authCfg, nil
+		return &authCfg, nil
 	}
 
-	err = json.Unmarshal(base64Decoded, authCfg)
+	err = json.Unmarshal(base64Decoded, &authCfg)
 	if err != nil {
 		//TODO mask possible password leak in error message
 		slog.Error("Failed to unmarshal auth config", "error", err, "auth", string(base64Decoded))
 		return nil, err
 	}
 
-	return authCfg, nil
+	return &authCfg, nil
 }
 
 // PushImage pushes an image

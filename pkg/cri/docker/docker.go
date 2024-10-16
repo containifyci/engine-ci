@@ -85,7 +85,7 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 			HostPort: p.Host.Port,
 		}
 		// binding, set := p.ToPortBinding()
-		portMap[nat.Port(p.Container.IP)] = []nat.PortBinding{portBinding}
+		portMap[nat.Port(p.Container.String())] = []nat.PortBinding{portBinding}
 		portSet[nat.Port(p.Container.Port)] = struct{}{}
 	}
 	config.ExposedPorts = portSet

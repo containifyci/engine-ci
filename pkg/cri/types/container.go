@@ -14,6 +14,13 @@ type PortBinding struct {
 	Port string
 }
 
+func (p PortBinding) String() string {
+	if p.IP != "" {
+		return p.IP + ":" + p.Port
+	}
+	return p.Port
+}
+
 type Binding struct {
 	Host      PortBinding
 	Container PortBinding
