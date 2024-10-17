@@ -18,6 +18,10 @@ func registryAuth() map[string]*protos2.ContainerRegistry {
 			Username: "env:DOCKER_USER",
 			Password: "env:DOCKER_TOKEN",
 		},
+		"ghcr.io": {
+			Username: "USERNAME",
+			Password: "env:GHCR_TOKEN",
+		},
 	}
 }
 

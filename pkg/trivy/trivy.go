@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	IMAGE = "ghcr.io/aquasecurity/trivy:canary"
+	IMAGE = "public.ecr.aws/aquasecurity/trivy:canary"
 )
 
 type TrivyContainer struct {
@@ -113,6 +113,8 @@ func (c *TrivyContainer) Scan() error {
 		"TRIVY_CACHE_DIR=/root/.cache/trivy",
 		"TRIVY_INSECURE=true",
 		"TRIVY_NON_SSL=true",
+		"TRIVY_DB_REPOSITORY=ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db",
+		"TRIVY_JAVA_DB_REPOSITORY=ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db",
 	}
 
 	ssh, err := network.SSHForward()
