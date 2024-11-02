@@ -9,10 +9,10 @@ import (
 )
 
 var (
-    version = "dev"
-    commit  = "none"
-    date    = "unknown"
-		repo    = "github.com/containifyci/engine-ci"
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	repo    = "github.com/containifyci/engine-ci"
 )
 
 func main() {

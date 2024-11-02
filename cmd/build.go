@@ -45,6 +45,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: RunBuild,
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+	},
 }
 
 func init() {
@@ -291,14 +293,14 @@ func (c *Command) Run(target string, arg *container.Build) {
 	}
 }
 
-func (c *Command) Main(arg container.Build) {
-	if len(os.Args) < 2 {
-		fmt.Print("Usage: containifyci <command>\n")
-		fmt.Print("Available commands: all, lint, build, push, sonar, protobuf\n")
-		os.Exit(1)
-	}
-	c.Run(os.Args[1], buildArgs)
-}
+// func (c *Command) Main(arg container.Build) {
+// 	if len(os.Args) < 2 {
+// 		fmt.Print("Usage: containifyci <command>\n")
+// 		fmt.Print("Available commands: all, lint, build, push, sonar, protobuf\n")
+// 		os.Exit(1)
+// 	}
+// 	c.Run(os.Args[1], buildArgs)
+// }
 
 // InitBuildSteps can be used to set the build steps for the build command
 // This is useful for registering a new build step as part of a extension

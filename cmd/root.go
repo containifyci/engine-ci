@@ -6,14 +6,16 @@ import (
 	"os"
 
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/logger"
 
 	"github.com/dusted-go/logging/prettylog"
 	"github.com/spf13/cobra"
 )
 
 type rootCmdArgs struct {
-	Verbose bool
-	Target  string
+	Verbose  bool
+	Progress string
+	Target   string
 }
 
 var RootArgs = &rootCmdArgs{}
@@ -40,9 +42,16 @@ to quickly create a Cobra application.`,
 			logOpts.AddSource = true
 		}
 
+		logger.NewLogAggregator(RootArgs.Progress)
+
 		prettyHandler := prettylog.NewHandler(&logOpts)
 		logger := slog.New(prettyHandler)
 		slog.SetDefault(logger)
+		slog.Info("Progress logging format", "format", RootArgs.Progress)
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		slog.Info("Flushing logs")
+		logger.GetLogAggregator().Flush()
 	},
 }
 
@@ -60,10 +69,11 @@ func init() {
 	}
 
 	prettyHandler := prettylog.NewHandler(&logOpts)
-	logger := slog.New(prettyHandler)
-	slog.SetDefault(logger)
+	slogger := slog.New(prettyHandler)
+	slog.SetDefault(slogger)
 	rootCmd.PersistentFlags().BoolVarP(&RootArgs.Verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringVarP(&RootArgs.Target, "target", "t", "all", "The build target to run")
+	rootCmd.PersistentFlags().StringVar(&RootArgs.Progress, "progress", "plain", "The progress logging format to use. Options are: progress, plain")
 }
 
 func All(opts *container.Build) error {
