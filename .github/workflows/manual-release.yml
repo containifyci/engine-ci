@@ -1,0 +1,30 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag to release"
+        required: true
+        default: ""
+        type: string
+
+concurrency:
+  group: engine_ci_service_${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-engine-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          # draft: true
+          generateReleaseNotes: true
+          makeLatest: true
+          tag: ${{ inputs.tag_name }}
+          token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
