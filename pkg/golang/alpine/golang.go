@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.22.7"
+	DEFAULT_GO = "1.23.2"
 	PROJ_MOUNT = "/src"
-	LINT_IMAGE = "golangci/golangci-lint:v1.59.1"
+	LINT_IMAGE = "golangci/golangci-lint:v1.61.0"
 	OUT_DIR    = "/out/"
 )
 
@@ -86,13 +86,13 @@ type GoBuild struct {
 	rf     build.RunFunc
 	name   string
 	images []string
-	async	 bool
+	async  bool
 }
 
-func (g GoBuild) Run() error { return g.rf() }
-func (g GoBuild) Name() string { return g.name }
-func (g GoBuild) Images() []string { return g.images}
-func (g GoBuild) IsAsync() bool { return g.async }
+func (g GoBuild) Run() error       { return g.rf() }
+func (g GoBuild) Name() string     { return g.name }
+func (g GoBuild) Images() []string { return g.images }
+func (g GoBuild) IsAsync() bool    { return g.async }
 
 func NewLinter() build.Build {
 	return GoBuild{
@@ -108,7 +108,7 @@ func NewLinter() build.Build {
 		},
 		name:   "golangci-lint",
 		images: []string{LINT_IMAGE},
-		async: false,
+		async:  false,
 	}
 }
 
