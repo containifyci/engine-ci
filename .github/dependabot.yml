@@ -15,18 +15,6 @@ updates:
           - "minor"
           - "patch"
   - package-ecosystem: "docker"
-    directory: "pkg/golang"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-    groups:
-      minor:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-  - package-ecosystem: "docker"
     directory: "pkg/maven"
     schedule:
       interval: "weekly"
