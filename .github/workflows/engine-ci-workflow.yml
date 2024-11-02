@@ -83,7 +83,7 @@ jobs:
       pull-requests: write # for updating pr
 
     env:
-      go_version: 1.22.7
+      go_version: 1.23.2
 
     steps:
       - name: Checkout
