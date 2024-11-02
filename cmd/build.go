@@ -19,6 +19,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/maven"
 	"github.com/containifyci/engine-ci/pkg/network"
 	"github.com/containifyci/engine-ci/pkg/protobuf"
+	"github.com/containifyci/engine-ci/pkg/pulumi"
 	"github.com/containifyci/engine-ci/pkg/python"
 	"github.com/containifyci/engine-ci/pkg/sonarcloud"
 	"github.com/containifyci/engine-ci/pkg/svc"
@@ -130,6 +131,7 @@ func Pre(arg ...*container.Build) *build.BuildSteps {
 			}
 			bs.Add(golang.NewProd())
 			bs.Add(goreleaser.New())
+			bs.Add(pulumi.New())
 		case container.Maven:
 			bs.Add(maven.New())
 			bs.Add(maven.NewProd())
@@ -186,12 +188,12 @@ func (c *Command) Run(target string, arg *container.Build) {
 		os.Exit(1)
 	}
 	go fnc()
-	defer func () {
+	defer func() {
 		slog.Info("Stopping http server")
 		srv.Listener.Close()
 
 		buildSteps = build.NewBuildSteps()
-	} ()
+	}()
 	slog.Info("Started http server", "address", srv.Listener.Addr().String())
 	addr := network.Address{Host: "localhost"}
 	if arg.Custom == nil {
@@ -215,6 +217,9 @@ func (c *Command) Run(target string, arg *container.Build) {
 		})
 		c.AddTarget("release", func() error {
 			return bs.Run("gorelease")
+		})
+		c.AddTarget("pulumi", func() error {
+			return bs.Run("pulumi")
 		})
 	case container.Maven:
 		c.AddTarget("build", func() error {
