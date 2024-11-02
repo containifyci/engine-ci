@@ -40,8 +40,8 @@ func main() {
 	opts2.Verbose = false
 	opts2.File = "main.go"
 	opts2.Properties = map[string]*build.ListValue{
-		"tags": build.NewList("containers_image_openpgp"),
-		"from": build.NewList("debian"),
+		"tags":       build.NewList("containers_image_openpgp"),
+		"from":       build.NewList("debian"),
 		"goreleaser": build.NewList("false"),
 	}
 	opts2.Registries = registryAuth()

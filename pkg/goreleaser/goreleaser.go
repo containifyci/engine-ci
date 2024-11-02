@@ -14,8 +14,6 @@ import (
 )
 
 const (
-	// IMAGE = "sonarsource/sonar-scanner-cli"
-	// IMAGE = "sonar:latest"
 	IMAGE = "goreleaser/goreleaser"
 )
 
@@ -56,20 +54,6 @@ func CacheFolder() string {
 	gomodcache := strings.Trim(string(output), "\n")
 	fmt.Printf("GOMODCACHE location: %s\n", gomodcache)
 	return gomodcache
-}
-
-func (c *GoReleaserContainer) CopyScript() error {
-	// Create a temporary script in-memory
-	script := `#!/bin/sh
-set -xe
-sonar-scanner -X -Dsonar.projectBaseDir=/usr/src
-`
-	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
-	if err != nil {
-		slog.Error("Failed to copy script to container: %s", "error", err)
-		os.Exit(1)
-	}
-	return err
 }
 
 func (c *GoReleaserContainer) ApplyEnvs(envs []string) []string {
@@ -132,12 +116,6 @@ func (c *GoReleaserContainer) Release(env container.EnvType) error {
 	err := c.Container.Create(opts)
 	if err != nil {
 		return err
-	}
-
-	err = c.CopyScript()
-	if err != nil {
-		slog.Error("Failed to start container", "error", err)
-		os.Exit(1)
 	}
 
 	err = c.Container.Start()
