@@ -25,6 +25,8 @@ import (
 	"github.com/docker/docker/api/types/registry"
 
 	"github.com/containifyci/engine-ci/pkg/cri"
+	"github.com/containifyci/engine-ci/pkg/logger"
+
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	u "github.com/containifyci/engine-ci/pkg/utils"
@@ -74,7 +76,8 @@ type Container struct {
 
 	Source fs.ReadDirFS
 
-	Opts types.ContainerConfig
+	Opts   types.ContainerConfig
+	Prefix string
 	t
 }
 
@@ -170,6 +173,10 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 	}
 	c.Name = info.Name
 	c.Image = info.Image
+	img, tag := ParseImageTag(info.Image)
+
+	short := fmt.Sprintf("%s:%s", img, safeShort(tag, 8))
+	c.Prefix = fmt.Sprintf("%s (%s)", c.ID[:6], short)
 	return err
 }
 
@@ -186,7 +193,7 @@ func (c *Container) Start() error {
 
 	short := fmt.Sprintf("%s:%s", img, safeShort(tag, 8))
 	go func() {
-		streamContainerLogs(c.ctx, c.client(), c.ID, short)
+		streamContainerLogs(c.ctx, c.client(), c.ID, short, c.Prefix)
 	}()
 	return err
 }
@@ -206,7 +213,7 @@ func ParseImageTag(imageTag string) (string, string) {
 	return parts[0], parts[1]
 }
 
-func streamContainerLogs(ctx context.Context, cli cri.ContainerManager, containerID, image string) {
+func streamContainerLogs(ctx context.Context, cli cri.ContainerManager, containerID, image, prefix string) {
 	out, err := cli.ContainerLogs(ctx, containerID, true, true, true)
 	if err != nil {
 		slog.Error("Error getting logs for container", "containerId", containerID, "error", err)
@@ -214,12 +221,11 @@ func streamContainerLogs(ctx context.Context, cli cri.ContainerManager, containe
 	}
 	defer out.Close()
 
-	prefix := fmt.Sprintf("[%s (%s)] ", containerID[:6], image)
-
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 		logLine := scanner.Text()
-		fmt.Printf("%s%s\n", prefix, logLine)
+		logger.GetLogAggregator().LogMessage(prefix, logLine)
+		// fmt.Printf("%s%s\n", prefix, logLine)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -297,6 +303,9 @@ func (c *Container) Wait() error {
 		log.Fatal(fmt.Errorf("Failed to wait for container status code is nil"))
 	}
 	if *statusCode != 0 {
+		defer func() {
+			logger.GetLogAggregator().FailedMessage(c.Prefix, "Container exited with non 0")
+		}()
 		// Inspect the container to retrieve metadata
 		inspection, err := c.client().InspectContainer(c.ctx, c.ID)
 		if err != nil {
@@ -305,6 +314,7 @@ func (c *Container) Wait() error {
 		}
 		return fmt.Errorf("Container %s exited with status %d", inspection.Image, *statusCode)
 	}
+	logger.GetLogAggregator().SuccessMessage(c.Prefix, "Container exited with status 0")
 	return nil
 }
 
