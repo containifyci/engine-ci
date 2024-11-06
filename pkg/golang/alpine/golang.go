@@ -39,6 +39,11 @@ type GoContainer struct {
 }
 
 func New() *GoContainer {
+	platforms := []*types.PlatformSpec{container.GetBuild().Platform.Container}
+	if !container.GetBuild().Platform.Same() {
+		slog.Info("Different platform detected", "host", container.GetBuild().Platform.Host, "container", container.GetBuild().Platform.Container)
+		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
+	}
 	return &GoContainer{
 		App:       container.GetBuild().App,
 		Container: container.New(container.BuildEnv),
@@ -46,9 +51,10 @@ func New() *GoContainer {
 		ImageTag:  container.GetBuild().ImageTag,
 		// TODO: only build multiple platforms when buildenv and localenv are running on different platforms
 		// FIX: linux-arm64 go build is needed when building contains on MacOS M1/M2
-		Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/amd64")},
-		File:      container.GetBuild().File,
-		Tags:      container.GetBuild().Custom["tags"],
+		Platforms: platforms,
+		// Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")},
+		File: container.GetBuild().File,
+		Tags: container.GetBuild().Custom["tags"],
 	}
 }
 

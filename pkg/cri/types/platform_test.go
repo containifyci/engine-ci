@@ -13,7 +13,7 @@ func TestGetContainerPlatform(t *testing.T) {
 	}{
 		{
 			Host:     "darwin/arm64",
-			Expected: "linux/amd64",
+			Expected: "linux/arm64",
 		},
 		{
 			Host:     "darwin/amd64",

@@ -9,7 +9,8 @@ ARG PROTOC_GEN_GOHTTP=v1.6.0
 ARG PROTOC_GEN_GOTAG=v1.0.1
 
 
-RUN go install -v google.golang.org/protobuf/cmd/protoc-gen-go@${PROTOC_GEN_GO_VERSION} \
+RUN arch \
+  && go install -v google.golang.org/protobuf/cmd/protoc-gen-go@${PROTOC_GEN_GO_VERSION} \
   && go install -v google.golang.org/grpc/cmd/protoc-gen-go-grpc@${PROTOC_GEN_GO_GRPC_VERSION} \
   && go install -v github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
   && go install -v github.com/nametake/protoc-gen-gohttp@${PROTOC_GEN_GOHTTP} \
