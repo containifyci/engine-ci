@@ -1,8 +1,11 @@
 package logger
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"slices"
+	"strings"
 	"sync"
 )
 
@@ -10,7 +13,8 @@ const (
 	reset       = "\033[0m"  // Reset to default color
 	green       = "\033[32m" // Green text
 	red         = "\033[31m" // Red text
-	maxLogLines = 20         // Maximum lines per routine
+	grayscale   = "\033[90m" // Grayscale text
+	maxLogLines = 5          // Maximum lines per routine
 )
 
 type ResettableOnce struct {
@@ -149,10 +153,10 @@ func (la *LogAggregator) startLogDisplay() {
 			if logEntry.isDone {
 				if !logEntry.isFailed {
 					logEntry.messages = []string{} // Remove the "Done" message
-					fmt.Printf("%s[%s] (Completed)%s\n", green, id, reset)
+					fmt.Printf("%s%s (Completed)%s\n", green, id, reset)
 				} else {
-					logEntry.messages = last5Messages(logEntry.messages[:len(logEntry.messages)-1])
-					fmt.Printf("%s[%s] (Failed)%s\n", red, id, reset)
+					logEntry.messages = last5Messages(logEntry.messages[:len(logEntry.messages)])
+					fmt.Printf("%s%s (Failed)%s\n", red, id, reset)
 				}
 			} else {
 				logEntry.mu.Unlock()
@@ -175,7 +179,7 @@ func (la *LogAggregator) startLogDisplay() {
 
 			logEntry.mu.Lock()
 			if !logEntry.isDone {
-				fmt.Printf("[%s]:\n", id)
+				fmt.Printf("%s:\n", id)
 				for _, msg := range logEntry.messages {
 					fmt.Printf("   %s\n", msg)
 				}
@@ -194,8 +198,31 @@ func (la *LogAggregator) logMessage(routineID string, msg string, isDone bool, i
 	if la.format == "progress" {
 		la.logChannel <- LogMessage{routineID: routineID, message: msg, isDone: isDone, isFailed: isFailed}
 	} else {
-		fmt.Printf("%s%s\n", routineID, msg)
+		fmt.Printf("%s%s %s%s\n", grayscale, routineID, reset, msg)
 	}
+}
+
+func (la *LogAggregator) Write(p []byte) (n int, err error) {
+	msg := string(p)
+	msg = strings.TrimSuffix(msg, "\n")
+	la.logMessage("[engine-ci]", msg, false, false)
+	return len(p), nil
+}
+func (la *LogAggregator) Copy(r io.ReadCloser) (n int, err error) {
+	scanner := bufio.NewScanner(r)
+
+	i := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "errorDetail") {
+			la.logMessage("[engine-ci]", line, true, true)
+			return i, fmt.Errorf("errorDetail: %s", line)
+		} else {
+			la.logMessage("[engine-ci]", line, false, false)
+		}
+		i++
+	}
+	return i, nil
 }
 
 func (la *LogAggregator) SuccessMessage(routineID string, msg string) {

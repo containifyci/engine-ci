@@ -8,7 +8,6 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/logger"
 
-	"github.com/dusted-go/logging/prettylog"
 	"github.com/spf13/cobra"
 )
 
@@ -42,9 +41,9 @@ to quickly create a Cobra application.`,
 			logOpts.AddSource = true
 		}
 
-		logger.NewLogAggregator(RootArgs.Progress)
-
-		prettyHandler := prettylog.NewHandler(&logOpts)
+		// prettyHandler := prettylog.New(&logOpts, prettylog.WithDestinationWriter(logger.NewLogAggregator(RootArgs.Progress)))
+		// prettyHandler := slog.NewTextHandler(logger.NewLogAggregator(RootArgs.Progress), &logOpts)
+		prettyHandler := logger.New(logger.NewLogAggregator(RootArgs.Progress), logOpts.Level)
 		logger := slog.New(prettyHandler)
 		slog.SetDefault(logger)
 		slog.Info("Progress logging format", "format", RootArgs.Progress)
@@ -68,7 +67,10 @@ func init() {
 		ReplaceAttr: nil,
 	}
 
-	prettyHandler := prettylog.NewHandler(&logOpts)
+	// prettyHandler := prettylog.New(&logOpts, prettylog.WithDestinationWriter(logger.NewLogAggregator("progress")))
+	// prettyHandler := slog.NewTextHandler(logger.NewLogAggregator("progress"), &logOpts)
+	prettyHandler := logger.New(os.Stdout, logOpts.Level)
+
 	slogger := slog.New(prettyHandler)
 	slog.SetDefault(slogger)
 	rootCmd.PersistentFlags().BoolVarP(&RootArgs.Verbose, "verbose", "v", false, "Enable verbose logging")

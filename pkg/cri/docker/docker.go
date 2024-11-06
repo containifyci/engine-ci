@@ -15,6 +15,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/logger"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
@@ -116,7 +117,7 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 			return "", err
 		}
 		defer r.Close()
-		_, err = io.Copy(os.Stdout, r)
+		logger.GetLogAggregator().Copy(r)
 		if err != nil {
 			return "", err
 		}
@@ -536,7 +537,7 @@ func (d *DockerManager) ensureBuilderExists(ctx context.Context, builderName str
 
 // BuildMultiArchImage builds a multi-architecture image using docker cli because the golang client doesn't support it yet
 func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, dockerCtx *bytes.Buffer, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error) {
-// func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error) {
+	// func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error) {
 	err := d.ensureBuilderExists(ctx, "containifyci-builder")
 	if err != nil {
 		slog.Error("Error ensuring builder exists", "error", err)
@@ -613,7 +614,7 @@ func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []by
 		}
 		defer reader.Close()
 		// Read the build output
-		_, err = io.Copy(os.Stdout, reader)
+		_, err = logger.GetLogAggregator().Copy(reader)
 		if err != nil {
 			slog.Error("Failed to pull image", "error", err)
 			os.Exit(1)

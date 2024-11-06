@@ -16,6 +16,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/golang"
 	"github.com/containifyci/engine-ci/pkg/goreleaser"
 	"github.com/containifyci/engine-ci/pkg/kv"
+	"github.com/containifyci/engine-ci/pkg/logger"
 	"github.com/containifyci/engine-ci/pkg/maven"
 	"github.com/containifyci/engine-ci/pkg/network"
 	"github.com/containifyci/engine-ci/pkg/protobuf"
@@ -24,8 +25,6 @@ import (
 	"github.com/containifyci/engine-ci/pkg/sonarcloud"
 	"github.com/containifyci/engine-ci/pkg/svc"
 	"github.com/containifyci/engine-ci/pkg/trivy"
-
-	"github.com/dusted-go/logging/prettylog"
 
 	"github.com/spf13/cobra"
 )
@@ -96,7 +95,10 @@ func Init(args ...*container.Build) {
 		logOpts.AddSource = true
 	}
 
-	prettyHandler := prettylog.NewHandler(&logOpts)
+	// prettyHandler := prettylog.NewHandler(&logOpts)
+	// prettyHandler := slog.NewTextHandler(logger.NewLogAggregator(RootArgs.Progress), &logOpts)
+	prettyHandler := logger.New(logger.NewLogAggregator(RootArgs.Progress), logOpts.Level)
+
 	logger := slog.New(prettyHandler)
 	slog.SetDefault(logger)
 
