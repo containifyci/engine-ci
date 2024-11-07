@@ -179,7 +179,7 @@ func (la *LogAggregator) startLogDisplay() {
 
 			logEntry.mu.Lock()
 			if !logEntry.isDone {
-				fmt.Printf("%s:\n", id)
+				fmt.Printf("%s%s:%s\n", grayscale, id, reset)
 				for _, msg := range logEntry.messages {
 					fmt.Printf("   %s\n", msg)
 				}
@@ -208,6 +208,7 @@ func (la *LogAggregator) Write(p []byte) (n int, err error) {
 	la.logMessage("[engine-ci]", msg, false, false)
 	return len(p), nil
 }
+
 func (la *LogAggregator) Copy(r io.ReadCloser) (n int, err error) {
 	scanner := bufio.NewScanner(r)
 

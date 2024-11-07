@@ -69,7 +69,7 @@ type Build struct {
 	SourcePackages     []string
 	SourceFiles        []string
 	Verbose            bool
-	Registries 				 map[string]*protos2.ContainerRegistry
+	Registries         map[string]*protos2.ContainerRegistry
 
 	defaults bool
 }

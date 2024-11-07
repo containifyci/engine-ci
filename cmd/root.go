@@ -40,11 +40,7 @@ to quickly create a Cobra application.`,
 			logOpts.Level = slog.LevelDebug
 			logOpts.AddSource = true
 		}
-
-		// prettyHandler := prettylog.New(&logOpts, prettylog.WithDestinationWriter(logger.NewLogAggregator(RootArgs.Progress)))
-		// prettyHandler := slog.NewTextHandler(logger.NewLogAggregator(RootArgs.Progress), &logOpts)
-		prettyHandler := logger.New(logger.NewLogAggregator(RootArgs.Progress), logOpts.Level)
-		logger := slog.New(prettyHandler)
+		logger := slog.New(logger.New(RootArgs.Progress, logOpts))
 		slog.SetDefault(logger)
 		slog.Info("Progress logging format", "format", RootArgs.Progress)
 	},
@@ -67,11 +63,7 @@ func init() {
 		ReplaceAttr: nil,
 	}
 
-	// prettyHandler := prettylog.New(&logOpts, prettylog.WithDestinationWriter(logger.NewLogAggregator("progress")))
-	// prettyHandler := slog.NewTextHandler(logger.NewLogAggregator("progress"), &logOpts)
-	prettyHandler := logger.New(os.Stdout, logOpts.Level)
-
-	slogger := slog.New(prettyHandler)
+	slogger := slog.New(logger.NewRootLog(logOpts))
 	slog.SetDefault(slogger)
 	rootCmd.PersistentFlags().BoolVarP(&RootArgs.Verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringVarP(&RootArgs.Target, "target", "t", "all", "The build target to run")

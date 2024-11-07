@@ -97,6 +97,7 @@ func (c *TrivyContainer) Scan() error {
 	cache := CacheFolder()
 
 	dir, _ := filepath.Abs(".")
+	opts.WorkingDir = "/usr/src"
 	opts.Volumes = []types.Volume{
 		{
 			Type:   "bind",

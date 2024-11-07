@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/dusted-go/logging/prettylog"
 )
 
 type SimpleHandler struct {
@@ -20,15 +23,25 @@ type Options struct {
 	Level slog.Leveler
 }
 
-func New(out io.Writer, level slog.Leveler) *SimpleHandler {
+func NewRootLog(logOpts slog.HandlerOptions) slog.Handler {
+	return slog.NewTextHandler(os.Stdout, &logOpts)
+}
+
+func New(progress string, logOpts slog.HandlerOptions) slog.Handler {
+	if progress == "progress" {
+		return NewSimpleLog(NewLogAggregator(progress), logOpts.Level)
+	}
+	return NewPrettyLog(progress, logOpts)
+}
+
+func NewSimpleLog(out io.Writer, level slog.Leveler) slog.Handler {
 	h := &SimpleHandler{out: out, mu: &sync.Mutex{}}
-	// if opts != nil {
-	// 	h.opts = *opts
-	// }
-	// if h.opts.Level == nil {
-	// 	h.opts.Level = slog.LevelInfo
-	// }
 	h.opts.Level = level
+	return h
+}
+
+func NewPrettyLog(progress string, logOpts slog.HandlerOptions) slog.Handler {
+	h := prettylog.New(&logOpts, prettylog.WithDestinationWriter(NewLogAggregator(progress)))
 	return h
 }
 

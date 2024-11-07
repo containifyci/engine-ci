@@ -95,11 +95,7 @@ func Init(args ...*container.Build) {
 		logOpts.AddSource = true
 	}
 
-	// prettyHandler := prettylog.NewHandler(&logOpts)
-	// prettyHandler := slog.NewTextHandler(logger.NewLogAggregator(RootArgs.Progress), &logOpts)
-	prettyHandler := logger.New(logger.NewLogAggregator(RootArgs.Progress), logOpts.Level)
-
-	logger := slog.New(prettyHandler)
+	logger := slog.New(logger.New(RootArgs.Progress, logOpts))
 	slog.SetDefault(logger)
 
 	git, err := svc.SetGitInfo()
