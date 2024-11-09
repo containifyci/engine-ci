@@ -1,7 +1,7 @@
 FROM alpine:3.20 as builder
 
 ARG TARGETPLATFORM
-ARG GH_VERSION=2.52.0
+ARG GH_VERSION=2.61.0
 
 RUN export RELEASE_LOCATION="${GH_VERSION}_$(echo "${TARGETPLATFORM//\//_}")" && \
     apk add --no-cache wget rsync && \
