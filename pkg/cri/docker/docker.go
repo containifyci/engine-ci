@@ -585,7 +585,7 @@ func (d *DockerManager) BuildMultiArchImage(ctx context.Context, dockerfile []by
 		}
 	}
 
-	command := []string{"docker", "buildx", "build", "--progress", "plain", "--push", "--provenance", "false", "--platform", platformStr, "-t", imageName, "-f", file.Name(), dir}
+	command := []string{"docker", "buildx", "build", "--progress", "plain", "--push", "--provenance=mode=max", "--sbom", "true", "--platform", platformStr, "-t", imageName, "-f", file.Name(), dir}
 	fmt.Printf("Running command: %v\n", command)
 	// Create the Docker buildx command
 	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
