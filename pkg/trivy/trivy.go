@@ -159,6 +159,10 @@ func (c *TrivyContainer) Pull() error {
 }
 
 func (c *TrivyContainer) Run() error {
+	if container.GetBuild().Image == "" {
+		slog.Warn("trivy: Image not set, skip pushing image")
+		return nil
+	}
 	err := c.Pull()
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)

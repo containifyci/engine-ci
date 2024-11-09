@@ -225,7 +225,6 @@ func streamContainerLogs(ctx context.Context, cli cri.ContainerManager, containe
 	for scanner.Scan() {
 		logLine := scanner.Text()
 		logger.GetLogAggregator().LogMessage(prefix, logLine)
-		// fmt.Printf("%s%s\n", prefix, logLine)
 	}
 
 	if err := scanner.Err(); err != nil {

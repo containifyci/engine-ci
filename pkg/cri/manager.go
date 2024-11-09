@@ -12,6 +12,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/cri/critest"
 	"github.com/containifyci/engine-ci/pkg/cri/docker"
+	"github.com/containifyci/engine-ci/pkg/cri/host"
 	"github.com/containifyci/engine-ci/pkg/cri/podman"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
@@ -62,14 +63,17 @@ func InitContainerRuntime() (ContainerManager, error) {
 func getRuntime() (ContainerManager, error) {
 	switch DetectContainerRuntime() {
 	case utils.Docker:
-		fmt.Println("Using Docker")
+		slog.Info("Using Docker")
 		return docker.NewDockerManager()
 	case utils.Podman:
-		fmt.Println("Using Podman")
+		slog.Info("Using Podman")
 		return podman.NewPodmanManager()
 	case utils.Test:
-		fmt.Println("Using Test")
+		slog.Info("Using Test")
 		return critest.NewMockContainerManager()
+	case utils.Host:
+		slog.Info("Using Host")
+		return host.NewHostManager(), nil
 	default:
 		slog.Error("unknown container runtime stop")
 		os.Exit(1)
@@ -82,14 +86,17 @@ func DetectContainerRuntime() utils.RuntimeType {
 	if runtime != "" {
 		switch runtime {
 		case "docker":
-			fmt.Println("Detect Docker")
+			slog.Info("Detect Docker")
 			return utils.Docker
 		case "podman":
-			fmt.Println("Detect Podman")
+			slog.Info("Detect Podman")
 			return utils.Podman
 		case "test":
-			fmt.Println("Detect Test")
+			slog.Info("Detect Test")
 			return utils.Test
+		case "host":
+			slog.Info("Detect Host")
+			return utils.Host
 		default:
 			slog.Error("unknown container runtime", "runtime", runtime)
 			os.Exit(1)

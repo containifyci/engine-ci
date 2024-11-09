@@ -186,7 +186,6 @@ func (la *LogAggregator) startLogDisplay() {
 			}
 			logEntry.mu.Unlock()
 		}
-		// time.Sleep(100 * time.Millisecond)
 	}
 }
 
