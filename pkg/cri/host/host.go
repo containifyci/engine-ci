@@ -75,6 +75,12 @@ func (d *HostManager) StartContainer(ctx context.Context, id string) error {
 	// 	commands = []string{"echo", "sleeping"}
 	// }
 
+	if len(commands) == 0 {
+		slog.Info("Skip command because its unspecified", "command", commands)
+		c.stdout = io.NopCloser(strings.NewReader("no command started"))
+		return nil
+	}
+
 	if len(commands) > 1 && commands[1] == "/tmp/script.sh" {
 		commands[1] = fmt.Sprintf("/tmp/%s/script.sh", id)
 	}
@@ -232,5 +238,5 @@ func (d *HostManager) CopyToContainer(ctx context.Context, id, srcPath, dstPath 
 }
 
 func (d *HostManager) CopyFileFromContainer(ctx context.Context, id string, srcPath string) (string, error) {
-	return "", nil
+	return "", io.EOF
 }

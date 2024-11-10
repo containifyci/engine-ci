@@ -30,8 +30,7 @@ func main() {
 	opts1 := build.NewGoServiceBuild("engine-ci")
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
-		"tags":        build.NewList("containers_image_openpgp"),
-		"gcloud_oidc": build.NewList("true"),
+		"tags": build.NewList("containers_image_openpgp"),
 	}
 
 	opts1.Registries = registryAuth()

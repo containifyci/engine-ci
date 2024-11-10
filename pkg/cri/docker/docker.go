@@ -123,7 +123,7 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 		}
 	}
 
-	containerResp, err := d.client.ContainerCreate(ctx, config, hostConfig, netConfig, platform, "")
+	containerResp, err := d.client.ContainerCreate(ctx, config, hostConfig, netConfig, platform, opts.Name)
 	if err != nil {
 		return "", err
 	}

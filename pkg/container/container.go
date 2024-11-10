@@ -138,6 +138,17 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 			}
 			if foundContainer != nil {
 				c.ID = foundContainer.ID
+				info, err := c.client().InspectContainer(c.ctx, c.ID)
+				if err != nil {
+					slog.Error("Failed to inspect container", "error", err)
+					os.Exit(1)
+				}
+				c.Name = info.Name
+				c.Image = info.Image
+				img, tag := ParseImageTag(info.Image)
+
+				short := fmt.Sprintf("%s:%s", img, safeShort(tag, 8))
+				c.Prefix = fmt.Sprintf("[%s (%s)]", c.ID[:6], short)
 				return nil
 			}
 		}
