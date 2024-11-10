@@ -53,11 +53,17 @@ func (p *Platform) Same() bool {
 func GetContainerPlatform(host *PlatformSpec) *PlatformSpec {
 	//TODO: convert darwin/arm64 to linux/arm64 and darwin/amd64 to linux/amd64
 	switch host.OS + "/" + host.Architecture {
-	case "darwin/arm64", "darwin/amd64": // MacOS M1/M2
-		slog.Info("Convert MacOS M1/M2 platform to linux/amd64 for container")
+	case "darwin/amd64": // MacOS M1
+		slog.Info("Convert MacOS M1 platform to linux/amd64 for container")
 		return &PlatformSpec{
 			OS:           "linux",
 			Architecture: "amd64",
+		}
+	case "darwin/arm64": // MacOS M2
+		slog.Info("Convert MacOS M2 platform to linux/amd64 for container")
+		return &PlatformSpec{
+			OS:           "linux",
+			Architecture: "arm64",
 		}
 	default:
 		slog.Info("Use host platform for container")

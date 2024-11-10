@@ -138,6 +138,7 @@ func (c *SonarcloudContainer) Analyze(env container.EnvType, token *string, addr
 		case container.Maven:
 			options = append(options,
 				"-Dsonar.language=kotlin",
+				"-Dsonar.tests=src/test/java",
 				"-Dsonar.exclusions=target/**",
 				"-Dsonar.java.binaries=target/classes",
 				"-Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml",
