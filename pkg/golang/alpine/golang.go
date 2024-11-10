@@ -322,6 +322,10 @@ func NewProd() build.Build {
 }
 
 func (c *GoContainer) Prod() error {
+	if container.GetBuild().Env == container.LocalEnv {
+		slog.Info("Skip building prod image in local environment")
+		return nil
+	}
 	if c.Image == "" {
 		slog.Info("Skip No image specified to push")
 		return nil
