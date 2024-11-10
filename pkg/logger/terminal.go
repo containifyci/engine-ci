@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -39,10 +40,12 @@ func (ro *ResettableOnce) Reset() {
 
 type (
 	LogEntry struct {
-		messages []string // Store recent messages for each routine
-		isDone   bool
-		isFailed bool
-		mu       sync.Mutex
+		messages  []string // Store recent messages for each routine
+		isDone    bool
+		isFailed  bool
+		startTime time.Time
+		endTime   time.Time
+		mu        sync.Mutex
 	}
 
 	LogAggregator struct {
@@ -118,7 +121,7 @@ func (la *LogAggregator) startLogDisplay() {
 				close(la.flushDone) // Signal that flushing is done
 				return
 			}
-			entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines)})
+			entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines), startTime: time.Now()})
 			logEntry := entry.(*LogEntry)
 
 			logEntry.addMessage(logMsg.message)
@@ -128,6 +131,7 @@ func (la *LogAggregator) startLogDisplay() {
 				logEntry.mu.Lock()
 				logEntry.isDone = logMsg.isDone
 				logEntry.isFailed = logMsg.isFailed
+				logEntry.endTime = time.Now()
 				logEntry.mu.Unlock()
 			}
 			if !slices.Contains(la.routineOrder, logMsg.routineID) {
@@ -151,12 +155,13 @@ func (la *LogAggregator) startLogDisplay() {
 			// Display recent log lines with indentation
 			logEntry.mu.Lock()
 			if logEntry.isDone {
+				elapsed := logEntry.endTime.Sub(logEntry.startTime)
 				if !logEntry.isFailed {
 					logEntry.messages = []string{} // Remove the "Done" message
-					fmt.Printf("%s%s (Completed)%s\n", green, id, reset)
+					fmt.Printf("%s%s (Completed in %v)%s\n", green, id, elapsed, reset)
 				} else {
 					logEntry.messages = last5Messages(logEntry.messages[:len(logEntry.messages)])
-					fmt.Printf("%s%s (Failed)%s\n", red, id, reset)
+					fmt.Printf("%s%s (Failed in in %v)%s\n", red, id, elapsed, reset)
 				}
 			} else {
 				logEntry.mu.Unlock()
@@ -178,8 +183,10 @@ func (la *LogAggregator) startLogDisplay() {
 			logEntry := value.(*LogEntry)
 
 			logEntry.mu.Lock()
+			elapsed := time.Since(logEntry.startTime)
+
 			if !logEntry.isDone {
-				fmt.Printf("%s%s:%s\n", grayscale, id, reset)
+				fmt.Printf("%s%s %v :%s\n", grayscale, id, elapsed, reset)
 				for _, msg := range logEntry.messages {
 					fmt.Printf("   %s\n", msg)
 				}
