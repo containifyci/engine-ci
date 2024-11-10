@@ -1,4 +1,4 @@
-FROM golang:1.23.2
+FROM golang:1.23.3
 
 # libbtrfs-dev is needed by podman go module
 RUN apt-get update && \
@@ -8,7 +8,7 @@ RUN apt-get update && \
   rm -rf /tmp/* /var/tmp/* && \
   rm -rf /var/lib/apt/lists/*
 
-RUN go install github.com/pact-foundation/pact-go/v2@2.x.x && \
+RUN go install github.com/pact-foundation/pact-go/v2@v2.0.8 && \
   pact-go -l DEBUG install && \
   go clean -cache && \
   go clean -modcache

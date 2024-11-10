@@ -138,6 +138,17 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 			}
 			if foundContainer != nil {
 				c.ID = foundContainer.ID
+				info, err := c.client().InspectContainer(c.ctx, c.ID)
+				if err != nil {
+					slog.Error("Failed to inspect container", "error", err)
+					os.Exit(1)
+				}
+				c.Name = info.Name
+				c.Image = info.Image
+				img, tag := ParseImageTag(info.Image)
+
+				short := fmt.Sprintf("%s:%s", img, safeShort(tag, 8))
+				c.Prefix = fmt.Sprintf("[%s (%s)]", c.ID[:6], short)
 				return nil
 			}
 		}
@@ -176,7 +187,7 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 	img, tag := ParseImageTag(info.Image)
 
 	short := fmt.Sprintf("%s:%s", img, safeShort(tag, 8))
-	c.Prefix = fmt.Sprintf("%s (%s)", c.ID[:6], short)
+	c.Prefix = fmt.Sprintf("[%s (%s)]", c.ID[:6], short)
 	return err
 }
 
@@ -225,7 +236,6 @@ func streamContainerLogs(ctx context.Context, cli cri.ContainerManager, containe
 	for scanner.Scan() {
 		logLine := scanner.Text()
 		logger.GetLogAggregator().LogMessage(prefix, logLine)
-		// fmt.Printf("%s%s\n", prefix, logLine)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -356,7 +366,7 @@ func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageName
 			}
 			defer out.Close()
 
-			_, err = io.Copy(os.Stdout, out)
+			_, err = logger.GetLogAggregator().Copy(out)
 			if err != nil {
 				return err
 			}
@@ -375,7 +385,7 @@ func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageName
 					return err
 				}
 				defer out.Close()
-				_, err = io.Copy(os.Stdout, out)
+				_, err = logger.GetLogAggregator().Copy(out)
 				if err != nil {
 					slog.Error("Failed to copy stdout", "error", err)
 					return err
@@ -444,9 +454,10 @@ func (c *Container) Push(source, target string, opts ...PushOption) error {
 		return err
 	}
 	defer reader.Close()
-	_, err = io.Copy(os.Stdout, reader)
+	_, err = logger.GetLogAggregator().Copy(reader)
 	if err != nil {
 		slog.Error("Failed to copy output", "error", err)
+		return err
 	}
 	if opts[0].Remove {
 		return c.client().RemoveImage(c.ctx, target)

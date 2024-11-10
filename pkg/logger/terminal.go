@@ -1,16 +1,21 @@
 package logger
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"slices"
+	"strings"
 	"sync"
+	"time"
 )
 
 const (
 	reset       = "\033[0m"  // Reset to default color
 	green       = "\033[32m" // Green text
 	red         = "\033[31m" // Red text
-	maxLogLines = 20         // Maximum lines per routine
+	grayscale   = "\033[90m" // Grayscale text
+	maxLogLines = 5          // Maximum lines per routine
 )
 
 type ResettableOnce struct {
@@ -35,10 +40,12 @@ func (ro *ResettableOnce) Reset() {
 
 type (
 	LogEntry struct {
-		messages []string // Store recent messages for each routine
-		isDone   bool
-		isFailed bool
-		mu       sync.Mutex
+		messages  []string // Store recent messages for each routine
+		isDone    bool
+		isFailed  bool
+		startTime time.Time
+		endTime   time.Time
+		mu        sync.Mutex
 	}
 
 	LogAggregator struct {
@@ -114,7 +121,7 @@ func (la *LogAggregator) startLogDisplay() {
 				close(la.flushDone) // Signal that flushing is done
 				return
 			}
-			entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines)})
+			entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines), startTime: time.Now()})
 			logEntry := entry.(*LogEntry)
 
 			logEntry.addMessage(logMsg.message)
@@ -124,6 +131,7 @@ func (la *LogAggregator) startLogDisplay() {
 				logEntry.mu.Lock()
 				logEntry.isDone = logMsg.isDone
 				logEntry.isFailed = logMsg.isFailed
+				logEntry.endTime = time.Now()
 				logEntry.mu.Unlock()
 			}
 			if !slices.Contains(la.routineOrder, logMsg.routineID) {
@@ -147,12 +155,13 @@ func (la *LogAggregator) startLogDisplay() {
 			// Display recent log lines with indentation
 			logEntry.mu.Lock()
 			if logEntry.isDone {
+				elapsed := logEntry.endTime.Sub(logEntry.startTime)
 				if !logEntry.isFailed {
 					logEntry.messages = []string{} // Remove the "Done" message
-					fmt.Printf("%s[%s] (Completed)%s\n", green, id, reset)
+					fmt.Printf("%s%s (Completed in %v)%s\n", green, id, elapsed, reset)
 				} else {
-					logEntry.messages = last5Messages(logEntry.messages[:len(logEntry.messages)-1])
-					fmt.Printf("%s[%s] (Failed)%s\n", red, id, reset)
+					logEntry.messages = last5Messages(logEntry.messages[:len(logEntry.messages)])
+					fmt.Printf("%s%s (Failed in in %v)%s\n", red, id, elapsed, reset)
 				}
 			} else {
 				logEntry.mu.Unlock()
@@ -174,15 +183,16 @@ func (la *LogAggregator) startLogDisplay() {
 			logEntry := value.(*LogEntry)
 
 			logEntry.mu.Lock()
+			elapsed := time.Since(logEntry.startTime)
+
 			if !logEntry.isDone {
-				fmt.Printf("[%s]:\n", id)
+				fmt.Printf("%s%s %v :%s\n", grayscale, id, elapsed, reset)
 				for _, msg := range logEntry.messages {
 					fmt.Printf("   %s\n", msg)
 				}
 			}
 			logEntry.mu.Unlock()
 		}
-		// time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -194,8 +204,32 @@ func (la *LogAggregator) logMessage(routineID string, msg string, isDone bool, i
 	if la.format == "progress" {
 		la.logChannel <- LogMessage{routineID: routineID, message: msg, isDone: isDone, isFailed: isFailed}
 	} else {
-		fmt.Printf("%s%s\n", routineID, msg)
+		fmt.Printf("%s%s %s%s\n", grayscale, routineID, reset, msg)
 	}
+}
+
+func (la *LogAggregator) Write(p []byte) (n int, err error) {
+	msg := string(p)
+	msg = strings.TrimSuffix(msg, "\n")
+	la.logMessage("[engine-ci]", msg, false, false)
+	return len(p), nil
+}
+
+func (la *LogAggregator) Copy(r io.ReadCloser) (n int, err error) {
+	scanner := bufio.NewScanner(r)
+
+	i := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "errorDetail") {
+			la.logMessage("[engine-ci]", line, true, true)
+			return i, fmt.Errorf("errorDetail: %s", line)
+		} else {
+			la.logMessage("[engine-ci]", line, false, false)
+		}
+		i++
+	}
+	return i, nil
 }
 
 func (la *LogAggregator) SuccessMessage(routineID string, msg string) {
