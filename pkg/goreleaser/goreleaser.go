@@ -65,11 +65,8 @@ func (c *GoReleaserContainer) ApplyEnvs(envs []string) []string {
 }
 
 func (c *GoReleaserContainer) Release(env container.EnvType) error {
-	if v, ok := container.GetBuild().Custom["goreleaser"]; ok {
-		if v[0] == "false" {
-			slog.Info("Skip goreleaser")
-			return nil
-		}
+	if container.GetBuild().Custom.Bool("goreleaser") {
+		slog.Info("Skip goreleaser")
 	}
 	token := container.GetEnv("CONTAINIFYCI_GITHUB_TOKEN")
 	if token == "" {

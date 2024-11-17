@@ -126,10 +126,14 @@ func Pre(arg ...*container.Build) *build.BuildSteps {
 			//TODO: register different build images automatically or at least in the build implementation itself
 			if from == "debian" {
 				bs.Add(golang.NewDebian())
+				bs.Add(golang.NewProdDebian())
+			} else if from == "debiancgo" {
+				bs.Add(golang.NewCGO())
+				bs.Add(golang.NewProdDebian())
 			} else {
 				bs.Add(golang.New())
+				bs.Add(golang.NewProd())
 			}
-			bs.Add(golang.NewProd())
 			bs.Add(goreleaser.New())
 			bs.Add(pulumi.New())
 		case container.Maven:
