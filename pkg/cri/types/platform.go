@@ -101,6 +101,18 @@ func GetPlatformSpec() *Platform {
 	return platform
 }
 
+func ParsePlatforms(platforms ...string) []*PlatformSpec {
+	specs := make([]*PlatformSpec, 0)
+
+	for _, platform := range platforms {
+		spec := ParsePlatform(platform)
+		if spec != nil {
+			specs = append(specs, spec)
+		}
+	}
+	return specs
+}
+
 func ParsePlatform(platform string) *PlatformSpec {
 	if platform == "" {
 		return nil

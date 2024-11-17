@@ -1,4 +1,4 @@
-package alpine
+package debiancgo
 
 import (
 	"embed"
@@ -52,11 +52,11 @@ func New() *GoContainer {
 		ImageTag:  container.GetBuild().ImageTag,
 		// TODO: only build multiple platforms when buildenv and localenv are running on different platforms
 		// FIX: linux-arm64 go build is needed when building contains on MacOS M1/M2
-		Platforms: platforms,
 		// Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")},
-		File:   container.GetBuild().File,
-		Folder: container.GetBuild().Folder,
-		Tags:   container.GetBuild().Custom["tags"],
+		Platforms: platforms,
+		File:      container.GetBuild().File,
+		Folder:    container.GetBuild().Folder,
+		Tags:      container.GetBuild().Custom["tags"],
 	}
 }
 
@@ -86,7 +86,7 @@ func CacheFolder() string {
 }
 
 func (c *GoContainer) Pull() error {
-	imageTag := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
+	imageTag := fmt.Sprintf("golang:%s", DEFAULT_GO)
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
@@ -135,9 +135,9 @@ set -x
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
-golangci-lint --out-format colored-line-number -v run %s --timeout=5m
+GOOS=%s GOARCH=%s golangci-lint --out-format colored-line-number -v run %s --timeout=5m
 ls -lha /
-`, tags)
+`, container.GetBuild().Platform.Container.OS, container.GetBuild().Platform.Container.Architecture, tags)
 	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)
@@ -227,12 +227,12 @@ func GoImage() string {
 		os.Exit(1)
 	}
 	tag := container.ComputeChecksum(dockerFile)
-	image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	image := fmt.Sprintf("golang-%s-cgo", DEFAULT_GO)
 	return utils.ImageURI(container.GetBuild().ContainifyRegistry, image, tag)
 }
 
 func (c *GoContainer) Images() []string {
-	imageTag := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	imageTag := fmt.Sprintf("golang-%s-cgo", DEFAULT_GO)
 
 	return []string{imageTag, "alpine:latest", GoImage()}
 }
@@ -266,8 +266,9 @@ func (c *GoContainer) Build() error {
 		"GOMODCACHE=/go/pkg/",
 		"GOCACHE=/go/pkg/build-cache",
 	}...)
-
 	opts.WorkingDir = "/src"
+
+	c.Container.Apply(&opts)
 
 	dir, _ := filepath.Abs(c.Folder)
 
@@ -308,7 +309,11 @@ func (c *GoContainer) Build() error {
 
 func (c *GoContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return Script(NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, c.Platforms...))
+	platforms := c.Platforms
+	if container.GetBuild().Custom.Strings("platforms") != nil {
+		platforms = types.ParsePlatforms(container.GetBuild().Custom.Strings("platforms")...)
+	}
+	return Script(NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, platforms...))
 }
 
 func NewProd() build.Build {
@@ -319,15 +324,10 @@ func NewProd() build.Build {
 		},
 		name: "golang-prod",
 		// images: []string{"alpine"},
-		async: false,
 	}
 }
 
 func (c *GoContainer) Prod() error {
-	if container.GetBuild().Env == container.LocalEnv {
-		slog.Info("Skip building prod image in local environment")
-		return nil
-	}
 	if c.Image == "" {
 		slog.Info("Skip No image specified to push")
 		return nil

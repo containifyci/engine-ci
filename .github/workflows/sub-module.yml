@@ -51,6 +51,7 @@ jobs:
           TAG: ${{ inputs.tag == '' && steps.semver.outputs.next || inputs.tag }}
       - name: Update major and minor release tags
         uses: containifyci/.github/github-actions/update-semver@main
+        if: steps.semver.outputs.next
         with:
           tag_name: ${{ inputs.tag == '' && steps.semver.outputs.next || inputs.tag }}
           semver_prefix: ${{ inputs.module }}/v

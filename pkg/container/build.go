@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
@@ -47,6 +48,41 @@ func (e *BuildType) Type() string {
 	return "BuildType"
 }
 
+type Custom map[string][]string
+
+func (c Custom) String(key string) string {
+	if v, ok := c[key]; ok {
+		return v[0]
+	}
+	return ""
+}
+
+func (c Custom) Strings(key string) []string {
+	if v, ok := c[key]; ok {
+		return v
+	}
+	return nil
+}
+
+func (c Custom) Bool(key string) bool {
+	if v, ok := c[key]; ok {
+		return v[0] == "true"
+	}
+	return false
+}
+
+func (c Custom) UInt(key string) uint {
+	if v, ok := c[key]; ok {
+		i, err := strconv.Atoi(v[0])
+		if err != nil {
+			slog.Error("Error converting string to int", "error", err)
+			os.Exit(1)
+		}
+		return uint(i)
+	}
+	return 0
+}
+
 // TODO: add target container platform
 type Build struct {
 	App      string `json:"app"`
@@ -55,7 +91,7 @@ type Build struct {
 	Folder   string
 	Image    string `json:"image"`
 	ImageTag string `json:"image_tag"`
-	Custom   map[string][]string
+	Custom   Custom
 
 	BuildType BuildType `json:"build_type"`
 	// docker or podman
@@ -164,6 +200,10 @@ func (b *Build) Defaults() *Build {
 
 	if b.File != "/src/main.go" {
 		b.File = "/src/" + b.File
+	}
+
+	if b.Folder == "" {
+		b.Folder = "."
 	}
 
 	if b.Repository == "" {

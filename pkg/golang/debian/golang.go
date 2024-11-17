@@ -31,6 +31,7 @@ type GoContainer struct {
 	//TODO add option to fail on linter or not
 	App       string
 	File      string
+	Folder    string
 	Image     string
 	ImageTag  string
 	Platforms []*types.PlatformSpec
@@ -54,6 +55,7 @@ func New() *GoContainer {
 		// Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")},
 		Platforms: platforms,
 		File:      container.GetBuild().File,
+		Folder:    container.GetBuild().Folder,
 		Tags:      container.GetBuild().Custom["tags"],
 	}
 }
@@ -268,7 +270,7 @@ func (c *GoContainer) Build() error {
 
 	c.Container.Apply(&opts)
 
-	dir, _ := filepath.Abs(".")
+	dir, _ := filepath.Abs(c.Folder)
 
 	cache := CacheFolder()
 	if cache == "" {
