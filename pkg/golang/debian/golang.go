@@ -369,7 +369,7 @@ func (c *GoContainer) Prod() error {
 
 	slog.Info("Container info", "name", containerInfo.Name, "image", containerInfo.Image, "arch", containerInfo.Platform.Container.Architecture, "os", containerInfo.Platform.Container.OS, "varian", containerInfo.Platform.Container.Variant)
 
-	err = c.Container.CopyFileTo(fmt.Sprintf("./%s-%s-%s", c.App, containerInfo.Platform.Container.OS, containerInfo.Platform.Container.Architecture), fmt.Sprintf("/app/%s", c.App))
+	err = c.Container.CopyFileTo(fmt.Sprintf("%s/%s-%s-%s", c.Folder, c.App, containerInfo.Platform.Container.OS, containerInfo.Platform.Container.Architecture), fmt.Sprintf("/app/%s", c.App))
 	if err != nil {
 		slog.Error("Failed to copy file to container", "error", err)
 		os.Exit(1)
