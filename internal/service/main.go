@@ -68,10 +68,12 @@ func createContainer(w http.ResponseWriter, r *http.Request) {
 	c := cmd.NewCommand(buildArgs)
 	c.AddTarget("all", func() error {
 		fmt.Println("Running build")
-		cmd.RunBuild(nil, nil)
+		// cmd.RunBuild(nil, nil)
 		return nil
 	})
-	c.Run("all", container.NewBuild(&buildArgs))
+	// addr := Start()
+
+	// c.Run("all", container.NewBuild(&buildArgs))
 
 	// switch buildType {
 	// case "golang":

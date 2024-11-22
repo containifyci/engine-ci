@@ -13,7 +13,7 @@ import (
 
 type Server struct {
 	Listener net.Listener
-	Port int
+	Port     int
 }
 
 // In-memory key-value store
@@ -56,7 +56,6 @@ func (kv *KeyValueStore) SetVal(key, val string) {
 	kv.store[key] = val
 	kv.mu.Unlock()
 }
-
 
 // Get value by key
 func (kv *KeyValueStore) Get(w http.ResponseWriter, r *http.Request) {

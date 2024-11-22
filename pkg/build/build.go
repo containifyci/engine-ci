@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/containifyci/engine-ci/pkg/container"
 )
 
 type BuildContext struct {
@@ -18,6 +20,7 @@ type Build interface {
 	Name() string
 	Images() []string
 	IsAsync() bool
+	// Set(container.Build)
 }
 
 type RunFunc func() error
@@ -25,6 +28,7 @@ type RunFunc func() error
 type BuildSteps struct {
 	init  bool
 	Steps []*BuildContext
+	build container.Build
 }
 
 func ToBuildContexts(steps ...Build) []*BuildContext {
@@ -40,15 +44,27 @@ func ToBuildContexts(steps ...Build) []*BuildContext {
 
 func NewBuildSteps(steps ...Build) *BuildSteps {
 	return &BuildSteps{
-		init: len(steps) > 0,
+		init:  len(steps) > 0,
+		Steps: ToBuildContexts(steps...),
+	}
+}
+
+func NewBuildStepsWithArg(arg container.Build, steps ...Build) *BuildSteps {
+	return &BuildSteps{
+		build: arg,
+		init:  len(steps) > 0,
 		Steps: ToBuildContexts(steps...),
 	}
 }
 
 func (bs *BuildSteps) IsNotInit() bool { return !bs.init }
-func (bs *BuildSteps) Init() { bs.init = true }
-func (bs *BuildSteps) Add(step Build) { bs.Steps = append(bs.Steps, &BuildContext{step, false}) }
-func (bs *BuildSteps) AddAsync(step Build) { bs.Steps = append(bs.Steps, &BuildContext{build: step, async: true}) }
+func (bs *BuildSteps) Init()           { bs.init = true }
+func (bs *BuildSteps) Add(step Build) {
+	bs.Steps = append(bs.Steps, &BuildContext{step, false})
+}
+func (bs *BuildSteps) AddAsync(step Build) {
+	bs.Steps = append(bs.Steps, &BuildContext{build: step, async: true})
+}
 
 func (bs *BuildSteps) String() string {
 	names := make([]string, len(bs.Steps))

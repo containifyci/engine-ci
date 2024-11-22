@@ -3,9 +3,12 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
@@ -29,12 +32,51 @@ func init() {
 	rootCmd.AddCommand(engineCmd)
 }
 
-func Engine(cmd *cobra.Command, args []string) error {
-	arg := GetBuild()
-	for _, a := range arg {
-		c := NewCommand(*a)
-		c.Run(RootArgs.Target, a)
+type LeaderElection struct {
+	mu sync.Mutex
+}
+
+func (l *LeaderElection) Leader(id string, fnc func() error) {
+	// Try to acquire the lock
+	if l.mu.TryLock() {
+		// Process becomes leader
+		defer l.mu.Unlock()
+		slog.Info("Process is the leader\n", "id", id)
+		err := fnc()
+		if err != nil {
+			slog.Error("Error runing func as leader", "error", err)
+		}
+	} else {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		err := fnc()
+		if err != nil {
+			slog.Error("Error runing func as non leader", "error", err)
+		}
+		slog.Info("Process is not the leader. Waiting...\n", "id",id)
 	}
+}
+
+func Engine(cmd *cobra.Command, _ []string) error {
+	leader := LeaderElection{}
+	fnc, addr := Start()
+	defer fnc()
+	arg := GetBuild()
+	wg := sync.WaitGroup{}
+	for _, a := range arg {
+		wg.Add(1)
+		go func() {
+			time.Sleep(1 * time.Second)
+			defer wg.Done()
+			a.Leader = &leader
+			c := NewCommand(*a)
+			c.Run(addr, RootArgs.Target, a)
+		}()
+	}
+	slog.Info("Waiting for all builds to complete")
+	wg.Wait()
+	slog.Info("Finish waiting for all builds to complete")
+
 	return nil
 }
 
@@ -108,7 +150,7 @@ func GetBuild() []*container.Build {
 			Image:          opt.Image,
 			ImageTag:       opt.ImageTag,
 			Registry:       opt.Registry,
-			Registries:   	opt.Registries,
+			Registries:     opt.Registries,
 			Repository:     opt.Repository,
 			File:           opt.File,
 			Folder:         opt.Folder,

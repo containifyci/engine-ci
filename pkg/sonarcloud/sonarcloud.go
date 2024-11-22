@@ -25,9 +25,9 @@ type SonarcloudContainer struct {
 	*container.Container
 }
 
-func New() *SonarcloudContainer {
+func New(build container.Build) *SonarcloudContainer {
 	return &SonarcloudContainer{
-		Container: container.New(container.BuildEnv),
+		Container: container.New(build),
 	}
 }
 
@@ -69,7 +69,7 @@ func (c *SonarcloudContainer) CopyScript() error {
 	// Create a temporary script in-memory
 	script := `#!/bin/sh
 set -xe
-sonar-scanner -X -Dsonar.projectBaseDir=/usr/src
+sonar-scanner -X -Dsonar.projectBaseDir=/usr/src -Dsonar.working.directory=/tmp/sonar
 `
 	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
@@ -90,7 +90,7 @@ func (c *SonarcloudContainer) Analyze(env container.EnvType, token *string, addr
 	}
 
 	options := []string{
-		fmt.Sprintf("-Dsonar.host.url=%s", address.ForContainer(env)),
+		fmt.Sprintf("-Dsonar.host.url=%s", address.ForContainer(*c.GetBuild())),
 		"-Dsonar.scm.disabled=true",
 	}
 
@@ -118,12 +118,12 @@ func (c *SonarcloudContainer) Analyze(env container.EnvType, token *string, addr
 
 	if !filesystem.FileExists("sonar-project.properties") {
 		options = append(options,
-			fmt.Sprintf("-Dsonar.projectKey=%s_%s", container.GetBuild().Organization, container.GetBuild().App),
-			fmt.Sprintf("-Dsonar.projectName=%s", container.GetBuild().App),
+			fmt.Sprintf("-Dsonar.projectKey=%s_%s", c.GetBuild().Organization, c.GetBuild().App),
+			fmt.Sprintf("-Dsonar.projectName=%s", c.GetBuild().App),
 			//TODO: get sonar organization from env
 			"-Dsonar.organization=xxx",
 		)
-		switch container.GetBuild().BuildType {
+		switch c.GetBuild().BuildType {
 		case container.GoLang:
 			options = append(options,
 				"-Dsonar.go.coverage.reportPaths=coverage.txt",
@@ -196,15 +196,19 @@ func (c *SonarcloudContainer) Pull() error {
 
 func (c *SonarcloudContainer) Run() error {
 	slog.Info("Run sonarcloud")
-	env := container.GetBuild().Env
-	sonarqube := NewSonarQube()
+	env := c.GetBuild().Env
+
+	sonarqube := NewSonarQube(*c.GetBuild())
 
 	if env == container.LocalEnv {
-		err := sonarqube.Start()
-		if err != nil {
-			slog.Error("Failed to start sonarqube container: %s", "error", err)
-			os.Exit(1)
-		}
+		c.GetBuild().Leader.Leader(c.GetBuild().App, func() error {
+			err := sonarqube.Start()
+			if err != nil {
+				slog.Error("Failed to start sonarqube container: %s", "error", err)
+				os.Exit(1)
+			}
+			return err
+		})
 	}
 
 	err := c.Pull()

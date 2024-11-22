@@ -27,9 +27,9 @@ type PulumiContainer struct {
 	*container.Container
 }
 
-func New() *PulumiContainer {
+func New(build container.Build) *PulumiContainer {
 	return &PulumiContainer{
-		Container: container.New(container.BuildEnv),
+		Container: container.New(build),
 	}
 }
 
@@ -68,26 +68,26 @@ func ComputeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func PulumiImage() string {
+func (c *PulumiContainer) PulumiImage() string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "pulumi-go", tag)
+	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "pulumi-go", tag)
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "maven-3-eclipse-temurin-17-alpine", tag)
 }
 
 func (c *PulumiContainer) BuildPulumiImage() error {
-	image := PulumiImage()
+	image := c.PulumiImage()
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
 	}
 
-	platforms := types.GetPlatforms(container.GetBuild().Platform)
+	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
 	err = c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
@@ -100,16 +100,16 @@ func (c *PulumiContainer) BuildPulumiImage() error {
 
 func (c *PulumiContainer) CopyScript() error {
 	var stack, command string
-	if v, ok := container.GetBuild().Custom["stack"]; ok {
+	if v, ok := c.GetBuild().Custom["stack"]; ok {
 		stack = v[0]
 	}
 
-	if v, ok := container.GetBuild().Custom["cmd"]; ok {
+	if v, ok := c.GetBuild().Custom["cmd"]; ok {
 		command = v[0]
 	}
 
 	if len(stack) <= 0 {
-		stack = container.GetBuild().App
+		stack = c.GetBuild().App
 	}
 
 	if len(command) <= 0 {
@@ -141,7 +141,7 @@ func (c *PulumiContainer) ApplyEnvs(envs []string) []string {
 }
 
 func (c *PulumiContainer) Release(env container.EnvType) error {
-	if v, ok := container.GetBuild().Custom["pulumi"]; ok {
+	if v, ok := c.GetBuild().Custom["pulumi"]; ok {
 		if v[0] == "false" {
 			slog.Info("Skip pulumi")
 			return nil
@@ -149,7 +149,7 @@ func (c *PulumiContainer) Release(env container.EnvType) error {
 	}
 
 	opts := types.ContainerConfig{}
-	opts.Image = PulumiImage()
+	opts.Image = c.PulumiImage()
 	opts.User = "root"
 
 	opts.Env = c.ApplyEnvs(opts.Env)
@@ -212,7 +212,7 @@ func (c *PulumiContainer) Pull() error {
 }
 
 func (c *PulumiContainer) Run() error {
-	if v, ok := container.GetBuild().Custom["pulumi"]; ok {
+	if v, ok := c.GetBuild().Custom["pulumi"]; ok {
 		if v[0] != "true" {
 			slog.Debug("Skip pulumi")
 			return nil
@@ -222,7 +222,7 @@ func (c *PulumiContainer) Run() error {
 		return nil
 	}
 	slog.Info("Run pulumi")
-	env := container.GetBuild().Env
+	env := c.GetBuild().Env
 
 	err := c.Pull()
 	if err != nil {

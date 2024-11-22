@@ -23,7 +23,7 @@ const (
 )
 
 // TODO: Find a better way then a package global var
-var _build *Build
+// var _build *Build
 
 type BuildType string
 
@@ -83,6 +83,10 @@ func (c Custom) UInt(key string) uint {
 	return 0
 }
 
+type Leader interface {
+	Leader(id string, fnc func() error)
+}
+
 // TODO: add target container platform
 type Build struct {
 	App      string `json:"app"`
@@ -107,7 +111,9 @@ type Build struct {
 	Verbose            bool
 	Registries         map[string]*protos2.ContainerRegistry
 
+	//internal variables
 	defaults bool
+	Leader   Leader
 }
 
 func (b *Build) CustomString(key string) string {
@@ -178,16 +184,16 @@ func NewPythonServiceBuild(appName string) Build {
 }
 
 func NewBuild(build *Build) *Build {
-	_build = build
-	if _build.Runtime == "" {
-		InitRuntime()
+	// _build = build
+	if build.Runtime == "" {
+		InitRuntime(build)
 	}
-	return _build
+	return build
 }
 
-func InitRuntime() *Build {
-	_build.Runtime = cri.DetectContainerRuntime()
-	return _build
+func InitRuntime(build *Build) *Build {
+	build.Runtime = cri.DetectContainerRuntime()
+	return build
 }
 
 func (b *Build) Defaults() *Build {

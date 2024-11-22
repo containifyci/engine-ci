@@ -21,9 +21,9 @@ type GoReleaserContainer struct {
 	*container.Container
 }
 
-func New() *GoReleaserContainer {
+func New(build container.Build) *GoReleaserContainer {
 	return &GoReleaserContainer{
-		Container: container.New(container.BuildEnv),
+		Container: container.New(build),
 	}
 }
 
@@ -65,7 +65,7 @@ func (c *GoReleaserContainer) ApplyEnvs(envs []string) []string {
 }
 
 func (c *GoReleaserContainer) Release(env container.EnvType) error {
-	if container.GetBuild().Custom.Bool("goreleaser") {
+	if c.GetBuild().Custom.Bool("goreleaser") {
 		slog.Info("Skip goreleaser")
 	}
 	token := container.GetEnv("CONTAINIFYCI_GITHUB_TOKEN")
@@ -133,7 +133,7 @@ func (c *GoReleaserContainer) Run() error {
 		slog.Info("Skipping goreleaser for non-main branch")
 		return nil
 	}
-	env := container.GetBuild().Env
+	env := c.GetBuild().Env
 
 	err := c.Pull()
 	if err != nil {

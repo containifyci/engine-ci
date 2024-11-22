@@ -40,24 +40,24 @@ type GoContainer struct {
 	*container.Container
 }
 
-func New() *GoContainer {
-	platforms := []*types.PlatformSpec{container.GetBuild().Platform.Container}
-	if !container.GetBuild().Platform.Same() {
-		slog.Info("Different platform detected", "host", container.GetBuild().Platform.Host, "container", container.GetBuild().Platform.Container)
+func New(build container.Build) *GoContainer {
+	platforms := []*types.PlatformSpec{build.Platform.Container}
+	if !build.Platform.Same() {
+		slog.Info("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
 		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
 	}
 	return &GoContainer{
-		App:       container.GetBuild().App,
-		Container: container.New(container.BuildEnv),
-		Image:     container.GetBuild().Image,
-		ImageTag:  container.GetBuild().ImageTag,
+		App:       build.App,
+		Container: container.New(build),
+		Image:     build.Image,
+		ImageTag:  build.ImageTag,
 		// TODO: only build multiple platforms when buildenv and localenv are running on different platforms
 		// FIX: linux-arm64 go build is needed when building contains on MacOS M1/M2
 		Platforms: platforms,
 		// Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")},
-		File:   container.GetBuild().File,
-		Folder: container.GetBuild().Folder,
-		Tags:   container.GetBuild().Custom["tags"],
+		File:   build.File,
+		Folder: build.Folder,
+		Tags:   build.Custom["tags"],
 	}
 }
 
@@ -103,10 +103,10 @@ func (g GoBuild) Name() string     { return g.name }
 func (g GoBuild) Images() []string { return g.images }
 func (g GoBuild) IsAsync() bool    { return g.async }
 
-func NewLinter() build.Build {
+func NewLinter(build container.Build) build.Build {
 	return GoBuild{
 		rf: func() error {
-			container := New()
+			container := New(build)
 			err := container.Container.Pull(LINT_IMAGE)
 			if err != nil {
 				slog.Error("Failed to pull image: %s", "error", err, "image", LINT_IMAGE)
@@ -150,7 +150,7 @@ ls -lha /
 func (c *GoContainer) Lint() error {
 	imageTag := LintImage()
 
-	ssh, err := network.SSHForward()
+	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
 		slog.Error("Failed to forward SSH", "error", err)
 		os.Exit(1)
@@ -221,7 +221,7 @@ func (c *GoContainer) Lint() error {
 	return err
 }
 
-func GoImage() string {
+func (c *GoContainer) GoImage() string {
 	dockerFile, err := f.ReadFile("Dockerfilego")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
@@ -229,17 +229,17 @@ func GoImage() string {
 	}
 	tag := container.ComputeChecksum(dockerFile)
 	image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
-	return utils.ImageURI(container.GetBuild().ContainifyRegistry, image, tag)
+	return utils.ImageURI(c.GetBuild().ContainifyRegistry, image, tag)
 }
 
 func (c *GoContainer) Images() []string {
 	imageTag := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
 
-	return []string{imageTag, "alpine:latest", GoImage()}
+	return []string{imageTag, "alpine:latest", c.GoImage()}
 }
 
 func (c *GoContainer) BuildGoImage() error {
-	image := GoImage()
+	image := c.GoImage()
 
 	dockerFile, err := f.ReadFile("Dockerfilego")
 	if err != nil {
@@ -247,15 +247,15 @@ func (c *GoContainer) BuildGoImage() error {
 		os.Exit(1)
 	}
 
-	platforms := types.GetPlatforms(container.GetBuild().Platform)
+	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
 func (c *GoContainer) Build() error {
-	imageTag := GoImage()
+	imageTag := c.GoImage()
 
-	ssh, err := network.SSHForward()
+	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
 		slog.Error("Failed to forward SSH", "error", err)
 		os.Exit(1)
@@ -312,8 +312,8 @@ func (c *GoContainer) BuildScript() string {
 	return buildscript.NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, c.Platforms...).String()
 }
 
-func NewProd() build.Build {
-	container := New()
+func NewProd(build container.Build) build.Build {
+	container := New(build)
 	return GoBuild{
 		rf: func() error {
 			return container.Prod()
@@ -325,7 +325,7 @@ func NewProd() build.Build {
 }
 
 func (c *GoContainer) Prod() error {
-	if container.GetBuild().Env == container.LocalEnv {
+	if c.GetBuild().Env == container.LocalEnv {
 		slog.Info("Skip building prod image in local environment")
 		return nil
 	}
@@ -392,7 +392,7 @@ func (c *GoContainer) Prod() error {
 		os.Exit(1)
 	}
 
-	imageUri := utils.ImageURI(container.GetBuild().Registry, c.Image, c.ImageTag)
+	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)
 	err = c.Container.Push(imageId, imageUri, container.PushOption{Remove: false})
 	if err != nil {
 		slog.Error("Failed to push image: %s", "error", err)

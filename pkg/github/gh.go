@@ -26,9 +26,9 @@ type GithubContainer struct {
 	*container.Container
 }
 
-func New() *GithubContainer {
+func New(build container.Build) *GithubContainer {
 	return &GithubContainer{
-		Container: container.New(container.BuildEnv),
+		Container: container.New(build),
 		git:       svc.GitInfo(),
 	}
 }
@@ -42,7 +42,7 @@ func (c *GithubContainer) Name() string {
 }
 
 func (c *GithubContainer) Images() []string {
-	return []string{Image()}
+	return []string{c.Image()}
 }
 
 func (c *GithubContainer) CopyScript() error {
@@ -59,20 +59,20 @@ gh pr comment %s --repo %s --edit-last --body-file /src/trivy.md || gh pr commen
 	return err
 }
 
-func Image() string {
+func (c *GithubContainer)  Image() string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
 		os.Exit(1)
 	}
 	tag := container.ComputeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "gh", tag)
+	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "gh", tag)
 
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "gh", tag)
 }
 
 func (c *GithubContainer) BuildImage() error {
-	image := Image()
+	image := c.Image()
 
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
@@ -80,7 +80,7 @@ func (c *GithubContainer) BuildImage() error {
 		os.Exit(1)
 	}
 
-	platforms := types.GetPlatforms(container.GetBuild().Platform)
+	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
 	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
@@ -88,7 +88,7 @@ func (c *GithubContainer) BuildImage() error {
 
 func (c *GithubContainer) Comment() error {
 	opts := types.ContainerConfig{}
-	opts.Image = Image()
+	opts.Image = c.Image()
 	//FIX: this should fix the permission issue with the mounted cache folder
 	// opts.User = "root"
 

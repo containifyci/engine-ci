@@ -29,9 +29,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var buildArgs = &container.Build{}
 
-var buildSteps = build.NewBuildSteps()
+// var buildSteps = build.NewBuildSteps()
+
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
@@ -43,12 +43,14 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: RunBuild,
+	// Run: RunBuild,
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 	},
 }
 
 func init() {
+	var buildArgs = &container.Build{}
+
 	rootCmd.AddCommand(buildCmd)
 
 	buildCmd.PersistentFlags().StringVarP(&buildArgs.App, "app", "a", "", "Application binary to build")
@@ -76,13 +78,13 @@ func init() {
 	buildCmd.PersistentFlags().BoolVarP(&buildArgs.Verbose, "verbose", "v", false, "Enable verbose logging")
 }
 
-func Init(args ...*container.Build) {
-	var arg *container.Build
-	if len(args) <= 0 {
-		arg = buildArgs
-	} else {
-		arg = args[0]
-	}
+func Init(arg *container.Build) *container.Build {
+	// var arg *container.Build
+	// if len(args) <= 0 {
+	// 	arg = buildArgs
+	// } else {
+		// arg = args[0]
+	// }
 	bld := container.NewBuild(arg)
 
 	logOpts := slog.HandlerOptions{
@@ -105,57 +107,76 @@ func Init(args ...*container.Build) {
 		git = svc.SetUnknowGitInfo()
 	}
 	slog.Info("Starting build", "build", bld, "git", git)
-	container.InitRuntime()
+	container.InitRuntime(arg)
+	return arg
 }
 
-func Pre(arg ...*container.Build) *build.BuildSteps {
-	Init(arg...)
-	bs := buildSteps
+func (c *Command) Pre() (*container.Build,*build.BuildSteps) {
+	a, bs := Pre(c.buildArgs)
+	return a, bs
+}
+
+func Pre(arg *container.Build) (*container.Build, *build.BuildSteps) {
+	slog.Info("Pre build", "args", arg)
+	a := Init(arg)
+	bs := build.NewBuildSteps()
 
 	var from string
-	if v, ok := container.GetBuild().Custom["from"]; ok {
+	if v, ok := a.Custom["from"]; ok {
 		slog.Info("Using custom build", "from", v[0])
 		from = v[0]
 	}
 
 	if bs.IsNotInit() {
-		bs.Add(gcloud.New())
-		switch container.GetBuild().BuildType {
+		slog.Info("Init build steps", "build", *a)
+		bs.Add(gcloud.New(*a))
+		switch a.BuildType {
 		case container.GoLang:
-			bs.Add(protobuf.New())
-			bs.AddAsync(golang.NewLinter())
+			bs.Add(protobuf.New(*a))
+			bs.AddAsync(golang.NewLinter(*a))
 			//TODO: register different build images automatically or at least in the build implementation itself
 			if from == "debian" {
-				bs.Add(golang.NewDebian())
-				bs.Add(golang.NewProdDebian())
+				bs.Add(golang.NewDebian(*a))
+				bs.Add(golang.NewProdDebian(*a))
 			} else if from == "debiancgo" {
-				bs.Add(golang.NewCGO())
-				bs.Add(golang.NewProdDebian())
+				bs.Add(golang.NewCGO(*a))
+				bs.Add(golang.NewProdDebian(*a))
 			} else {
-				bs.Add(golang.New())
-				bs.Add(golang.NewProd())
+				bs.Add(golang.New(*a))
+				bs.Add(golang.NewProd(*a))
 			}
-			bs.Add(goreleaser.New())
-			bs.Add(pulumi.New())
+			bs.Add(goreleaser.New(*a))
+			bs.Add(pulumi.New(*a))
 		case container.Maven:
-			bs.Add(maven.New())
-			bs.Add(maven.NewProd())
+			bs.Add(maven.New(*a))
+			bs.Add(maven.NewProd(*a))
 		case container.Python:
-			bs.Add(python.New())
-			bs.Add(python.NewProd())
+			bs.Add(python.New(*a))
+			bs.Add(python.NewProd(*a))
 		}
-		bs.AddAsync(sonarcloud.New())
-		bs.Add(trivy.New())
-		bs.AddAsync(github.New())
+		bs.AddAsync(sonarcloud.New(*a))
+		bs.Add(trivy.New(*a))
+		bs.AddAsync(github.New(*a))
 		bs.Init()
 	}
 
 	bs.PrintSteps()
-	return bs
+	return a, bs
 }
 
-func RunBuild(_ *cobra.Command, _ []string) {
-	bs := Pre()
+// func RunBuild(_ *cobra.Command, _ []string) {
+// 	fmt.Println("build called2")
+// 	_, bs := Pre(buildArgs)
+// 	err := bs.Run()
+// 	if err != nil {
+// 		slog.Error("Failed to build", "error", err)
+// 		os.Exit(1)
+// 	}
+// }
+
+func (c *Command) RunBuild() {
+	fmt.Println("build called")
+	_, bs := c.Pre()
 	err := bs.Run()
 	if err != nil {
 		slog.Error("Failed to build", "error", err)
@@ -165,13 +186,15 @@ func RunBuild(_ *cobra.Command, _ []string) {
 
 type Command struct {
 	targets map[string]func() error
+	buildArgs *container.Build
 }
 
 func NewCommand(_buildArgs container.Build) *Command {
-	buildArgs = &_buildArgs
-	buildArgs.Defaults()
+	// buildArgs = &_buildArgs
+	_buildArgs.Defaults()
 	return &Command{
 		targets: map[string]func() error{},
+		buildArgs: &_buildArgs,
 	}
 }
 
@@ -186,26 +209,33 @@ func (c *Command) AddTarget(name string, fnc func() error) {
 	}
 }
 
-func (c *Command) Run(target string, arg *container.Build) {
+func Start() (func(), network.Address) {
 	err, srv, fnc := kv.StartHttpServer(kv.NewKeyValueStore())
 	if err != nil {
 		slog.Error("Failed to start http server", "error", err)
 		os.Exit(1)
 	}
 	go fnc()
-	defer func() {
+	slog.Info("Started http server", "address", srv.Listener.Addr().String())
+	addr := network.Address{Host: "localhost", Port: srv.Port}
+	// if arg.Custom == nil {
+	// 	arg.Custom = make(map[string][]string)
+	// }
+	// arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), srv.Port)}
+	return func() {
 		slog.Info("Stopping http server")
 		srv.Listener.Close()
 
-		buildSteps = build.NewBuildSteps()
-	}()
-	slog.Info("Started http server", "address", srv.Listener.Addr().String())
-	addr := network.Address{Host: "localhost"}
+		// buildSteps = build.NewBuildSteps()
+	}, addr
+}
+
+func (c *Command) Run(addr network.Address, target string, arg *container.Build) {
 	if arg.Custom == nil {
 		arg.Custom = make(map[string][]string)
 	}
-	arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), srv.Port)}
-	bs := Pre(arg)
+	arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), addr.Port)}
+	_, bs := Pre(arg)
 	switch arg.BuildType {
 	case container.GoLang:
 		c.AddTarget("lint", func() error {
@@ -242,7 +272,9 @@ func (c *Command) Run(target string, arg *container.Build) {
 		})
 	}
 	c.AddTarget("all", func() error {
-		return All(arg)
+		// return All(arg)
+		c.RunBuild()
+		return nil
 	})
 	c.AddTarget("sonar", func() error {
 		return bs.Run("sonarcloud")
@@ -310,6 +342,8 @@ func (c *Command) Run(target string, arg *container.Build) {
 // of the engine-ci with to support new build types for different languages
 // or to customize the build steps for a specific project.
 func InitBuildSteps(_buildSteps *build.BuildSteps) *build.BuildSteps {
-	buildSteps = _buildSteps
-	return buildSteps
+	//TODO make it possible to register new build steps without the need of a gloabl variable
+	// buildSteps = _buildSteps
+	// return buildSteps
+	return _buildSteps
 }

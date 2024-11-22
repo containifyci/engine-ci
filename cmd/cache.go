@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/spf13/cobra"
 )
@@ -57,7 +56,7 @@ func init() {
 
 func SaveCache() error {
 	args := GetBuild()
-	bs := Pre(args...)
+	_, bs := Pre(args[0])
 	images := bs.Images()
 	if len(images) == 0 {
 		return nil
@@ -97,7 +96,7 @@ docker save -o ~/image-cache/%s.tar %s
 
 func LoadCache() error {
 	args := GetBuild()
-	bs := Pre(args...)
+	arg, bs := Pre(args[0])
 
 	images := bs.Images()
 	if len(images) == 0 {
@@ -117,13 +116,13 @@ func LoadCache() error {
 			slog.Error("Error parsing image", "error", err)
 			os.Exit(1)
 		}
-		if container.GetBuild().Runtime == utils.Docker {
+		if arg.Runtime == utils.Docker {
 			cmd := fmt.Sprintf(`
 set -x
 docker load -i ~/image-cache/%s.tar
 `, info.Image)
 			go runCommand(&wg, errs, "sh", []string{"-c", cmd}...)
-		} else if container.GetBuild().Runtime == utils.Podman {
+		} else if arg.Runtime == utils.Podman {
 			cmd := fmt.Sprintf(`
 set -x
 podman load -i ~/image-cache/%s.tar

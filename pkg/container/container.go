@@ -79,6 +79,8 @@ type Container struct {
 	Opts   types.ContainerConfig
 	Prefix string
 	t
+
+	Build *Build
 }
 
 type PushOption struct {
@@ -93,7 +95,7 @@ func GetEnv(key string) string {
 	return u.GetEnv(key, string(BuildEnv))
 }
 
-func New(env EnvType) *Container {
+func New(build Build) *Container {
 	_client := func() cri.ContainerManager {
 		client, err := cri.InitContainerRuntime()
 		if err != nil {
@@ -103,14 +105,14 @@ func New(env EnvType) *Container {
 		return client
 	}
 	// _client()
-	if _build != nil {
-		return &Container{t: t{client: _client, ctx: context.TODO()}, Env: env, Verbose: _build.Verbose}
-	}
-	return &Container{t: t{client: _client, ctx: context.TODO()}, Env: env}
+	// if _build != nil {
+	// 	return &Container{t: t{client: _client, ctx: context.TODO()}, Env: env, Verbose: _build.Verbose}
+	// }
+	return &Container{t: t{client: _client, ctx: context.TODO()}, Env: build.Env, Build: &build}
 }
 
-func getContainifyHost() string {
-	if v, ok := GetBuild().Custom["CONTAINIFYCI_HOST"]; ok {
+func (c *Container) getContainifyHost() string {
+	if v, ok := c.GetBuild().Custom["CONTAINIFYCI_HOST"]; ok {
 		return v[0]
 	}
 	return ""
@@ -158,8 +160,8 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 		opts.Env = []string{}
 	}
 
-	if getContainifyHost() != "" {
-		opts.Env = append(opts.Env, fmt.Sprintf("CONTAINIFYCI_HOST=%s", getContainifyHost()))
+	if c.getContainifyHost() != "" {
+		opts.Env = append(opts.Env, fmt.Sprintf("CONTAINIFYCI_HOST=%s", c.getContainifyHost()))
 	}
 
 	if opts.Platform == types.AutoPlatform {
@@ -168,7 +170,7 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 
 	slog.Info("Creating container", "opts", opts, "platform", opts.Platform)
 
-	authConfig := registryAuthBase64(opts.Image)
+	authConfig := c.registryAuthBase64(opts.Image)
 	id, err := c.client().CreateContainer(c.ctx, &opts, authConfig)
 
 	if err != nil {
@@ -199,7 +201,7 @@ func (c *Container) Start() error {
 	}
 
 	// TODO make this optional or provide a way to opt out
-	shortImage := strings.ReplaceAll(c.Opts.Image, GetBuild().Registry+"/", "")
+	shortImage := strings.ReplaceAll(c.Opts.Image, c.GetBuild().Registry+"/", "")
 	img, tag := ParseImageTag(shortImage)
 
 	short := fmt.Sprintf("%s:%s", img, safeShort(tag, 8))
@@ -339,11 +341,11 @@ func (c *Container) Ready() error {
 }
 
 func (c *Container) PullByPlatform(platform string, imageTags ...string) error {
-	return ensureImagesExists(c.ctx, c.client(), imageTags, platform)
+	return c.ensureImagesExists(c.ctx, c.client(), imageTags, platform)
 }
 
 func (c *Container) Pull(imageTags ...string) error {
-	return ensureImagesExists(c.ctx, c.client(), imageTags, GetBuild().Platform.Container.String())
+	return c.ensureImagesExists(c.ctx, c.client(), imageTags, c.GetBuild().Platform.Container.String())
 }
 
 func (c *Container) PullDefault(imageTags ...string) error {
@@ -351,7 +353,7 @@ func (c *Container) PullDefault(imageTags ...string) error {
 }
 
 // ensureImageExists checks if a Docker image exists locally and pulls it if it doesn't.
-func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageNames []string, platform string) error {
+func (c *Container) ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageNames []string, platform string) error {
 	for _, imageName := range imageNames {
 		images, err := cli.ListImage(ctx, imageName)
 		if err != nil {
@@ -360,7 +362,7 @@ func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageName
 
 		if len(images) == 0 {
 			slog.Info("Image not found locally. Pulling from registry...", "image", imageName)
-			out, err := cli.PullImage(ctx, imageName, registryAuthBase64(imageName), platform)
+			out, err := cli.PullImage(ctx, imageName, c.registryAuthBase64(imageName), platform)
 			if err != nil {
 				return err
 			}
@@ -379,7 +381,7 @@ func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageName
 			if info.Platform.String() != platform {
 				slog.Warn("Image found locally but with different platform", "image", imageName, "platform", info.Platform.String())
 				slog.Warn("Pulling from registry...", "image", imageName)
-				out, err := cli.PullImage(ctx, imageName, registryAuthBase64(imageName), platform)
+				out, err := cli.PullImage(ctx, imageName, c.registryAuthBase64(imageName), platform)
 				if err != nil {
 					slog.Error("Failed to pull image", "error", err)
 					return err
@@ -399,7 +401,7 @@ func ensureImagesExists(ctx context.Context, cli cri.ContainerManager, imageName
 }
 
 // TODO: make registry authentification configurable and support multiple registries
-func registryAuthBase64(imageName string) string {
+func (c *Container) registryAuthBase64(imageName string) string {
 
 	imgInfo, err := utils.ParseDockerImage(imageName)
 	if err != nil {
@@ -407,15 +409,15 @@ func registryAuthBase64(imageName string) string {
 		return ""
 	}
 
-	if reg, ok := GetBuild().Registries[imgInfo.Server]; ok {
-		username := u.GetValue(reg.Username, GetBuild().Env.String())
+	if reg, ok := c.GetBuild().Registries[imgInfo.Server]; ok {
+		username := u.GetValue(reg.Username, c.GetBuild().Env.String())
 		slog.Debug("Registry auth found for image", "image", imageName, "server", imgInfo.Server, "username", username)
 		authConfig := registry.AuthConfig{
 			Username:      username,
-			Password:      u.GetValue(reg.Password, GetBuild().Env.String()),
+			Password:      u.GetValue(reg.Password, c.GetBuild().Env.String()),
 			ServerAddress: imgInfo.Server, // Server address for GCR
 		}
-		return encodeAuthToBase64(authConfig)
+		return c.encodeAuthToBase64(authConfig)
 	}
 
 	slog.Warn("No registry auth found for image", "image", imageName, "server", imgInfo.Server)
@@ -435,7 +437,7 @@ func (c *Container) Tag(source, target string) error {
 func (c *Container) Push(source, target string, opts ...PushOption) error {
 	if opts == nil {
 		opts = []PushOption{{Remove: true}}
-		if GetBuild().Runtime == utils.Podman {
+		if c.GetBuild().Runtime == utils.Podman {
 			opts = []PushOption{{Remove: false}}
 		}
 	}
@@ -446,7 +448,7 @@ func (c *Container) Push(source, target string, opts ...PushOption) error {
 		return err
 	}
 
-	authConfig := registryAuthBase64(target)
+	authConfig := c.registryAuthBase64(target)
 
 	reader, err := c.client().PushImage(c.ctx, target, authConfig)
 	if err != nil {
@@ -466,9 +468,9 @@ func (c *Container) Push(source, target string, opts ...PushOption) error {
 }
 
 // encodeAuthToBase64 encodes the authentication configuration to base64.
-func encodeAuthToBase64(auth registry.AuthConfig) string {
+func (c *Container) encodeAuthToBase64(auth registry.AuthConfig) string {
 	authJSON, _ := json.Marshal(auth)
-	if GetBuild().Verbose {
+	if c.GetBuild().Verbose {
 		slog.Debug("Auth config", "auth", string(authJSON))
 	}
 	return base64.URLEncoding.EncodeToString(authJSON)
@@ -514,12 +516,12 @@ func waitForApplication(ctx context.Context, readiness *types.ReadinessProbe) er
 	}
 }
 
-func GetBuild() *Build {
-	return _build
+func (c *Container) GetBuild() *Build {
+	return c.Build
 }
 
 func (c *Container) BuildImageByPlatforms(dockerfile []byte, dockerCtx *bytes.Buffer, imageName string, platforms []string) ([]string, error) {
-	authConfig := registryAuthBase64(imageName)
+	authConfig := c.registryAuthBase64(imageName)
 	reader, imageIds, err := c.client().BuildMultiArchImage(c.ctx, dockerfile, dockerCtx, imageName, platforms, authConfig)
 	if err != nil {
 		return nil, err
@@ -551,7 +553,7 @@ func (c *Container) BuildImageByPlatform(dockerfile []byte, imageName string, pl
 }
 
 func (c *Container) BuildImage(dockerfile []byte, imageName string) error {
-	return c.BuildImageByPlatform(dockerfile, imageName, GetBuild().Platform.Container.String())
+	return c.BuildImageByPlatform(dockerfile, imageName, c.GetBuild().Platform.Container.String())
 }
 
 // imageExists checks if the image with the specified tag exists.
@@ -632,7 +634,7 @@ func (c *Container) BuildingContainer(opts types.ContainerConfig) error {
 
 	//TODO: load the secrets in the build scripts from above
 	//The secret could be loaded as part of the entrypoint.
-	if secrets, ok := GetBuild().Custom["secrets"]; ok {
+	if secrets, ok := c.GetBuild().Custom["secrets"]; ok {
 		var buf bytes.Buffer
 		buf.WriteString("#!/bin/sh\nset +xe\n")
 		for _, secret := range secrets {
@@ -662,7 +664,7 @@ func (c *Container) BuildingContainer(opts types.ContainerConfig) error {
 
 func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, platforms ...string) error {
 	if len(platforms) == 0 {
-		platforms = []string{GetBuild().Platform.Container.String()}
+		platforms = []string{c.GetBuild().Platform.Container.String()}
 	}
 
 	exists, err := c.ImageExists(image, platforms...)
@@ -707,7 +709,7 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 		}
 	} else {
 		//TODO: how to pull multi platform images
-		platform := GetBuild().Platform.Container.String()
+		platform := c.GetBuild().Platform.Container.String()
 		err = c.PullByPlatform(platform, image)
 		if err != nil {
 			slog.Warn("Failed to pull intermediate image. Has to build now then", "error", err, "image", image)
@@ -809,7 +811,7 @@ func TarDir(src fs.ReadDirFS) (*bytes.Buffer, error) {
 }
 
 func (c *Container) Apply(opts *types.ContainerConfig) {
-	if envs, ok := GetBuild().Custom["envs"]; ok {
+	if envs, ok := c.GetBuild().Custom["envs"]; ok {
 		for _, env := range envs {
 			v := u.GetEnv(env, "build")
 			opts.Env = append(opts.Env, fmt.Sprintf("%s=%s", env, v))
