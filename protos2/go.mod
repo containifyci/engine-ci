@@ -1,7 +1,6 @@
 module github.com/containifyci/engine-ci/protos2
 
-go 1.22.5
-toolchain go1.22.9
+go 1.23
 
 require (
 	github.com/hashicorp/go-plugin v1.6.2

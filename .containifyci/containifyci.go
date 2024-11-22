@@ -26,7 +26,17 @@ func registryAuth() map[string]*protos2.ContainerRegistry {
 }
 
 func main() {
+
 	os.Chdir("..")
+	protos2 := build.NewGoServiceBuild("engine-ci-protos2")
+	protos2.Folder = "protos2"
+	protos2.Image = ""
+
+	client := build.NewGoServiceBuild("engine-ci-client")
+	client.File = "goflip.go"
+	client.Folder = "client"
+	client.Image = ""
+
 	opts1 := build.NewGoServiceBuild("engine-ci")
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
@@ -43,5 +53,5 @@ func main() {
 		"goreleaser": build.NewList("false"),
 	}
 	opts2.Registries = registryAuth()
-	build.Serve(opts1, opts2)
+	build.Serve(protos2, client, opts1, opts2)
 }
