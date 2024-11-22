@@ -52,7 +52,6 @@ func NewServiceBuild(appName string, buildType protos2.BuildType) *BuildArgs {
 		Image:       appName,
 		ImageTag:    commitSha,
 		BuildType:   buildType,
-		// Platform:       "linux/amd64",
 		SourcePackages: packages,
 		SourceFiles:    files,
 	}
@@ -62,12 +61,30 @@ func NewGoServiceBuild(appName string) *BuildArgs {
 	return NewServiceBuild(appName, protos2.BuildType_GoLang)
 }
 
+func NewGoLibraryBuild(appName string) *BuildArgs {
+	lib := NewGoServiceBuild(appName)
+	lib.Image = ""
+	return lib
+}
+
 func NewMavenServiceBuild(appName string) *BuildArgs {
 	build := NewServiceBuild(appName, protos2.BuildType_Maven)
 	build.Folder = "target/quarkus-app"
 	return build
 }
 
+func NewMavenLibraryBuild(appName string) *BuildArgs {
+	lib := NewMavenServiceBuild(appName)
+	lib.Image = ""
+	return lib
+}
+
 func NewPythonServiceBuild(appName string) *BuildArgs {
 	return NewServiceBuild(appName, protos2.BuildType_Python)
+}
+
+func NewPythonLibraryBuild(appName string) *BuildArgs {
+	lib := NewPythonServiceBuild(appName)
+	lib.Image = ""
+	return lib
 }

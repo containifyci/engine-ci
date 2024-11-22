@@ -33,7 +33,7 @@ func main() {
 	protos2.Image = ""
 
 	client := build.NewGoServiceBuild("engine-ci-client")
-	client.File = "goflip.go"
+	client.File = "client.go"
 	client.Folder = "client"
 	client.Image = ""
 

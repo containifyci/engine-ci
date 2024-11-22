@@ -8,11 +8,7 @@ import (
 var opts protos2.BuildArgs
 
 func init() {
-	// os.Chdir("..")
 	opts = protos2.BuildArgs{}
-	// opts.Custom = map[string][]string{
-	// 	"tags": {"containers_image_openpgp"},
-	// }
 	opts.Verbose = true
 	opts.File = "containifyci.go"
 	opts.Application = "containifyci-cli"
