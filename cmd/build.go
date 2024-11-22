@@ -100,8 +100,9 @@ func Init(args ...*container.Build) {
 
 	git, err := svc.SetGitInfo()
 	if err != nil {
-		slog.Error("Failed to get git info", "error", err)
-		os.Exit(1)
+		slog.Warn("Failed to get git info", "error", err)
+		// os.Exit(1)
+		git = svc.SetUnknowGitInfo()
 	}
 	slog.Info("Starting build", "build", bld, "git", git)
 	container.InitRuntime()

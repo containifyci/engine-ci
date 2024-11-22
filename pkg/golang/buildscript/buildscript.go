@@ -1,4 +1,4 @@
-package alpine
+package buildscript
 
 import (
 	"bytes"
@@ -17,14 +17,21 @@ type BuildScript struct {
 	Tags      []string
 	AppName   string
 	MainFile  string
+	Output    string
 	Platforms []*types.PlatformSpec
 	Verbose   bool
 }
 
 func NewBuildScript(appName, mainfile string, tags []string, verbose bool, platforms ...*types.PlatformSpec) *BuildScript {
+	output := "-o /src/{{.app}}-{{.os}}-{{.arch}}"
+	if mainfile == "" {
+		mainfile = "./..."
+		output = ""
+	}
 	script := &BuildScript{
 		AppName:   appName,
 		MainFile:  mainfile,
+		Output:    output,
 		Platforms: platforms,
 		Tags:      tags,
 		Verbose:   verbose,
@@ -33,7 +40,7 @@ func NewBuildScript(appName, mainfile string, tags []string, verbose bool, platf
 }
 
 // TODO: the -race flag needs CDO enabled for now https://github.com/golang/go/issues/6508
-func Script(bs *BuildScript) string {
+func (bs *BuildScript) String() string {
 	return script(bs)
 }
 
@@ -50,8 +57,12 @@ git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
 	return script
 }
 
-func trim(str string) string {
-	return strings.TrimSpace(str)
+func trim(str string, args ...any) string {
+	s := strings.TrimSpace(str)
+	if len(args) == 0 {
+		return s
+	}
+	return fmt.Sprintf(s, args...)
 }
 
 func renderTestCommand(m map[string]interface{}) string {
@@ -68,11 +79,11 @@ go test {{- .verbose }} -timeout 120s {{- .tags }} -cover -coverprofile coverage
 	return buf.String()
 }
 
-func renderCompileCommand(m map[string]interface{}) string {
+func (bs *BuildScript) renderCompileCommand(m map[string]interface{}) string {
 	t := template.Must(template.New("").
 		Parse(trim(`
-env GOOS={{.os}} GOARCH={{ .arch }} go build {{- .tags }} {{- .verbose }} -o /src/{{.app}}-{{.os}}-{{.arch}} {{.mainfile}}
-`)))
+env GOOS={{.os}} GOARCH={{ .arch }} go build {{- .tags }} {{- .verbose }} %s {{.mainfile}}
+`, bs.Output)))
 	buf := new(bytes.Buffer)
 	err := t.Execute(buf, m)
 	if err != nil {
@@ -92,7 +103,7 @@ func goBuildCmds(bs *BuildScript) string {
 		if len(bs.Tags) > 0 {
 			m["tags"] = " -tags " + strings.Join(bs.Tags, ",")
 		}
-		cmds = append(cmds, renderCompileCommand(m))
+		cmds = append(cmds, bs.renderCompileCommand(m))
 	}
 	m := map[string]interface{}{"verbose": "", "tags": "", "cgo": 0}
 	if bs.Verbose {

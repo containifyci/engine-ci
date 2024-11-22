@@ -135,6 +135,16 @@ func GitInfo() *Git {
 	return git
 }
 
+func SetUnknowGitInfo() (*Git) {
+	git = &Git{
+		Owner:  "unknown",
+		Repo:   "unknown",
+		Branch: "unknown",
+		Tag:    "unknown",
+	}
+	return git
+}
+
 func SetGitInfo() (*Git, error) {
 	return setGitInfo(&GitCommander{})
 }
