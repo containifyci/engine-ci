@@ -44,14 +44,14 @@ For a practical example of how **engine-ci** is used, check out the [containifyc
 - [ ] **NPM Pipeline**: Add support for pipelines targeting npm-based repositories (medium priority).
 - [ ] **Podman Logging**: Improve progress logging functionality within Podman (high priority).
 - [ ] **Multi-Architecture Docker Image**: Add Docker build support for the `sonar-scanner-cli` multi-architecture image (low priority).
-- [ ] **Golang Libraries Support**: Enable builds for Go libraries that do not include a `main` package (high priority).
-- [ ] **Golang Submodule Support**: Allow Go submodules to be built as part of the main module build (high priority).
-- [ ] **Container Image Push**: Provide an option to opt out of pushing container images (enabled by default).
-- [ ] **Goreleaser Integration**: Provide an option to opt out of using Goreleaser (enabled by default).
-- [ ] **Dependabot**: Update DependaBot configuration also to run daily (high priority).
+- [x] **Golang Libraries Support**: Enable builds for Go libraries that do not include a `main` package (high priority).
+- [x] **Golang Submodule Support**: Allow Go submodules to be built as part of the main module build (high priority).
+- [x] **Container Image Push**: Provide an option to opt out of pushing container images (enabled by default).
+- [x] **Goreleaser Integration**: Provide an option to opt out of using Goreleaser (enabled by default).
+- [x] **Dependabot**: Update DependaBot configuration also to run daily (high priority).
 - [ ] **Github Action**: Change release process to create draft a release and to publish it after all artifacts are uploaded by goreleaser.
   - https://goreleaser.com/customization/release/#github
-
+- [ ] **Goreleaser Signed Apple Builds**: Add signing for Apple builds (high priority).
 
 ## Contribution
 
