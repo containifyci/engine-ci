@@ -14,6 +14,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
 	"github.com/containifyci/engine-ci/pkg/network"
 )
 
@@ -313,7 +314,7 @@ func (c *GoContainer) BuildScript() string {
 	if container.GetBuild().Custom.Strings("platforms") != nil {
 		platforms = types.ParsePlatforms(container.GetBuild().Custom.Strings("platforms")...)
 	}
-	return Script(NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, platforms...))
+	return buildscript.NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, platforms...).String()
 }
 
 func NewProd() build.Build {

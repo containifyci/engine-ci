@@ -51,11 +51,11 @@ on:
         type: boolean
     secrets:
       CONTAINIFYCI_DOCKER_TOKEN:
-        required: true
+        required: false
       CONTAINIFYCI_RELEASE_TOKEN:
-        required: true
+        required: false
       CONTAINIFYCI_CI_SSH_PRIVATE_KEY:
-        required: true
+        required: false
       SONAR_TOKEN:
         required: false
       NGROK_AUTH_TOKEN:
@@ -94,6 +94,9 @@ jobs:
 
       - name: Setup SSH agent for retrieving (private) Github dependencies
         uses: webfactory/ssh-agent@v0.9.0
+        if: env.CONTAINIFYCI_CI_SSH_PRIVATE_KEY != null
+        env:
+          CONTAINIFYCI_CI_SSH_PRIVATE_KEY: ${{ secrets.CONTAINIFYCI_CI_SSH_PRIVATE_KEY }}
         with:
           ssh-private-key: ${{ secrets.CONTAINIFYCI_CI_SSH_PRIVATE_KEY }}
 
@@ -110,6 +113,9 @@ jobs:
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
+        if: env.CONTAINIFYCI_DOCKER_TOKEN != null
+        env:
+          CONTAINIFYCI_DOCKER_TOKEN: ${{ secrets.CONTAINIFYCI_DOCKER_TOKEN }}
         with:
           username: ${{ inputs.dockerhub_user }}
           password: ${{ secrets.CONTAINIFYCI_DOCKER_TOKEN }}
@@ -140,7 +146,7 @@ jobs:
           extension-matching: disable
           rename-to: engine-ci
           chmod: 0755
-          token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
+          # token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
 
       - name: Install libbtrfs-dev needed by podman go module
         if: ${{ !inputs.install_binary }}

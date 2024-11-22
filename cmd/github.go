@@ -15,8 +15,8 @@ var githubWorkflow []byte
 // buildCmd represents the build command
 var githubCmd = &cobra.Command{
 	Use:   "github",
-	Short: "Command to generate Github Action file for gflip",
-	Long: `Command to generate Github Action file for gflip.
+	Short: "Command to generate Github Action file for engine-ci",
+	Long: `Command to generate Github Action file for engine-ci.
 `,
 	Run: RunGithub,
 }

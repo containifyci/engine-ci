@@ -1,4 +1,4 @@
-package alpine
+package buildscript
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ env GOOS=linux GOARCH=amd64 go build -tags build_tag -x -o /src/test-linux-amd64
 env GOOS=darwin GOARCH=arm64 go build -tags build_tag -x -o /src/test-darwin-arm64 /src/main.go
 go test -v -timeout 120s -tags build_tag -cover -coverprofile coverage.txt ./...
 `
-	script := Script(bs)
+	script := bs.String()
 	assert.Equal(t, expected, script)
 }
 
@@ -35,6 +35,6 @@ env GOOS=darwin GOARCH=arm64 go build -o /src/test-darwin-arm64 /src/main.go
 env GOOS=linux GOARCH=amd64 go build -o /src/test-linux-amd64 /src/main.go
 go test -timeout 120s -cover -coverprofile coverage.txt ./...
 `
-	script := Script(bs)
+	script := bs.String()
 	assert.Equal(t, expected, script)
 }

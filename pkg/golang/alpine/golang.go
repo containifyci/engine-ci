@@ -14,6 +14,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
 	"github.com/containifyci/engine-ci/pkg/network"
 )
 
@@ -308,7 +309,7 @@ func (c *GoContainer) Build() error {
 
 func (c *GoContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return Script(NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, c.Platforms...))
+	return buildscript.NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, c.Platforms...).String()
 }
 
 func NewProd() build.Build {
