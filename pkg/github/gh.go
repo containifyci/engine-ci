@@ -149,7 +149,11 @@ func (c *GithubContainer) Run() error {
 		slog.Info("Skip github PR comment because PR number is not set")
 		return nil
 	}
-	slog.Info("Run Github")
+
+	if !ifTrivyFileExists() {
+		slog.Info("Skip github PR comment because trivy.json file does not exist")
+		return nil
+	}
 
 	err := c.BuildImage()
 	if err != nil {
@@ -163,4 +167,17 @@ func (c *GithubContainer) Run() error {
 		os.Exit(1)
 	}
 	return nil
+}
+
+func ifTrivyFileExists() bool {
+	_, err := os.Stat("trivy.json")
+	if err == nil {
+		return true
+	} else if os.IsNotExist(err) {
+		return false
+	}
+
+	slog.Error("Failed to read trivy.json file", "error", err)
+	os.Exit(1)
+	return false
 }
