@@ -16,14 +16,30 @@ var Handshake = plugin.HandshakeConfig{
 }
 
 // PluginMap is the map of plugins we can dispense.
-var PluginMap = map[string]plugin.Plugin{
-	"containifyci": &ContainifyCIGRPCPlugin{},
+// var PluginMap = map[string]plugin.Plugin{
+// 	"containifyci": &ContainifyCIGRPCPlugin{},
+// }
+
+// PluginMap is the map of plugins we can dispense.
+var PluginMap = map[int]plugin.PluginSet{
+	1: {
+		"containifyci": &ContainifyCIv1GRPCPlugin{},
+	},
+	2: {
+		"containifyci": &ContainifyCIv2GRPCPlugin{},
+	},
 }
 
-type ContainifyCI interface {
+type ContainifyCIv2 interface {
+	GetBuilds() *BuildArgsGroupResponse
+}
+
+type ContainifyCIv1 interface {
 	GetBuild() *BuildArgsResponse
 }
 
-var _ plugin.GRPCPlugin = &ContainifyCIGRPCPlugin{}
+var _ plugin.GRPCPlugin = &ContainifyCIv2GRPCPlugin{}
+var _ ContainifyCIv2 = &ContainifyCIv2GRPCClient{}
 
-var _ ContainifyCI = &ContainifyCIGRPCClient{}
+var _ plugin.GRPCPlugin = &ContainifyCIv1GRPCPlugin{}
+var _ ContainifyCIv1 = &ContainifyCIv1GRPCClient{}
