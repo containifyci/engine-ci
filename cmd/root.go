@@ -3,9 +3,8 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"os"
+	"sync"
 
-	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/logger"
 
 	"github.com/spf13/cobra"
@@ -50,6 +49,8 @@ to quickly create a Cobra application.`,
 	},
 }
 
+var mu sync.Mutex
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() error {
@@ -70,11 +71,12 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&RootArgs.Progress, "progress", "plain", "The progress logging format to use. Options are: progress, plain")
 }
 
-func All(opts *container.Build) error {
-	os.Args[1] = "build"
-	os.Args = append(os.Args, opts.AsFlags()...)
-	return Execute()
-}
+// func All(opts *container.Build) error {
+// 	os.Args[1] = "build"
+// 	os.Args = append(os.Args, opts.AsFlags()...)
+// 	slog.Info("Running build command", "args", opts.AsFlags())
+// 	return Execute()
+// }
 
 func SetVersionInfo(version, commit, date, repo string) string {
 	rootCmd.Version = fmt.Sprintf("%s (Built on %s from Git SHA %s of %s)", version, date, commit, repo)

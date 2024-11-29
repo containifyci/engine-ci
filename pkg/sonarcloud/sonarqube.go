@@ -55,10 +55,10 @@ func (c *SonarqubeContainer) Address() *network.Address {
 	return &network.Address{Host: "https://sonarcloud.io:443", InternalHost: "http://localhost:9000"}
 }
 
-func NewSonarQube() *SonarqubeContainer {
+func NewSonarQube(build container.Build) *SonarqubeContainer {
 	_token := os.Getenv("SONAR_TOKEN")
 	return &SonarqubeContainer{
-		Container: container.New(container.LocalEnv),
+		Container: container.New(build),
 		token:     &_token,
 	}
 }

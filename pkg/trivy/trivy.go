@@ -21,9 +21,9 @@ type TrivyContainer struct {
 	*container.Container
 }
 
-func New() *TrivyContainer {
+func New(build container.Build) *TrivyContainer {
 	return &TrivyContainer{
-		Container: container.New(container.BuildEnv),
+		Container: container.New(build),
 	}
 }
 
@@ -63,8 +63,8 @@ func CacheFolder() string {
 
 func (c *TrivyContainer) CopyScript() error {
 	// TODO add the --podman-host /var/run/podman.sock  only when runtime is podman
-	image := container.GetBuild().ImageURI()
-	if container.GetBuild().Runtime == utils.Podman {
+	image := c.GetBuild().ImageURI()
+	if c.GetBuild().Runtime == utils.Podman {
 		info, err := c.Container.InspectImage(image)
 		if err != nil {
 			slog.Error("Failed to inspect image", "error", err)
@@ -118,14 +118,14 @@ func (c *TrivyContainer) Scan() error {
 		"TRIVY_JAVA_DB_REPOSITORY=ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db",
 	}
 
-	ssh, err := network.SSHForward()
+	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
 		slog.Error("Failed to create ssh forward", "error", err)
 		os.Exit(1)
 	}
 
 	opts = ssh.Apply(&opts)
-	opts = utils.ApplySocket(container.GetBuild().Runtime, &opts)
+	opts = utils.ApplySocket(c.GetBuild().Runtime, &opts)
 
 	opts.Entrypoint = []string{"sh", "/tmp/script.sh"}
 
@@ -159,8 +159,12 @@ func (c *TrivyContainer) Pull() error {
 }
 
 func (c *TrivyContainer) Run() error {
-	if container.GetBuild().Image == "" {
-		slog.Warn("trivy: Image not set, skip pushing image")
+	if c.GetBuild().Env == container.LocalEnv {
+		slog.Warn("trivy: Image not set, skip trivy scan")
+		return nil
+	}
+	if c.GetBuild().Image == "" {
+		slog.Warn("trivy: Image not set, skip trivy scan")
 		return nil
 	}
 	err := c.Pull()

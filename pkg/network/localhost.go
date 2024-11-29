@@ -15,6 +15,7 @@ var RuntimeOS = runtime.GOOS
 type Address struct {
 	Host         string
 	InternalHost string
+	Port         int
 }
 
 func (a *Address) NewAddress(arg *container.Build) {
@@ -62,10 +63,10 @@ func hostname(scheme, host, port string) string {
 	return fmt.Sprintf("%s://%s:%s", scheme, host, port)
 }
 
-func (a *Address) ForContainer(env container.EnvType) string {
-	a.NewAddress(container.GetBuild())
+func (a *Address) ForContainer(build container.Build) string {
+	a.NewAddress(&build)
 
-	switch env {
+	switch build.Env {
 	case container.LocalEnv:
 		return a.InternalHost
 	case container.BuildEnv:
@@ -75,12 +76,7 @@ func (a *Address) ForContainer(env container.EnvType) string {
 	}
 }
 
-func (a *Address) ForContainerDefault(arg ...*container.Build) string {
-	if len(arg) > 0 {
-		a.NewAddress(arg[0])
-	} else {
-		a.NewAddress(container.GetBuild())
-	}
-
+func (a *Address) ForContainerDefault(arg *container.Build) string {
+	a.NewAddress(arg)
 	return a.InternalHost
 }

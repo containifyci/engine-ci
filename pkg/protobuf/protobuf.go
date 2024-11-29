@@ -25,26 +25,26 @@ type ProtogufContainer struct {
 	*container.Container
 }
 
-func New() *ProtogufContainer {
+func New(build container.Build) *ProtogufContainer {
 	command := "protoc"
-	if v, ok := container.GetBuild().Custom["protobuf_cmd"]; ok {
+	if v, ok := build.Custom["protobuf_cmd"]; ok {
 		command = v[0]
 	}
 	withHttp := false
-	if v, ok := container.GetBuild().Custom["withHttp"]; ok {
+	if v, ok := build.Custom["withHttp"]; ok {
 		withHttp = v[0] == "true"
 	}
 	withTag := false
-	if v, ok := container.GetBuild().Custom["withTag"]; ok {
+	if v, ok := build.Custom["withTag"]; ok {
 		withTag = v[0] == "true"
 	}
 	return &ProtogufContainer{
 		Command:        command,
 		WithHttp:       withHttp,
 		WithTag:        withTag,
-		Container:      container.New(container.BuildEnv),
-		SourcePackages: container.GetBuild().SourcePackages,
-		SourceFiles:    container.GetBuild().SourceFiles,
+		Container:      container.New(build),
+		SourcePackages: build.SourcePackages,
+		SourceFiles:    build.SourceFiles,
 	}
 }
 
@@ -53,17 +53,17 @@ func (c *ProtogufContainer) IsAsync() bool {
 }
 
 func (c *ProtogufContainer) Images() []string {
-	return []string{Image()}
+	return []string{c.Image()}
 }
 
-func Image() string {
+func (c *ProtogufContainer) Image() string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
 	}
 	tag := computeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "protobuf", tag)
+	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "protobuf", tag)
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "protobuf", tag)
 }
 
@@ -72,7 +72,7 @@ func (c *ProtogufContainer) Name() string {
 }
 
 func (c *ProtogufContainer) Pull() error {
-	image := Image()
+	image := c.Image()
 	err := c.Container.Pull(image)
 	if err != nil {
 		slog.Info("Failed to pull image", "error", err, "image", image)
@@ -92,7 +92,7 @@ func (c *ProtogufContainer) CopyBuildScript() error {
 }
 
 func (c *ProtogufContainer) Generate() error {
-	image := Image()
+	image := c.Image()
 
 	opts := types.ContainerConfig{}
 	opts.Image = image
@@ -144,7 +144,7 @@ func (c *ProtogufContainer) Generate() error {
 }
 
 func (c *ProtogufContainer) Build() error {
-	image := Image()
+	image := c.Image()
 
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
@@ -152,7 +152,7 @@ func (c *ProtogufContainer) Build() error {
 		os.Exit(1)
 	}
 
-	platforms := types.GetPlatforms(container.GetBuild().Platform)
+	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
 	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)

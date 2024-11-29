@@ -53,15 +53,15 @@ func TestSSHForward(t *testing.T) {
 	for _, tt := range tests {
 		t.Setenv("SSH_AUTH_SOCK", "linux_ssh_auth_socket")
 		t.Run("test for "+tt.os, func(t *testing.T) {
-			container.NewBuild(&container.Build{
+			build := &container.Build{
 				Runtime: tt.cri,
 				Platform: types.Platform{
 					Host: &types.PlatformSpec{
 						OS: tt.os,
 					},
 				},
-			})
-			got, err := SSHForward()
+			}
+			got, err := SSHForward(*build)
 			if tt.want == nil {
 				assert.Error(t, err)
 			} else {

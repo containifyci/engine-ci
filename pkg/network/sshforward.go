@@ -36,8 +36,8 @@ func (f *Forward) Apply(opts *types.ContainerConfig) types.ContainerConfig {
 	return *opts
 }
 
-func SSHForward() (*Forward, error) {
-	switch container.GetBuild().Platform.Host.OS {
+func SSHForward(build container.Build) (*Forward, error) {
+	switch build.Platform.Host.OS {
 	case "linux":
 		sshAuthSocket := os.Getenv("SSH_AUTH_SOCK")
 		if sshAuthSocket == "" {
@@ -55,7 +55,7 @@ func SSHForward() (*Forward, error) {
 			},
 		}, nil
 	case "darwin":
-		if container.GetBuild().Runtime == "podman" {
+		if build.Runtime == "podman" {
 			slog.Warn("SSH forwarding is not supported on macOS with Podman")
 			return nil, nil
 		}
@@ -75,5 +75,5 @@ func SSHForward() (*Forward, error) {
 			},
 		}, nil
 	}
-	return nil, fmt.Errorf("unsupported platform: %s", container.GetBuild().Platform.Host)
+	return nil, fmt.Errorf("unsupported platform: %s", build.Platform.Host)
 }

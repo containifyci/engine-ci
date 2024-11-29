@@ -2,31 +2,32 @@ package golang
 
 import (
 	"github.com/containifyci/engine-ci/pkg/build"
+	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/golang/alpine"
 	"github.com/containifyci/engine-ci/pkg/golang/debian"
 	"github.com/containifyci/engine-ci/pkg/golang/debiancgo"
 )
 
-func New() *alpine.GoContainer {
-	return alpine.New()
+func New(build container.Build) *alpine.GoContainer {
+	return alpine.New(build)
 }
 
-func NewDebian() *debian.GoContainer {
-	return debian.New()
+func NewDebian(build container.Build) *debian.GoContainer {
+	return debian.New(build)
 }
 
-func NewProdDebian() build.Build {
-	return debian.NewProd()
+func NewProdDebian(build container.Build) build.Build {
+	return debian.NewProd(build)
 }
 
-func NewCGO() *debiancgo.GoContainer {
-	return debiancgo.New()
+func NewCGO(build container.Build) *debiancgo.GoContainer {
+	return debiancgo.New(build)
 }
 
-func NewProd() build.Build {
-	return alpine.NewProd()
+func NewProd(build container.Build) build.Build {
+	return alpine.NewProd(build)
 }
 
-func NewLinter() build.Build {
-	return alpine.NewLinter()
+func NewLinter(build container.Build) build.Build {
+	return alpine.NewLinter(build)
 }

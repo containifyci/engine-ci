@@ -37,14 +37,14 @@ type PythonContainer struct {
 	*container.Container
 }
 
-func New() *PythonContainer {
+func New(build container.Build) *PythonContainer {
 	return &PythonContainer{
-		App:       container.GetBuild().App,
-		Container: container.New(container.BuildEnv),
-		Image:     container.GetBuild().Image,
-		Folder:    container.GetBuild().Folder,
-		ImageTag:  container.GetBuild().ImageTag,
-		Platform:  container.GetBuild().Platform,
+		App:       build.App,
+		Container: container.New(build),
+		Image:     build.Image,
+		Folder:    build.Folder,
+		ImageTag:  build.ImageTag,
+		Platform:  build.Platform,
 	}
 }
 
@@ -75,7 +75,7 @@ func (c *PythonContainer) Pull() error {
 }
 
 func (c *PythonContainer) Images() []string {
-	return []string{PythonImage(), BaseImage}
+	return []string{c.PythonImage(), BaseImage}
 }
 
 // TODO: provide a shorter checksum
@@ -84,14 +84,14 @@ func ComputeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func PythonImage() string {
+func  (c *PythonContainer) PythonImage() string {
 	dockerFile, err := f.ReadFile("Dockerfile.python")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.Python", "error", err)
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "python-3.11-slim-bookworm", tag)
+	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "python-3.11-slim-bookworm", tag)
 
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "python-3.11-slim-bookworm", tag)
 }
@@ -113,7 +113,7 @@ func (c *PythonContainer) BuildPythonImage() error {
 	installUv := "RUN pip3 --no-cache install uv"
 
 	// Podman can't run uv installed with x86_64.manylinux packages
-	if container.GetBuild().Runtime == utils.Podman {
+	if c.GetBuild().Runtime == utils.Podman {
 		installUv = `
 RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --only-binary=:all: --target /tmp/uv uv && \
 	mv /tmp/uv/bin/uv /usr/local/bin && \
@@ -126,9 +126,9 @@ RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --o
 		slog.Error("Failed to render Dockerfile.Python", "error", err)
 		os.Exit(1)
 	}
-	image := PythonImage()
+	image := c.PythonImage()
 
-	platforms := types.GetPlatforms(container.GetBuild().Platform)
+	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
 	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
@@ -139,9 +139,9 @@ func (c *PythonContainer) Address() *network.Address {
 }
 
 func (c *PythonContainer) Build() (string, error) {
-	imageTag := PythonImage()
+	imageTag := c.PythonImage()
 
-	ssh, err := network.SSHForward()
+	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
 		slog.Error("Failed to forward SSH", "error", err)
 		os.Exit(1)
@@ -202,20 +202,20 @@ type PythonBuild struct {
 	async  bool
 }
 
-func (g PythonBuild) Run() error { return g.rf() }
-func (g PythonBuild) Name() string { return g.name }
+func (g PythonBuild) Run() error       { return g.rf() }
+func (g PythonBuild) Name() string     { return g.name }
 func (g PythonBuild) Images() []string { return g.images }
-func (g PythonBuild) IsAsync() bool { return g.async }
+func (g PythonBuild) IsAsync() bool    { return g.async }
 
-func NewProd() build.Build {
-	container := New()
+func NewProd(build container.Build) build.Build {
+	container := New(build)
 	return PythonBuild{
 		rf: func() error {
 			return container.Prod()
 		},
 		name:   "python-prod",
-		images: []string{PythonImage()},
-		async: false,
+		images: []string{container.PythonImage()},
+		async:  false,
 	}
 }
 
@@ -263,7 +263,7 @@ func (c *PythonContainer) Prod() error {
 		os.Exit(1)
 	}
 
-	imageUri := utils.ImageURI(container.GetBuild().Registry, c.Image, c.ImageTag)
+	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)
 	err = c.Container.Push(imageId, imageUri, container.PushOption{Remove: false})
 	if err != nil {
 		slog.Error("Failed to push image: %s", "error", err)

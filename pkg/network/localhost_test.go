@@ -77,10 +77,7 @@ func TestAddress_ForContainer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name+" os "+tt.os+" cri "+string(tt.cri), func(t *testing.T) {
 			RuntimeOS = tt.os
-			container.NewBuild(&container.Build{
-				Runtime: tt.cri,
-			})
-			host := tt.addr.ForContainer(tt.env)
+			host := tt.addr.ForContainer(container.Build{Env: tt.env, Runtime: tt.cri})
 			assert.Equal(t, tt.want, host)
 		})
 	}

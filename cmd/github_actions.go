@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/spf13/cobra"
@@ -35,7 +34,8 @@ func RunGithubAction() error {
 
 	// Define the script content
 	var scriptContent string
-	switch cri.DetectContainerRuntime() {
+	runtime := cri.DetectContainerRuntime()
+	switch runtime {
 	case utils.Docker:
 		slog.Info("Docker runtime detected")
 		scriptContent = `#!/bin/bash
@@ -67,8 +67,8 @@ ls -lha  /run/user/1001/podman/podman.sock
 echo "CONTAINER_PRIVILGED=false" >> $GITHUB_ENV
 `
 	default:
-		slog.Error("Unknown runtime", "runtime", container.GetBuild().Runtime)
-		return fmt.Errorf("unknown runtime: %s", container.GetBuild().Runtime)
+		slog.Error("Unknown runtime", "runtime", runtime)
+		return fmt.Errorf("unknown runtime: %s", runtime)
 	}
 
 	// Write the script to a temporary file

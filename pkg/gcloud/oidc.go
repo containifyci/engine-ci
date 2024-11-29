@@ -33,9 +33,9 @@ type GCloudContainer struct {
 	*container.Container
 }
 
-func New() *GCloudContainer {
+func New(build container.Build) *GCloudContainer {
 	return &GCloudContainer{
-		Container: container.New(container.BuildEnv),
+		Container: container.New(build),
 	}
 }
 
@@ -81,7 +81,7 @@ func calculateDirChecksum(_fs embed.FS) ([]byte, error) {
 }
 
 func (c *GCloudContainer) BuildImage() error {
-	image := Image()
+	image := Image(c.GetBuild())
 
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *GCloudContainer) BuildImage() error {
 		os.Exit(1)
 	}
 
-	platforms := types.GetPlatforms(container.GetBuild().Platform)
+	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
 	c.Container.Source = d
@@ -99,7 +99,7 @@ func (c *GCloudContainer) BuildImage() error {
 
 func (c *GCloudContainer) Auth() error {
 	opts := types.ContainerConfig{}
-	opts.Image = Image()
+	opts.Image = Image(c.GetBuild())
 
 	dir, _ := filepath.Abs(".")
 	opts.Volumes = []types.Volume{
@@ -158,7 +158,7 @@ func (c *GCloudContainer) Auth() error {
 	return c.Container.Wait()
 }
 
-func Image() string {
+func Image(build *container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
@@ -174,13 +174,13 @@ func Image() string {
 	dckCheckSum := sha256.Sum256(dockerFile)
 	tag := container.SumChecksum(fsCheckSum, dckCheckSum[:])
 	// tag := container.ComputeChecksum(dockerFile)
-	return utils.ImageURI(container.GetBuild().ContainifyRegistry, "gcloud", tag)
+	return utils.ImageURI(build.ContainifyRegistry, "gcloud", tag)
 }
 
 func (c *GCloudContainer) Run() error {
 	if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" ||
-		container.GetBuild().CustomString("gcloud_oidc") == "" {
-		slog.Info("No ACTIONS_ID_TOKEN_REQUEST_URL found and Custom property gcloud_oidc not set, skipping gcloud_oidc container", "ACTIONS_ID_TOKEN_REQUEST_URL", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), "gcloud_oidc", container.GetBuild().CustomString("gcloud_oidc"))
+		c.GetBuild().CustomString("gcloud_oidc") == "" {
+		slog.Info("No ACTIONS_ID_TOKEN_REQUEST_URL found and Custom property gcloud_oidc not set, skipping gcloud_oidc container", "ACTIONS_ID_TOKEN_REQUEST_URL", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), "gcloud_oidc", c.GetBuild().CustomString("gcloud_oidc"))
 		return nil
 	}
 
