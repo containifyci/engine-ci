@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -11,40 +10,6 @@ import (
 )
 
 var osStat = os.Stat
-
-func FileExists(filename string) bool {
-	_, err := osStat(filename)
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
-		return false
-	}
-	slog.Error("Error checking existence of file", "file", filename, "error", err)
-	return false
-}
-
-func DirectoryExists(dirName string) error {
-	info, err := os.Stat(dirName)
-	if os.IsNotExist(err) {
-		// Directory does not exist, create it
-		err = os.MkdirAll(dirName, os.ModePerm)
-		if err != nil {
-			slog.Error("Failed to create directory", "dir", dirName, "error", err)
-			return fmt.Errorf("failed to create directory: %w", err)
-		}
-		slog.Info("Directory created", "dir", dirName)
-	} else if err != nil {
-		slog.Error("Failed to check directory", "dir", dirName, "error", err)
-		return err
-	} else if !info.IsDir() {
-		slog.Error("Path exists but is not a directory", "path", dirName)
-		return fmt.Errorf("path exists but is not a directory: %s", dirName)
-	} else {
-		slog.Info("Directory already exists", "dir", dirName)
-	}
-	return nil
-}
 
 type FileCache struct {
 	cache       bool
@@ -145,4 +110,13 @@ func (fc *FileCache) SaveResultsAsYAML(fileSuffix string, files []string) error 
 	}
 
 	return nil
+}
+
+func HomeDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		slog.Error("Error getting home directory", "error", err)
+		os.Exit(1)
+	}
+	return home
 }

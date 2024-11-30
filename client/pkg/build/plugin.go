@@ -9,14 +9,46 @@ import (
 )
 
 func (p *Plugin) GetBuild() *protos2.BuildArgsResponse {
-	return &p.opts
+	res := &protos2.BuildArgsResponse{
+		Args: []*protos2.BuildArgs{},
+	}
+	for _, arg := range p.builds.Args {
+		res.Args = append(res.Args, arg.Args...)
+	}
+	return res
+}
+
+func (p *Plugin) GetBuilds() *protos2.BuildArgsGroupResponse {
+	return &p.builds
 }
 
 type Plugin struct {
-	opts protos2.BuildArgsResponse
+	builds protos2.BuildArgsGroupResponse
 }
 
-func Serve(opts ...*BuildArgs) {
+//depreacted use Build
+func Serve(opts ...*protos2.BuildArgs) {
+	Build(opts...)
+}
+
+func Build(opts ...*protos2.BuildArgs) {
+	args := make([]*protos2.BuildArgsGroup, len(opts))
+	for i, opt := range opts {
+		args[i] = &protos2.BuildArgsGroup{
+			Args: []*protos2.BuildArgs{opt},
+		}
+	}
+	BuildGroups(args...)
+}
+
+func BuildAsync(opts ...*protos2.BuildArgs) {
+	args := []*protos2.BuildArgsGroup{ {
+		Args: opts,
+	}}
+	BuildGroups(args...)
+}
+
+func BuildGroups(builds ...*protos2.BuildArgsGroup) {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:           hclog.Error,
 		Output:          os.Stderr,
@@ -29,17 +61,23 @@ func Serve(opts ...*BuildArgs) {
 
 	logger.Debug("message from plugin", "foo", "bar")
 
-	impl := &Plugin{opts: protos2.BuildArgsResponse{
-		Args: opts,
+	impl := &Plugin{builds: protos2.BuildArgsGroupResponse{
+		Args: builds,
 	}}
 
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: protos2.Handshake,
 		Logger:          logger,
-		Plugins: map[string]plugin.Plugin{
-			"containifyci": &protos2.ContainifyCIGRPCPlugin{Impl: impl},
+		VersionedPlugins: map[int]plugin.PluginSet{
+			// Version 2 only uses NetRPC
+			1: {
+				"containifyci": &protos2.ContainifyCIv1GRPCPlugin{Impl: impl},
+			},
+			// Version 3 only uses GRPC
+			2: {
+				"containifyci": &protos2.ContainifyCIv2GRPCPlugin{Impl: impl},
+			},
 		},
-
 		// A non-nil value here enables gRPC serving for this plugin...
 		GRPCServer: plugin.DefaultGRPCServer,
 	})
