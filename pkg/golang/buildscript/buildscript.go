@@ -21,9 +21,10 @@ type BuildScript struct {
 	Output     string
 	Platforms  []*types.PlatformSpec
 	Verbose    bool
+	NoCoverage bool
 }
 
-func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, platforms ...*types.PlatformSpec) *BuildScript {
+func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, platforms ...*types.PlatformSpec) *BuildScript {
 	output := "-o /src/{{.app}}-{{.os}}-{{.arch}}"
 	if mainfile == "" {
 		mainfile = "./..."
@@ -36,6 +37,7 @@ func NewBuildScript(appName, mainfile string, folder string, tags []string, verb
 		AppName:    appName,
 		MainFile:   mainfile,
 		Folder:     folder,
+		NoCoverage: nocoverage,
 		Output:     output,
 		Platforms:  platforms,
 		Tags:       tags,
@@ -74,7 +76,7 @@ func trim(str string, args ...any) string {
 func renderTestCommand(m map[string]interface{}) string {
 	t := template.Must(template.New("").
 		Parse(trim(`
-go test {{- .verbose }} -timeout 120s {{- .tags }} -cover -coverprofile coverage.txt ./...
+go test {{- .verbose }} -timeout 120s {{- .tags }} {{- .coverage}} ./...
 `)))
 	buf := new(bytes.Buffer)
 	err := t.Execute(buf, m)
@@ -99,6 +101,13 @@ env GOOS={{.os}} GOARCH={{ .arch }} go build {{- .tags }} {{- .verbose }} %s {{.
 	return buf.String()
 }
 
+func coverage(nocoverage bool) string {
+	if nocoverage {
+		return ""
+	}
+	return " -cover -coverprofile coverage.txt"
+}
+
 func goBuildCmds(bs *BuildScript) string {
 	var cmds []string
 	for _, platform := range bs.Platforms {
@@ -111,7 +120,8 @@ func goBuildCmds(bs *BuildScript) string {
 		}
 		cmds = append(cmds, bs.renderCompileCommand(m))
 	}
-	m := map[string]interface{}{"verbose": "", "tags": "", "cgo": 0}
+	coverage := coverage(bs.NoCoverage)
+	m := map[string]interface{}{"verbose": "", "tags": "", "cgo": 0, "coverage": coverage}
 	if bs.Verbose {
 		m["verbose"] = " -v"
 	}

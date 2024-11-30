@@ -837,9 +837,9 @@ func (p *PodmanManager) PullImage(ctx context.Context, image string, authBase64 
 		return nil, err
 	}
 
-	buf := new(bytes.Buffer)
+	var buf bytes.Buffer
 	unwahr := false
-	var progressWriter io.Writer = buf
+	var progressWriter io.Writer = &buf
 
 	platformSpec := types.ParsePlatform(platform)
 

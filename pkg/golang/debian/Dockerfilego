@@ -12,3 +12,8 @@ RUN go install github.com/pact-foundation/pact-go/v2@v2.0.8 && \
   pact-go -l DEBUG install && \
   go clean -cache && \
   go clean -modcache
+
+RUN go install github.com/wadey/gocovmerge@latest && \
+  go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
+  go clean -cache && \
+  go clean -modcache

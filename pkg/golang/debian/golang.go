@@ -114,9 +114,9 @@ func (c *GoContainer) GoImage() string {
 }
 
 func (c *GoContainer) Images() []string {
-	imageTag := fmt.Sprintf("golang:%s", DEFAULT_GO)
+	image := fmt.Sprintf("golang:%s", DEFAULT_GO)
 
-	return []string{imageTag, "alpine:latest", c.GoImage()}
+	return []string{image, "alpine:latest", c.GoImage()}
 }
 
 func (c *GoContainer) BuildGoImage() error {
@@ -191,7 +191,8 @@ func (c *GoContainer) Build() error {
 
 func (c *GoContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return buildscript.NewBuildScript(c.App, c.File, c.Folder,c.Tags, c.Container.Verbose, c.Platforms...).String()
+	nocoverage := c.GetBuild().Custom.Bool("nocoverage")
+	return buildscript.NewBuildScript(c.App, c.File, c.Folder,c.Tags, c.Container.Verbose, nocoverage, c.Platforms...).String()
 }
 
 func NewProd(build container.Build) build.Build {

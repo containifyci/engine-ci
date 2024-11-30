@@ -55,8 +55,7 @@ func main() {
 		"from":       build.NewList("debian"),
 	}
 	opts2.Registries = registryAuth()
-	// build.Serve(opts1, opts2)
-	// build.Build(pr2, client, opts1, opts2)
+
 	build.BuildGroups(
 		&protos2.BuildArgsGroup{
 			Args: []*protos2.BuildArgs{pr2, client},
