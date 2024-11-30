@@ -178,4 +178,4 @@ jobs:
         with:
           github_user: ${{ inputs.remote_debug_user }}
           ngrok_auth_token: ${{ secrets.NGROK_AUTH_TOKEN }}
-          timeout: 1m
+          timeout: 20m

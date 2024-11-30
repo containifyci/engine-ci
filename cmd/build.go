@@ -133,7 +133,6 @@ func Pre(arg *container.Build) (*container.Build, *build.BuildSteps) {
 		switch a.BuildType {
 		case container.GoLang:
 			bs.Add(protobuf.New(*a))
-			bs.AddAsync(golang.NewLinter(*a))
 			//TODO: register different build images automatically or at least in the build implementation itself
 			if from == "debian" {
 				bs.Add(golang.NewDebian(*a))
@@ -145,6 +144,7 @@ func Pre(arg *container.Build) (*container.Build, *build.BuildSteps) {
 				bs.Add(golang.New(*a))
 				bs.Add(golang.NewProd(*a))
 			}
+			bs.AddAsync(golang.NewLinter(*a))
 			bs.Add(goreleaser.New(*a))
 			bs.Add(pulumi.New(*a))
 		case container.Maven:

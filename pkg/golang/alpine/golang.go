@@ -146,7 +146,7 @@ golangci-lint --out-format colored-line-number -v run %s --timeout=5m
 }
 
 func (c *GoContainer) Lint() error {
-	imageTag := LintImage()
+	image := c.GoImage()
 
 	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
@@ -155,7 +155,7 @@ func (c *GoContainer) Lint() error {
 	}
 
 	opts := types.ContainerConfig{}
-	opts.Image = imageTag
+	opts.Image = image
 	opts.Env = append(opts.Env, []string{
 		"GOMODCACHE=/go/pkg/",
 		"GOCACHE=/go/pkg/build-cache",
@@ -234,9 +234,9 @@ func (c *GoContainer) GoImage() string {
 }
 
 func (c *GoContainer) Images() []string {
-	imageTag := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	image := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
 
-	return []string{imageTag, "alpine:latest", c.GoImage()}
+	return []string{image, "alpine:latest", c.GoImage()}
 }
 
 func (c *GoContainer) BuildGoImage() error {
@@ -268,7 +268,6 @@ func (c *GoContainer) Build() error {
 		"GOMODCACHE=/go/pkg/",
 		"GOCACHE=/go/pkg/build-cache",
 	}...)
-
 	opts.WorkingDir = "/src"
 
 	// dir, _ := filepath.Abs(c.Folder)

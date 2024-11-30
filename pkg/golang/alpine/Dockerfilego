@@ -5,5 +5,6 @@ RUN apk --no-cache add git openssh-client && \
 
 RUN go install github.com/wadey/gocovmerge@latest && \
   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
+  go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2 && \
   go clean -cache && \
   go clean -modcache

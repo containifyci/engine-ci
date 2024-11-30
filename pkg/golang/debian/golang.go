@@ -114,9 +114,9 @@ func (c *GoContainer) GoImage() string {
 }
 
 func (c *GoContainer) Images() []string {
-	imageTag := fmt.Sprintf("golang:%s", DEFAULT_GO)
+	image := fmt.Sprintf("golang:%s", DEFAULT_GO)
 
-	return []string{imageTag, "alpine:latest", c.GoImage()}
+	return []string{image, "alpine:latest", c.GoImage()}
 }
 
 func (c *GoContainer) BuildGoImage() error {
