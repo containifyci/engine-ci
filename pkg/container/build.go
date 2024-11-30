@@ -116,6 +116,12 @@ type Build struct {
 	Leader   Leader
 }
 
+type BuildGroup struct {
+	Builds []*Build
+}
+
+type BuildGroups []*BuildGroup
+
 func (b *Build) CustomString(key string) string {
 	if v, ok := b.Custom[key]; ok {
 		if len(v) == 1 {

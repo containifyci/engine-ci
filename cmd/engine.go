@@ -53,7 +53,7 @@ func (l *LeaderElection) Leader(id string, fnc func() error) {
 		if err != nil {
 			slog.Error("Error runing func as non leader", "error", err)
 		}
-		slog.Info("Process is not the leader. Waiting...\n", "id",id)
+		slog.Info("Process is not the leader. Waiting...\n", "id", id)
 	}
 }
 
@@ -64,23 +64,25 @@ func Engine(cmd *cobra.Command, _ []string) error {
 	arg := GetBuild()
 	wg := sync.WaitGroup{}
 	for _, a := range arg {
-		wg.Add(1)
-		go func() {
-			time.Sleep(1 * time.Second)
-			defer wg.Done()
-			a.Leader = &leader
-			c := NewCommand(*a)
-			c.Run(addr, RootArgs.Target, a)
-		}()
+		for _, b := range a.Builds {
+			wg.Add(1)
+			go func() {
+				time.Sleep(1 * time.Second)
+				defer wg.Done()
+				b.Leader = &leader
+				c := NewCommand(*b)
+				c.Run(addr, RootArgs.Target, b)
+			}()
+		}
+		slog.Info("Waiting for all builds to complete")
+		wg.Wait()
 	}
-	slog.Info("Waiting for all builds to complete")
-	wg.Wait()
 	slog.Info("Finish waiting for all builds to complete")
 
 	return nil
 }
 
-func GetBuild() []*container.Build {
+func GetBuild() container.BuildGroups {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:           hclog.Error,
 		Output:          os.Stderr,
@@ -108,9 +110,10 @@ func GetBuild() []*container.Build {
 	// We're a host. Start by launching the plugin process.
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: protos2.Handshake,
-		Plugins:         protos2.PluginMap,
-		Stderr:          os.Stderr,
-		Cmd:             exec.Command("go", "run", "-C", path, file),
+		// Plugins:          protos2.PluginMap,
+		VersionedPlugins: protos2.PluginMap,
+		Stderr:           os.Stderr,
+		Cmd:              exec.Command("go", "run", "-C", path, file),
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC,
 			plugin.ProtocolGRPC,
@@ -133,54 +136,82 @@ func GetBuild() []*container.Build {
 		os.Exit(1)
 	}
 
-	// We should have a Counter store now! This feels like a normal interface
-	// implementation but is in fact over an RPC connection.
-	containifyci := raw.(protos2.ContainifyCI)
+	opts := CallPlugin(logger, raw)
 
-	resp := containifyci.GetBuild()
-	opts := resp.Args
+	groups := container.BuildGroups{}
 
-	args := []*container.Build{}
-	for _, opt := range opts {
+	// args := []*container.Build{}
+	for _, group := range opts {
+		g := &container.BuildGroup{}
 
-		arg := container.Build{
-			App:            opt.Application,
-			BuildType:      container.BuildType(opt.BuildType.String()),
-			Env:            container.EnvType(opt.Environment.String()),
-			Image:          opt.Image,
-			ImageTag:       opt.ImageTag,
-			Registry:       opt.Registry,
-			Registries:     opt.Registries,
-			Repository:     opt.Repository,
-			File:           opt.File,
-			Folder:         opt.Folder,
-			SourcePackages: opt.SourcePackages,
-			SourceFiles:    opt.SourceFiles,
-			Organization:   opt.Organization,
-			Verbose:        opt.Verbose,
-		}
+		for _, opt := range group.Args {
+			arg := container.Build{
+				App:            opt.Application,
+				BuildType:      container.BuildType(opt.BuildType.String()),
+				Env:            container.EnvType(opt.Environment.String()),
+				Image:          opt.Image,
+				ImageTag:       opt.ImageTag,
+				Registry:       opt.Registry,
+				Registries:     opt.Registries,
+				Repository:     opt.Repository,
+				File:           opt.File,
+				Folder:         opt.Folder,
+				SourcePackages: opt.SourcePackages,
+				SourceFiles:    opt.SourceFiles,
+				Organization:   opt.Organization,
+				Verbose:        opt.Verbose,
+			}
 
-		if opt.Properties != nil {
-			arg.Custom = make(map[string][]string)
-			for k, v := range opt.Properties {
-				arg.Custom[k] = make([]string, len(v.Values))
-				for i, l := range v.Values {
-					arg.Custom[k][i] = l.GetStringValue()
+			if opt.Properties != nil {
+				arg.Custom = make(map[string][]string)
+				for k, v := range opt.Properties {
+					arg.Custom[k] = make([]string, len(v.Values))
+					for i, l := range v.Values {
+						arg.Custom[k][i] = l.GetStringValue()
+					}
 				}
 			}
-		}
 
-		if opt.Platform != "" {
-			platform := types.Platform{
-				Host: types.ParsePlatform(opt.Platform),
+			if opt.Platform != "" {
+				platform := types.Platform{
+					Host: types.ParsePlatform(opt.Platform),
+				}
+
+				platform.Container = types.GetContainerPlatform(platform.Host)
+				arg.Platform = platform
 			}
-
-			platform.Container = types.GetContainerPlatform(platform.Host)
-			arg.Platform = platform
+			arg.Defaults()
+			// args = append(args, &arg)
+			fmt.Printf("Builds: %v\n", arg)
+			g.Builds = append(g.Builds, &arg)
 		}
-		arg.Defaults()
-		args = append(args, &arg)
-		fmt.Printf("Builds: %v\n", arg)
+		groups = append(groups, g)
 	}
-	return args
+	return groups
+}
+
+func CallPlugin(logger hclog.Logger, plugin interface{}) []*protos2.BuildArgsGroup {
+	// We should have a Counter store now! This feels like a normal interface
+	// implementation but is in fact over an RPC connection.
+	containifyci, ok := plugin.(protos2.ContainifyCIv2)
+	if ok {
+		resp := containifyci.GetBuilds()
+		return resp.Args
+	}
+	{
+		containifyci, ok := plugin.(protos2.ContainifyCIv1)
+		if !ok {
+			logger.Error("Can't use v1 plugin version.")
+			os.Exit(1)
+		}
+		resp := containifyci.GetBuild()
+
+		groups := []*protos2.BuildArgsGroup{}
+		for _, a := range resp.Args {
+			groups = append(groups, &protos2.BuildArgsGroup{
+				Args: []*protos2.BuildArgs{a},
+			})
+		}
+		return groups
+	}
 }

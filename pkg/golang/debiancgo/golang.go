@@ -314,7 +314,7 @@ func (c *GoContainer) BuildScript() string {
 	if c.GetBuild().Custom.Strings("platforms") != nil {
 		platforms = types.ParsePlatforms(c.GetBuild().Custom.Strings("platforms")...)
 	}
-	return buildscript.NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, platforms...).String()
+	return buildscript.NewBuildScript(c.App, c.File, c.Folder, c.Tags, c.Container.Verbose, platforms...).String()
 }
 
 func NewProd(build container.Build) build.Build {

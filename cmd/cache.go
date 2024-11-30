@@ -56,7 +56,7 @@ func init() {
 
 func SaveCache() error {
 	args := GetBuild()
-	_, bs := Pre(args[0])
+	_, bs := Pre(args[0].Builds[0])
 	images := bs.Images()
 	if len(images) == 0 {
 		return nil
@@ -96,7 +96,7 @@ docker save -o ~/image-cache/%s.tar %s
 
 func LoadCache() error {
 	args := GetBuild()
-	arg, bs := Pre(args[0])
+	arg, bs := Pre(args[0].Builds[0])
 
 	images := bs.Images()
 	if len(images) == 0 {

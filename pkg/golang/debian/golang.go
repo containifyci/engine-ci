@@ -310,7 +310,7 @@ func (c *GoContainer) Build() error {
 
 func (c *GoContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return buildscript.NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, c.Platforms...).String()
+	return buildscript.NewBuildScript(c.App, c.File, c.Folder,c.Tags, c.Container.Verbose, c.Platforms...).String()
 }
 
 func NewProd(build container.Build) build.Build {
