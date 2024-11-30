@@ -23,15 +23,15 @@ type MockContainerManager struct {
 	Containers           map[string]*MockContainerLifecycle
 	ContainerLogsEntries map[string][]string
 	Images               map[string]*MockImageLifecycle
-	ImagesLogEntries     []string
 	Errors               map[string]error
+	ImagesLogEntries     []string
 }
 
 type MockContainerLifecycle struct {
-	ID     string
 	Opts   *types.ContainerConfig
-	State  string
 	Volume *MockContainerVolume
+	ID     string
+	State  string
 }
 
 type MockContainerVolume struct {
@@ -146,7 +146,8 @@ func (m *MockContainerManager) ContainerLogs(ctx context.Context, id string, sho
 		return nil, ErrContainerNotFound
 	}
 
-	if logs, exists := m.ContainerLogsEntries[con.Opts.Image]; exists {
+	logs, exists := m.ContainerLogsEntries[con.Opts.Image]
+	if exists {
 		return io.NopCloser(strings.NewReader(strings.Join(logs, "\n"))), nil
 	}
 	return nil, ErrContainerNotFound

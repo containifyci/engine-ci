@@ -67,20 +67,16 @@ func (e *EnvType) Type() string {
 }
 
 type Container struct {
-	// private fields
+	t
+	Source  fs.ReadDirFS
+	Build   *Build
 	ID      string
 	Name    string
 	Image   string
 	Env     EnvType
+	Prefix  string
+	Opts    types.ContainerConfig
 	Verbose bool
-
-	Source fs.ReadDirFS
-
-	Opts   types.ContainerConfig
-	Prefix string
-	t
-
-	Build *Build
 }
 
 type PushOption struct {

@@ -67,10 +67,10 @@ func CacheFolder() string {
 
 func (c *SonarcloudContainer) CopyScript() error {
 	// Create a temporary script in-memory
-	script := `#!/bin/sh
+	script := fmt.Sprintf(`#!/bin/sh
 set -xe
-sonar-scanner -X -Dsonar.projectBaseDir=/usr/src -Dsonar.working.directory=/tmp/sonar
-`
+sonar-scanner -X -Dsonar.projectBaseDir=/usr/src/%s -Dsonar.working.directory=/tmp/sonar
+`, c.Build.Folder)
 	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)

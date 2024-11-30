@@ -29,8 +29,8 @@ const (
 )
 
 type GCloudContainer struct {
-	applicationCredentials string
 	*container.Container
+	applicationCredentials string
 }
 
 func New(build container.Build) *GCloudContainer {

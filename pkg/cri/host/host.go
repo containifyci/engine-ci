@@ -155,7 +155,7 @@ func (d *HostManager) CopyContentToContainer(ctx context.Context, id, content, d
 			os.Exit(1)
 		}
 		dest = fmt.Sprintf("/tmp/%s/script.sh", id)
-		content := strings.ReplaceAll(content, c.opts.WorkingDir+"/", "")
+		content = strings.ReplaceAll(content, c.opts.WorkingDir+"/", "")
 		return os.WriteFile(dest, []byte(content), 0755)
 	}
 	os.Exit(1)

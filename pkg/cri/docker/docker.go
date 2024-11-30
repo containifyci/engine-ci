@@ -117,7 +117,7 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 			return "", err
 		}
 		defer r.Close()
-		logger.GetLogAggregator().Copy(r)
+		_, err = logger.GetLogAggregator().Copy(r)
 		if err != nil {
 			return "", err
 		}

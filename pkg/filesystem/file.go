@@ -47,9 +47,9 @@ func DirectoryExists(dirName string) error {
 }
 
 type FileCache struct {
-	cache       bool
-	fileName    string
 	FileResults map[string]FileResult `yaml:"file_results"`
+	fileName    string
+	cache       bool
 }
 
 type FileResult struct {

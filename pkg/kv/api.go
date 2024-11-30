@@ -67,7 +67,10 @@ func (kv *KeyValueStore) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(value))
+	_, err := w.Write([]byte(value))
+	if err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+	}
 }
 
 // Set value for a key

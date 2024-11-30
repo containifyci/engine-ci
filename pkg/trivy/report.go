@@ -26,20 +26,20 @@ type Metadata struct {
 }
 
 type Vulnerability struct {
+	FixedVersion     string   `json:"FixedVersion"`
 	VulnerabilityID  string   `json:"VulnerabilityID"`
-	PrimaryURL       string   `json:"PrimaryURL"`
 	PkgID            string   `json:"PkgID"`
 	PkgPath          string   `json:"PkgPath"`
 	PkgName          string   `json:"PkgName"`
 	InstalledVersion string   `json:"InstalledVersion"`
-	FixedVersion     string   `json:"FixedVersion"`
+	PrimaryURL       string   `json:"PrimaryURL"`
 	Status           string   `json:"Status"`
-	Severity         string   `json:"Severity"`
-	Title            string   `json:"Title"`
 	Description      string   `json:"Description"`
-	References       []string `json:"References"`
-	PublishedDate    string   `json:"PublishedDate"`
+	Title            string   `json:"Title"`
+	Severity         string   `json:"Severity"`
 	LastModifiedDate string   `json:"LastModifiedDate"`
+	PublishedDate    string   `json:"PublishedDate"`
+	References       []string `json:"References"`
 }
 
 type Result struct {
@@ -50,12 +50,12 @@ type Result struct {
 }
 
 type Comment struct {
-	SchemaVersion int       `json:"SchemaVersion"`
 	CreatedAt     time.Time `json:"CreatedAt"`
 	ArtifactName  string    `json:"ArtifactName"`
 	ArtifactType  string    `json:"ArtifactType"`
 	Metadata      Metadata  `json:"Metadata"`
 	Results       []Result  `json:"Results"`
+	SchemaVersion int       `json:"SchemaVersion"`
 }
 
 func Parse(jsonData string) string {

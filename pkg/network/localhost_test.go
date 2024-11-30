@@ -14,9 +14,9 @@ func TestAddress_ForContainer(t *testing.T) {
 		name string
 		os   string
 		cri  utils.RuntimeType
-		addr Address
 		env  container.EnvType
 		want string
+		addr Address
 	}{
 		{
 			name: "Local URL",

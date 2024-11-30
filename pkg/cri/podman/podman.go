@@ -655,9 +655,9 @@ func (p *PodmanManager) BuildImage(ctx context.Context, dockerfile []byte, image
 // BuildImage builds an image
 func (p *PodmanManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, dockerCtx *bytes.Buffer, imageName string, platforms []string, _ string) (io.ReadCloser, []string, error) {
 	imageIDs := []struct {
+		Platform *types.PlatformSpec
 		ID       *string
 		Image    string
-		Platform *types.PlatformSpec
 	}{}
 	// Create a temporary directory for the Dockerfile
 	dir, err := os.MkdirTemp("", "podman-build")
@@ -735,9 +735,9 @@ func (p *PodmanManager) BuildMultiArchImage(ctx context.Context, dockerfile []by
 				os.Exit(1)
 			}
 			imageIDs = append(imageIDs, struct {
+				Platform *types.PlatformSpec
 				ID       *string
 				Image    string
-				Platform *types.PlatformSpec
 			}{
 				ID:       &res.ID,
 				Image:    tmpImageName,
@@ -754,9 +754,9 @@ func (p *PodmanManager) BuildMultiArchImage(ctx context.Context, dockerfile []by
 			os.Exit(1)
 		}
 		imageIDs = append(imageIDs, struct {
+			Platform *types.PlatformSpec
 			ID       *string
 			Image    string
-			Platform *types.PlatformSpec
 		}{
 			ID:    &res.ID,
 			Image: imageName,

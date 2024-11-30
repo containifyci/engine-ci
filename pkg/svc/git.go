@@ -27,8 +27,8 @@ func (g *Git) FullRepo() string {
 
 // CustomError is a basic custom error type.
 type GitError struct {
-	Code    int
 	Message string
+	Code    int
 }
 
 const (

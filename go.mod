@@ -3,30 +3,25 @@ module github.com/containifyci/engine-ci
 go 1.23
 
 require (
+	cloud.google.com/go/iam v1.2.2
 	github.com/containers/buildah v1.38.0
 	github.com/containers/common v0.61.0
 	github.com/containers/podman/v5 v5.3.1
-	github.com/containifyci/engine-ci/protos2 v0.6.0
+	github.com/containifyci/engine-ci/protos2 v0.7.0
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
-	//CVE-2024-37298 fix
-	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/gorilla/websocket v1.5.3
+	github.com/hashicorp/go-hclog v1.6.3
+	github.com/hashicorp/go-plugin v1.6.2
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
-	gopkg.in/yaml.v3 v3.0.1
-)
-
-require (
-	cloud.google.com/go/iam v1.2.2
-	github.com/hashicorp/go-hclog v1.6.3
-	github.com/hashicorp/go-plugin v1.6.2
 	golang.org/x/oauth2 v0.24.0
 	google.golang.org/api v0.209.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -90,6 +85,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.0 // indirect
+	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect

@@ -14,27 +14,32 @@ import (
 type Image string
 
 type BuildScript struct {
-	Tags      []string
-	AppName   string
-	MainFile  string
-	Output    string
-	Platforms []*types.PlatformSpec
-	Verbose   bool
+	Tags       []string
+	AppName    string
+	MainFile   string
+	Folder     string
+	Output     string
+	Platforms  []*types.PlatformSpec
+	Verbose    bool
 }
 
-func NewBuildScript(appName, mainfile string, tags []string, verbose bool, platforms ...*types.PlatformSpec) *BuildScript {
+func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, platforms ...*types.PlatformSpec) *BuildScript {
 	output := "-o /src/{{.app}}-{{.os}}-{{.arch}}"
 	if mainfile == "" {
 		mainfile = "./..."
 		output = ""
 	}
+	if folder == "" {
+		folder = "."
+	}
 	script := &BuildScript{
-		AppName:   appName,
-		MainFile:  mainfile,
-		Output:    output,
-		Platforms: platforms,
-		Tags:      tags,
-		Verbose:   verbose,
+		AppName:    appName,
+		MainFile:   mainfile,
+		Folder:     folder,
+		Output:     output,
+		Platforms:  platforms,
+		Tags:       tags,
+		Verbose:    verbose,
 	}
 	return script
 }
@@ -51,8 +56,9 @@ set -xe
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
+cd %s
 %s
-`, goBuildCmd)
+`, bs.Folder, goBuildCmd)
 
 	return script
 }

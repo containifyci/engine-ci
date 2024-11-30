@@ -12,10 +12,10 @@ import (
 
 type BuildScript struct {
 	Command        string
-	WithHttp       bool
-	WithTag        bool
 	TargetPackages []string
 	SourceFiles    []string
+	WithHttp       bool
+	WithTag        bool
 }
 
 func NewBuildScript(Command string, SourcePackages, SourceFiles []string, WithHttp, WithTag bool) *BuildScript {

@@ -8,13 +8,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/containifyci/engine-ci/pkg/build"
-	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
 	"github.com/containifyci/engine-ci/pkg/network"
 )
 
@@ -30,14 +29,14 @@ var f embed.FS
 
 type GoContainer struct {
 	//TODO add option to fail on linter or not
+	*container.Container
 	App       string
 	File      string
 	Folder    string
 	Image     string
 	ImageTag  string
-	Platforms []*types.PlatformSpec
 	Tags      []string
-	*container.Container
+	Platforms []*types.PlatformSpec
 }
 
 func New(build container.Build) *GoContainer {
@@ -102,124 +101,6 @@ func (g GoBuild) Run() error       { return g.rf() }
 func (g GoBuild) Name() string     { return g.name }
 func (g GoBuild) Images() []string { return g.images }
 func (g GoBuild) IsAsync() bool    { return g.async }
-
-func NewLinter(build container.Build) build.Build {
-	return GoBuild{
-		rf: func() error {
-			container := New(build)
-			err := container.Container.Pull(LINT_IMAGE)
-			if err != nil {
-				slog.Error("Failed to pull image: %s", "error", err, "image", LINT_IMAGE)
-				os.Exit(1)
-			}
-
-			return container.Lint()
-		},
-		name:   "golangci-lint",
-		images: []string{LINT_IMAGE},
-		async:  false,
-	}
-}
-
-func LintImage() string {
-	return LINT_IMAGE
-}
-
-func (c *GoContainer) CopyLintScript() error {
-	tags := ""
-	if len(c.Tags) > 0 {
-		// c.Tags = append(c.Tags, "linux")
-		tags = "--build-tags " + strings.Join(c.Tags, ",")
-	}
-	script := fmt.Sprintf(`#!/bin/sh
-set -x
-mkdir -p ~/.ssh
-ssh-keyscan github.com >> ~/.ssh/known_hosts
-git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
-GOOS=%s GOARCH=%s golangci-lint --out-format colored-line-number -v run %s --timeout=5m
-ls -lha /
-`, c.GetBuild().Platform.Container.OS, c.GetBuild().Platform.Container.Architecture, tags)
-	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
-	if err != nil {
-		slog.Error("Failed to copy script to container: %s", "error", err)
-		os.Exit(1)
-	}
-	return err
-}
-
-func (c *GoContainer) Lint() error {
-	imageTag := LintImage()
-
-	ssh, err := network.SSHForward(*c.GetBuild())
-	if err != nil {
-		slog.Error("Failed to forward SSH", "error", err)
-		os.Exit(1)
-	}
-
-	opts := types.ContainerConfig{}
-	opts.Image = imageTag
-	opts.Env = append(opts.Env, []string{
-		"GOMODCACHE=/go/pkg/",
-		"GOCACHE=/go/pkg/build-cache",
-		"GOLANGCI_LINT_CACHE=/go/pkg/lint-cache",
-	}...)
-	opts.Cmd = []string{"sh", "/tmp/script.sh"}
-	// opts.User = "golangci-lint"
-	if c.Container.Verbose {
-		opts.Cmd = append(opts.Cmd, "-v")
-	}
-	// opts.Platform = "auto"
-	opts.WorkingDir = "/src"
-
-	dir, _ := filepath.Abs(".")
-	cache := CacheFolder()
-	if cache == "" {
-		cache, _ = filepath.Abs(".tmp/go")
-	}
-	opts.Volumes = []types.Volume{
-		{
-			Type:   "bind",
-			Source: dir,
-			Target: "/src",
-		},
-		{
-			Type:   "bind",
-			Source: cache,
-			Target: "/go/pkg",
-		},
-	}
-
-	opts = ssh.Apply(&opts)
-
-	err = c.Container.Create(opts)
-	slog.Info("Container created", "containerId", c.Container.ID)
-	if err != nil {
-		slog.Error("Failed to create container: %s", "error", err)
-		os.Exit(1)
-	}
-
-	err = c.CopyLintScript()
-	if err != nil {
-		slog.Error("Failed to start container", "error", err)
-		os.Exit(1)
-	}
-
-	err = c.Container.Start()
-	if err != nil {
-		slog.Error("Failed to start container: %s", "error", err)
-		os.Exit(1)
-	}
-
-	err = c.Container.Wait()
-	if err != nil {
-		slog.Error("Failed to wait for container: %s", "error", err)
-		// GIVE time to receive all logs
-		time.Sleep(5 * time.Second)
-		os.Exit(1)
-	}
-
-	return err
-}
 
 func (c *GoContainer) GoImage() string {
 	dockerFile, err := f.ReadFile("Dockerfilego")
@@ -310,7 +191,7 @@ func (c *GoContainer) Build() error {
 
 func (c *GoContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return buildscript.NewBuildScript(c.App, c.File, c.Tags, c.Container.Verbose, c.Platforms...).String()
+	return buildscript.NewBuildScript(c.App, c.File, c.Folder,c.Tags, c.Container.Verbose, c.Platforms...).String()
 }
 
 func NewProd(build container.Build) build.Build {

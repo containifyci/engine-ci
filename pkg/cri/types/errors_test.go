@@ -1,7 +1,7 @@
 package types
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,5 +35,5 @@ func TestHasSamePrefix(t *testing.T) {
 }
 
 func NewError(message string) error {
-	return fmt.Errorf(message)
+	return errors.New(message)
 }
