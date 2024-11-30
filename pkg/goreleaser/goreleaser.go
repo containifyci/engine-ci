@@ -133,6 +133,10 @@ func (c *GoReleaserContainer) Run() error {
 		slog.Info("Skipping goreleaser for non-main branch")
 		return nil
 	}
+	if !c.GetBuild().Custom.Bool("goreleaser") {
+		slog.Info("Skip goreleaser because its not explicit enabled")
+		return nil
+	}
 	env := c.GetBuild().Env
 
 	err := c.Pull()
