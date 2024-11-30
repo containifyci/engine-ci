@@ -5,17 +5,25 @@ import (
 	"github.com/containifyci/engine-ci/protos2"
 )
 
-var opts protos2.BuildArgs
+var opt protos2.BuildArgs
+var opts protos2.BuildArgsGroup
 
 func init() {
-	opts = protos2.BuildArgs{}
-	opts.Verbose = true
-	opts.File = "containifyci.go"
-	opts.Application = "containifyci-cli"
-	opts.BuildType = protos2.BuildType_GoLang
-	opts.Environment = protos2.EnvType_local
+	// os.Chdir("..")
+	opt = protos2.BuildArgs{}
+	opt.Verbose = true
+	opt.File = "containifyci.go"
+	opt.Application = "containifyci-cli"
+	opt.BuildType = protos2.BuildType_GoLang
+	opt.Environment = protos2.EnvType_local
+
+	opts = protos2.BuildArgsGroup{
+		Args: []*protos2.BuildArgs{&opt},
+	}
 }
 
 func main() {
-	build.Serve(&opts)
+	build.Build(&opt)
+	build.BuildAsync(&opt)
+	build.BuildGroups(&opts)
 }
