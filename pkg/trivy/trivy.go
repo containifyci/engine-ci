@@ -75,8 +75,7 @@ func (c *TrivyContainer) CopyScript() error {
 
 	script := fmt.Sprintf(`#!/bin/sh
 set -xe
-trivy image --podman-host /var/run/podman.sock --severity CRITICAL,HIGH --ignore-unfixed -d --scanners vuln --format json --output /usr/src/trivy.json %s
-#chmod 0755 -R /root/.cache/trivy
+trivy image --podman-host /var/run/podman.sock --severity CRITICAL,HIGH --ignore-unfixed -d --scanners vuln --format json --output /usr/src/trivy.json %s || true
 `, image)
 	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
