@@ -19,14 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ContainifyCIEngine_GetBuild_FullMethodName = "/protos2.ContainifyCIEngine/GetBuild"
+	ContainifyCIEngine_GetBuild_FullMethodName  = "/protos2.ContainifyCIEngine/GetBuild"
+	ContainifyCIEngine_GetBuilds_FullMethodName = "/protos2.ContainifyCIEngine/GetBuilds"
 )
 
 // ContainifyCIEngineClient is the client API for ContainifyCIEngine service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContainifyCIEngineClient interface {
+	// deprecated kept for backward compatibility
 	GetBuild(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*BuildArgsResponse, error)
+	GetBuilds(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*BuildArgsGroupResponse, error)
 }
 
 type containifyCIEngineClient struct {
@@ -47,11 +50,23 @@ func (c *containifyCIEngineClient) GetBuild(ctx context.Context, in *Empty, opts
 	return out, nil
 }
 
+func (c *containifyCIEngineClient) GetBuilds(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*BuildArgsGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BuildArgsGroupResponse)
+	err := c.cc.Invoke(ctx, ContainifyCIEngine_GetBuilds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ContainifyCIEngineServer is the server API for ContainifyCIEngine service.
 // All implementations must embed UnimplementedContainifyCIEngineServer
 // for forward compatibility.
 type ContainifyCIEngineServer interface {
+	// deprecated kept for backward compatibility
 	GetBuild(context.Context, *Empty) (*BuildArgsResponse, error)
+	GetBuilds(context.Context, *Empty) (*BuildArgsGroupResponse, error)
 	mustEmbedUnimplementedContainifyCIEngineServer()
 }
 
@@ -64,6 +79,9 @@ type UnimplementedContainifyCIEngineServer struct{}
 
 func (UnimplementedContainifyCIEngineServer) GetBuild(context.Context, *Empty) (*BuildArgsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBuild not implemented")
+}
+func (UnimplementedContainifyCIEngineServer) GetBuilds(context.Context, *Empty) (*BuildArgsGroupResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBuilds not implemented")
 }
 func (UnimplementedContainifyCIEngineServer) mustEmbedUnimplementedContainifyCIEngineServer() {}
 func (UnimplementedContainifyCIEngineServer) testEmbeddedByValue()                            {}
@@ -104,6 +122,24 @@ func _ContainifyCIEngine_GetBuild_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ContainifyCIEngine_GetBuilds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContainifyCIEngineServer).GetBuilds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContainifyCIEngine_GetBuilds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContainifyCIEngineServer).GetBuilds(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ContainifyCIEngine_ServiceDesc is the grpc.ServiceDesc for ContainifyCIEngine service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +150,10 @@ var ContainifyCIEngine_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBuild",
 			Handler:    _ContainifyCIEngine_GetBuild_Handler,
+		},
+		{
+			MethodName: "GetBuilds",
+			Handler:    _ContainifyCIEngine_GetBuilds_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

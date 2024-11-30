@@ -10,44 +10,90 @@ import (
 	"google.golang.org/grpc"
 )
 
-type ContainifyCIGRPCPlugin struct {
+type ContainifyCIv2GRPCPlugin struct {
 	// GRPCPlugin must still implement the Plugin interface
 	plugin.Plugin
 	// Concrete implementation, written in Go. This is only used for plugins
 	// that are written in Go.
-	Impl ContainifyCI
+	Impl ContainifyCIv2
 }
 
-func (p *ContainifyCIGRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	RegisterContainifyCIEngineServer(s, &GRPCServerContainifyCI{Impl: p.Impl, broker: broker})
+
+func (p *ContainifyCIv2GRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
+	RegisterContainifyCIEngineServer(s, &GRPCServerContainifyCIv2{Impl: p.Impl, broker: broker})
 	return nil
 }
 
-func (p *ContainifyCIGRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	return &ContainifyCIGRPCClient{client: NewContainifyCIEngineClient(c)}, nil
+func (p *ContainifyCIv2GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+	return &ContainifyCIv2GRPCClient{client: NewContainifyCIEngineClient(c)}, nil
+}
+
+type ContainifyCIv1GRPCPlugin struct {
+	// GRPCPlugin must still implement the Plugin interface
+	plugin.Plugin
+	// Concrete implementation, written in Go. This is only used for plugins
+	// that are written in Go.
+	Impl ContainifyCIv1
+}
+
+func (p *ContainifyCIv1GRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
+	RegisterContainifyCIEngineServer(s, &GRPCServerContainifyCIv1{Impl: p.Impl, broker: broker})
+	return nil
+}
+
+func (p *ContainifyCIv1GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+	return &ContainifyCIv1GRPCClient{client: NewContainifyCIEngineClient(c)}, nil
 }
 
 // GRPCClient is an implementation of KV that talks over RPC.
-type ContainifyCIGRPCClient struct {
+type ContainifyCIv2GRPCClient struct {
 	// broker *plugin.GRPCBroker
 	client ContainifyCIEngineClient
 }
 
-type GRPCServerContainifyCI struct {
+// GRPCClient is an implementation of KV that talks over RPC.
+type ContainifyCIv1GRPCClient struct {
+	// broker *plugin.GRPCBroker
+	client ContainifyCIEngineClient
+}
+
+type GRPCServerContainifyCIv1 struct {
 	// This is the real implementation
-	Impl ContainifyCI
+	Impl ContainifyCIv1
 
 	broker *plugin.GRPCBroker
 	UnimplementedContainifyCIEngineServer
 	// UnsafeContainifyCIEngineServer
 }
 
-func (m *GRPCServerContainifyCI) GetBuild(ctx context.Context, _ *Empty) (*BuildArgsResponse, error) {
+func (m *GRPCServerContainifyCIv1) GetBuild(ctx context.Context, _ *Empty) (*BuildArgsResponse, error) {
 	return m.Impl.GetBuild(), nil
 }
 
-func (m *ContainifyCIGRPCClient) GetBuild() *BuildArgsResponse {
+func (m *ContainifyCIv1GRPCClient) GetBuild() *BuildArgsResponse {
 	args, err := m.client.GetBuild(context.Background(), &Empty{})
+	if err != nil {
+		panic(err)
+	}
+	return args
+}
+
+
+type GRPCServerContainifyCIv2 struct {
+	// This is the real implementation
+	Impl ContainifyCIv2
+
+	broker *plugin.GRPCBroker
+	UnimplementedContainifyCIEngineServer
+	// UnsafeContainifyCIEngineServer
+}
+
+func (m *GRPCServerContainifyCIv2) GetBuilds(ctx context.Context, _ *Empty) (*BuildArgsGroupResponse, error) {
+	return m.Impl.GetBuilds(), nil
+}
+
+func (m *ContainifyCIv2GRPCClient) GetBuilds() *BuildArgsGroupResponse {
+	args, err := m.client.GetBuilds(context.Background(), &Empty{})
 	if err != nil {
 		panic(err)
 	}

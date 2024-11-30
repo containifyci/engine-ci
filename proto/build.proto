@@ -51,10 +51,21 @@ message BuildArgs {
 message Empty {
 }
 
+// deprecated kept for backward compatibility
 message BuildArgsResponse {
     repeated BuildArgs args = 1;
 }
 
+message BuildArgsGroup {
+    repeated BuildArgs args = 1;
+}
+
+message BuildArgsGroupResponse {
+    repeated BuildArgsGroup args = 1;
+}
+
 service ContainifyCIEngine {
+    // deprecated kept for backward compatibility
     rpc GetBuild(Empty) returns (BuildArgsResponse);
+    rpc GetBuilds(Empty) returns (BuildArgsGroupResponse);
 }
