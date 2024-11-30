@@ -28,13 +28,13 @@ const (
 var f embed.FS
 
 type PythonContainer struct {
+	Platform types.Platform
+	*container.Container
 	App      string
 	File     string
 	Folder   string
 	Image    string
 	ImageTag string
-	Platform types.Platform
-	*container.Container
 }
 
 func New(build container.Build) *PythonContainer {
@@ -84,7 +84,7 @@ func ComputeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func  (c *PythonContainer) PythonImage() string {
+func (c *PythonContainer) PythonImage() string {
 	dockerFile, err := f.ReadFile("Dockerfile.python")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.Python", "error", err)

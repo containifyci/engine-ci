@@ -12,9 +12,9 @@ import (
 func TestSSHForward(t *testing.T) {
 	// Todo: add test for podman runtime
 	tests := []struct {
+		want *Forward
 		os   string
 		cri  utils.RuntimeType
-		want *Forward
 	}{
 		{
 			os:  "linux",

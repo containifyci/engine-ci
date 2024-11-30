@@ -8,11 +8,11 @@ import (
 )
 
 type GitTestCommand struct {
+	err       error
 	branch    string
 	tag       string
-	exists    bool
 	remoteURL string
-	err       error
+	exists    bool
 }
 
 func (g *GitTestCommand) Exists() bool {
@@ -51,10 +51,10 @@ func NewGitCommand(branch, remoteURL string, tag string, exists bool) GitCommand
 
 func TestSetGitInfo(t *testing.T) {
 	tests := []struct {
-		name    string
 		command GitCommand
-		expect  Git
 		err     error
+		expect  Git
+		name    string
 	}{
 		{
 			name:    "Git https url",
@@ -87,10 +87,10 @@ func TestSetGitInfoWithEnv(t *testing.T) {
 	t.Setenv("GITHUB_HEAD_REF", "feature/branch")
 	t.Setenv("GITHUB_REF", "refs/tags/v1.0.4")
 	tests := []struct {
-		name    string
 		command GitCommand
-		expect  Git
 		err     error
+		expect  Git
+		name    string
 	}{
 		{
 			name:    "Without Git command only with env",
@@ -109,10 +109,10 @@ func TestSetGitInfoWithEnv(t *testing.T) {
 
 func TestSetGitInfoWithError(t *testing.T) {
 	tests := []struct {
-		name    string
 		command GitCommand
-		expect  Git
 		err     error
+		expect  Git
+		name    string
 	}{
 		{
 			name:    "Git https url",
@@ -125,26 +125,26 @@ func TestSetGitInfoWithError(t *testing.T) {
 }
 
 func RunGitInfoTest(t *testing.T, tests []struct {
-	name    string
 	command GitCommand
-	expect  Git
 	err     error
+	expect  Git
+	name    string
 }) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			git = nil
-			git, err := setGitInfo(tt.command)
+			gitInfo, err := setGitInfo(tt.command)
 			if tt.err != nil {
 				assert.ErrorContains(t, err, tt.err.Error())
-				assert.Nil(t, git)
+				assert.Nil(t, gitInfo)
 				return
 			}
 			assert.NoError(t, err)
 
-			assert.Equal(t, tt.expect.Owner, git.Owner)
-			assert.Equal(t, tt.expect.Repo, git.Repo)
-			assert.Equal(t, tt.expect.Branch, git.Branch)
-			assert.Equal(t, tt.expect.Tag, git.Tag)
+			assert.Equal(t, tt.expect.Owner, gitInfo.Owner)
+			assert.Equal(t, tt.expect.Repo, gitInfo.Repo)
+			assert.Equal(t, tt.expect.Branch, gitInfo.Branch)
+			assert.Equal(t, tt.expect.Tag, gitInfo.Tag)
 
 		})
 	}

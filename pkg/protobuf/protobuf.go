@@ -17,12 +17,12 @@ import (
 var f embed.FS
 
 type ProtogufContainer struct {
+	*container.Container
 	Command        string
-	WithHttp       bool
-	WithTag        bool
 	SourcePackages []string
 	SourceFiles    []string
-	*container.Container
+	WithHttp       bool
+	WithTag        bool
 }
 
 func New(build container.Build) *ProtogufContainer {

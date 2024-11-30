@@ -89,31 +89,26 @@ type Leader interface {
 
 // TODO: add target container platform
 type Build struct {
-	App      string `json:"app"`
-	Env      EnvType
-	File     string
-	Folder   string
-	Image    string `json:"image"`
-	ImageTag string `json:"image_tag"`
-	Custom   Custom
-
-	BuildType BuildType `json:"build_type"`
-	// docker or podman
-	Runtime utils.RuntimeType
-
-	Organization       string
+	Leader             Leader
 	Platform           types.Platform
+	Custom             Custom
+	Registries         map[string]*protos2.ContainerRegistry
+	Folder             string
+	App                string    `json:"app"`
+	Image              string    `json:"image"`
+	BuildType          BuildType `json:"build_type"`
+	Runtime            utils.RuntimeType
+	Organization       string
+	ImageTag           string `json:"image_tag"`
 	Registry           string
 	ContainifyRegistry string
+	Env                EnvType
+	File               string
 	Repository         string
 	SourcePackages     []string
 	SourceFiles        []string
 	Verbose            bool
-	Registries         map[string]*protos2.ContainerRegistry
-
-	//internal variables
-	defaults bool
-	Leader   Leader
+	defaults           bool
 }
 
 type BuildGroup struct {

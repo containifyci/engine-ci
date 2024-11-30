@@ -26,9 +26,9 @@ type Build interface {
 type RunFunc func() error
 
 type BuildSteps struct {
-	init  bool
 	Steps []*BuildContext
 	build container.Build
+	init  bool
 }
 
 func ToBuildContexts(steps ...Build) []*BuildContext {

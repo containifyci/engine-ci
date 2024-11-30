@@ -193,10 +193,12 @@ func GetBuild() container.BuildGroups {
 func CallPlugin(logger hclog.Logger, plugin interface{}) []*protos2.BuildArgsGroup {
 	// We should have a Counter store now! This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	containifyci, ok := plugin.(protos2.ContainifyCIv2)
-	if ok {
-		resp := containifyci.GetBuilds()
-		return resp.Args
+	{
+		containifyci, ok := plugin.(protos2.ContainifyCIv2)
+		if ok {
+			resp := containifyci.GetBuilds()
+			return resp.Args
+		}
 	}
 	{
 		containifyci, ok := plugin.(protos2.ContainifyCIv1)

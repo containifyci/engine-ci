@@ -29,13 +29,13 @@ const (
 var f embed.FS
 
 type MavenContainer struct {
+	Platform types.Platform
+	*container.Container
 	App      string
 	File     string
 	Folder   string
 	Image    string
 	ImageTag string
-	Platform types.Platform
-	*container.Container
 }
 
 func New(build container.Build) *MavenContainer {
@@ -49,7 +49,7 @@ func New(build container.Build) *MavenContainer {
 	}
 }
 
-func (c *MavenContainer) IsAsync () bool {
+func (c *MavenContainer) IsAsync() bool {
 	return false
 }
 
@@ -205,13 +205,13 @@ type MavenBuild struct {
 	rf     build.RunFunc
 	name   string
 	images []string
-	async bool
+	async  bool
 }
 
-func (g MavenBuild) Run() error { return g.rf() }
-func (g MavenBuild) Name() string { return g.name }
+func (g MavenBuild) Run() error       { return g.rf() }
+func (g MavenBuild) Name() string     { return g.name }
 func (g MavenBuild) Images() []string { return g.images }
-func (g MavenBuild) IsAsync() bool { return g.async }
+func (g MavenBuild) IsAsync() bool    { return g.async }
 
 func NewProd(build container.Build) build.Build {
 	container := New(build)
@@ -221,7 +221,7 @@ func NewProd(build container.Build) build.Build {
 		},
 		name:   "maven-prod",
 		images: []string{ProdImage},
-		async: false,
+		async:  false,
 	}
 }
 

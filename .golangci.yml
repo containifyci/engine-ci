@@ -1,17 +1,9 @@
+issues:
+  exclude-rules:
+    - text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
+      linters: [govet]
 linters-settings:
   govet:
-    # Disable all analyzers.
-    # Default: false
-    # disable-all: true
-    # Enable analyzers by name.
-    # (in addition to default:
-    #   appends, asmdecl, assign, atomic, bools, buildtag, cgocall, composites, copylocks, defers, directive, errorsas,
-    #   framepointer, httpresponse, ifaceassert, loopclosure, lostcancel, nilfunc, printf, shift, sigchanyzer, slog,
-    #   stdmethods, stringintconv, structtag, testinggoroutine, tests, timeformat, unmarshal, unreachable, unsafeptr,
-    #   unusedresult
-    # ).
-    # Run `GL_DEBUG=govet golangci-lint run --enable=govet` to see default, all available analyzers, and enabled analyzers.
-    # Default: []
     enable:
       - appends
       - asmdecl
@@ -53,68 +45,8 @@ linters-settings:
       - unsafeptr
       - unusedresult
       - unusedwrite
-    # Enable all analyzers.
-    # Default: false
-    # enable-all: true
-    # Disable analyzers by name.
-    # (in addition to default
-    #   atomicalign, deepequalerrors, fieldalignment, findcall, nilness, reflectvaluecompare, shadow, sortslice,
-    #   timeformat, unusedwrite
-    # ).
-    # Run `GL_DEBUG=govet golangci-lint run --enable=govet` to see default, all available analyzers, and enabled analyzers.
-    # Default: []
-    # disable:
-    #   - appends
-    #   - asmdecl
-    #   - assign
-    #   - atomic
-    #   - atomicalign
-    #   - bools
-    #   - buildtag
-    #   - cgocall
-    #   - composites
-    #   - copylocks
-    #   - deepequalerrors
-    #   - defers
-    #   - directive
-    #   - errorsas
-    #   - fieldalignment
-    #   - findcall
-    #   - framepointer
-    #   - httpresponse
-    #   - ifaceassert
-    #   - loopclosure
-    #   - lostcancel
-    #   - nilfunc
-    #   - nilness
-    #   - printf
-    #   - reflectvaluecompare
-    #   - shadow
-    #   - shift
-    #   - sigchanyzer
-    #   - slog
-    #   - sortslice
-    #   - stdmethods
-    #   - stringintconv
-    #   - structtag
-    #   - testinggoroutine
-    #   - tests
-    #   - unmarshal
-    #   - unreachable
-    #   - unsafeptr
-    #   - unusedresult
-    #   - unusedwrite
     # Settings per analyzer.
     settings:
-      # Analyzer name, run `go tool vet help` to see all analyzers.
-      printf:
-        # Comma-separated list of print function names to check (in addition to default, see `go tool vet help printf`).
-        # Default: []
-        funcs:
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
       shadow:
         # Whether to be strict about shadowing; can be noisy.
         # Default: false

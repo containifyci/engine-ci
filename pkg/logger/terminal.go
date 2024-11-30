@@ -40,22 +40,20 @@ func (ro *ResettableOnce) Reset() {
 
 type (
 	LogEntry struct {
-		messages  []string // Store recent messages for each routine
-		isDone    bool
-		isFailed  bool
 		startTime time.Time
 		endTime   time.Time
+		messages  []string
 		mu        sync.Mutex
+		isDone    bool
+		isFailed  bool
 	}
 
 	LogAggregator struct {
-		logMap sync.Map
-		// routineOrder []int
-		// wg           sync.WaitGroup
-		routineOrder []string        // Maintain the order of routine IDs
-		logChannel   chan LogMessage // Channel for incoming log messages
-		flushDone    chan struct{}   // Channel to signal that flushing is done
+		logChannel   chan LogMessage
+		flushDone    chan struct{}
+		logMap       sync.Map
 		format       string
+		routineOrder []string
 	}
 
 	LogMessage struct {
@@ -109,42 +107,45 @@ func last5Messages(messages []string) []string {
 	return messages[len(messages)-5:]
 }
 
+func readFromChannel(la *LogAggregator) []string {
+	logMsg, ok := <-la.logChannel
+		if !ok {
+			// Channel is closed, break the loop to finish
+			close(la.flushDone) // Signal that flushing is done
+			return nil
+		}
+		entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines), startTime: time.Now()})
+		logEntry := entry.(*LogEntry)
+
+		logEntry.addMessage(logMsg.message)
+
+		// If the routine is done, mark it
+		if logMsg.isDone {
+			logEntry.mu.Lock()
+			logEntry.isDone = logMsg.isDone
+			logEntry.isFailed = logMsg.isFailed
+			logEntry.endTime = time.Now()
+			logEntry.mu.Unlock()
+		}
+		if !slices.Contains(la.routineOrder, logMsg.routineID) {
+			la.routineOrder = append(la.routineOrder, logMsg.routineID)
+		}
+		return la.routineOrder
+}
+
 func (la *LogAggregator) startLogDisplay() {
 	fmt.Println("Starting Real-Time Log Aggregation...")
 
 	// Continuously update the console with the current log state
 	for {
-		select {
-		case logMsg, ok := <-la.logChannel:
-			if !ok {
-				// Channel is closed, break the loop to finish
-				close(la.flushDone) // Signal that flushing is done
-				return
-			}
-			entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines), startTime: time.Now()})
-			logEntry := entry.(*LogEntry)
 
-			logEntry.addMessage(logMsg.message)
-
-			// If the routine is done, mark it
-			if logMsg.isDone {
-				logEntry.mu.Lock()
-				logEntry.isDone = logMsg.isDone
-				logEntry.isFailed = logMsg.isFailed
-				logEntry.endTime = time.Now()
-				logEntry.mu.Unlock()
-			}
-			if !slices.Contains(la.routineOrder, logMsg.routineID) {
-				la.routineOrder = append(la.routineOrder, logMsg.routineID)
-			}
-		}
-
+		routineOrder := readFromChannel(la)
 		// Clear screen by printing new lines
 		fmt.Print("\033[H\033[2J") // ANSI escape sequence to clear the screen
 		fmt.Println("Real-Time Log Aggregation")
 
 		// Display completed log entries first
-		for _, id := range la.routineOrder {
+		for _, id := range routineOrder {
 			value, ok := la.logMap.Load(id)
 			if !ok {
 				continue
@@ -174,7 +175,7 @@ func (la *LogAggregator) startLogDisplay() {
 		}
 
 		// Display in-progress entries after completed ones
-		for _, id := range la.routineOrder {
+		for _, id := range routineOrder {
 			value, ok := la.logMap.Load(id)
 			if !ok {
 				continue

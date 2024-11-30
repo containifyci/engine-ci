@@ -9,8 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var osStat = os.Stat
-
 type FileCache struct {
 	cache       bool
 	fileName    string

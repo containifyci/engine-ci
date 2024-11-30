@@ -21,7 +21,7 @@ import (
 const (
 	DEFAULT_GO = "1.23.3"
 	PROJ_MOUNT = "/src"
-	LINT_IMAGE = "golangci/golangci-lint:v1.61.0"
+	LINT_IMAGE = "golangci/golangci-lint:v1.62.2"
 	OUT_DIR    = "/out/"
 )
 
@@ -30,6 +30,7 @@ var f embed.FS
 
 type GoContainer struct {
 	//TODO add option to fail on linter or not
+	*container.Container
 	App       string
 	File      string
 	Folder    string
@@ -37,7 +38,6 @@ type GoContainer struct {
 	ImageTag  string
 	Platforms []*types.PlatformSpec
 	Tags      []string
-	*container.Container
 }
 
 func New(build container.Build) *GoContainer {
@@ -128,7 +128,6 @@ func LintImage() string {
 func (c *GoContainer) CopyLintScript() error {
 	tags := ""
 	if len(c.Tags) > 0 {
-		// c.Tags = append(c.Tags, "linux")
 		tags = "--build-tags " + strings.Join(c.Tags, ",")
 	}
 	script := fmt.Sprintf(`#!/bin/sh
@@ -137,7 +136,6 @@ mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
 golangci-lint --out-format colored-line-number -v run %s --timeout=5m
-ls -lha /
 `, tags)
 	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
@@ -172,6 +170,9 @@ func (c *GoContainer) Lint() error {
 	opts.WorkingDir = "/src"
 
 	dir, _ := filepath.Abs(".")
+	if c.Folder != "" {
+		dir, _ = filepath.Abs(c.Folder)
+	}
 	cache := CacheFolder()
 	if cache == "" {
 		cache, _ = filepath.Abs(".tmp/go")

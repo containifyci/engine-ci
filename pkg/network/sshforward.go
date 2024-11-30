@@ -14,10 +14,10 @@ const (
 )
 
 type Forward struct {
+	Volume *types.Volume
 	Source string
 	Target string
 	Env    string
-	Volume *types.Volume
 }
 
 // TODO implement ssh socket forward with

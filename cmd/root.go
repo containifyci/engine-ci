@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"sync"
 
 	"github.com/containifyci/engine-ci/pkg/logger"
 
@@ -11,9 +10,9 @@ import (
 )
 
 type rootCmdArgs struct {
-	Verbose  bool
 	Progress string
 	Target   string
+	Verbose  bool
 }
 
 var RootArgs = &rootCmdArgs{}
@@ -48,8 +47,6 @@ to quickly create a Cobra application.`,
 		logger.GetLogAggregator().Flush()
 	},
 }
-
-var mu sync.Mutex
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
