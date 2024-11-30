@@ -52,6 +52,8 @@ For a practical example of how **engine-ci** is used, check out the [containifyc
 - [ ] **Github Action**: Change release process to create draft a release and to publish it after all artifacts are uploaded by goreleaser.
   - https://goreleaser.com/customization/release/#github
 - [ ] **Goreleaser Signed Apple Builds**: Add signing for Apple builds (high priority).
+- [x] **Concurrent Build Support**: Implement concurrent build support (medium priority).
+- [ ] **Add Go Quality Build Steps**: Add extra Go quality build steps to post test coverage and other reports to the Pull Request similar to the trivy report. [go-coverage-report](github.com/fgrosse/go-coverage-report/) (low priority).
 
 ## Contribution
 

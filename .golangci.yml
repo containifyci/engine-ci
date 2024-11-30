@@ -51,3 +51,7 @@ linters-settings:
         # Whether to be strict about shadowing; can be noisy.
         # Default: false
         strict: true
+run:
+  build-tags:
+    - containers_image_openpgp
+  modules-download-mode: readonly
