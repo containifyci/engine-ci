@@ -113,6 +113,20 @@ func TestGetEnv(t *testing.T) {
 	}
 }
 
+func TestGetAllEnv(t *testing.T) {
+	t.Setenv("key", "value")
+	t.Setenv("key_env", "env:key")
+	t.Setenv("key_cmd", "cmd:echo value")
+	t.Setenv("key_cmd_default", "cmd:cat file || echo value")
+	envs := GetAllEnvs([]string{"key", "key_env", "key_cmd", "key_cmd_default", "key_missing"}, "build")
+
+	assert.Equal(t, "value", envs["key"])
+	assert.Equal(t, "value", envs["key_env"])
+	assert.Equal(t, "value", envs["key_cmd"])
+	assert.Equal(t, "value", envs["key_cmd_default"])
+	assert.Equal(t, "", envs["key_missing"])
+}
+
 func TestGetenvs(t *testing.T) {
 	t.Setenv("key", "value")
 	t.Setenv("key_LOCAL", "value_LOCAL")

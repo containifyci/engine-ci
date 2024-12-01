@@ -10,6 +10,8 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
+	utils "github.com/containifyci/engine-ci/pkg/utils"
+
 	"github.com/containifyci/engine-ci/pkg/svc"
 )
 
@@ -65,9 +67,6 @@ func (c *GoReleaserContainer) ApplyEnvs(envs []string) []string {
 }
 
 func (c *GoReleaserContainer) Release(env container.EnvType) error {
-	if c.GetBuild().Custom.Bool("goreleaser") {
-		slog.Info("Skip goreleaser")
-	}
 	token := container.GetEnv("CONTAINIFYCI_GITHUB_TOKEN")
 	if token == "" {
 		slog.Warn("Skip goreleaser missing CONTAINIFYCI_GITHUB_TOKEN")
@@ -78,6 +77,13 @@ func (c *GoReleaserContainer) Release(env container.EnvType) error {
 	opts.Image = IMAGE
 	//FIX: this should fix the permission issue with the mounted cache folder
 	// opts.User = "root"
+
+	envKeys := c.GetBuild().Custom.Strings("goreleaser_envs")
+	envs := utils.GetAllEnvs(envKeys, c.Env.String())
+
+	for k, v := range envs {
+		opts.Env = append(opts.Env, []string{k + "=" + v}...)
+	}
 
 	opts.Env = append(opts.Env, []string{
 		"GOMODCACHE=/go/pkg/",
