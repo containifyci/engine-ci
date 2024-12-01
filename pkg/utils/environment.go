@@ -40,6 +40,16 @@ func GetEnvs(key []string, envType string) string {
 }
 
 
+func GetAllEnvs(key []string, envType string) map[string]string {
+	envs := make(map[string]string)
+	for _, k := range key {
+		if v := GetEnv(k, envType); v != "" {
+			envs[k] = v
+		}
+	}
+	return envs
+}
+
 
 func GetEnv(key string, envType string) string {
 	env := Getenv(key, envType)
