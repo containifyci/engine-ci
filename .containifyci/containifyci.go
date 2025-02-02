@@ -42,7 +42,7 @@ func main() {
 	opts1 := build.NewGoServiceBuild("engine-ci")
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
-		"tags": build.NewList("containers_image_openpgp"),
+		"tags":       build.NewList("containers_image_openpgp"),
 		"goreleaser": build.NewList("true"),
 	}
 
@@ -51,8 +51,8 @@ func main() {
 	opts2 := build.NewGoServiceBuild("engine-ci-debian")
 	opts2.File = "main.go"
 	opts2.Properties = map[string]*build.ListValue{
-		"tags":       build.NewList("containers_image_openpgp"),
-		"from":       build.NewList("debian"),
+		"tags": build.NewList("containers_image_openpgp"),
+		"from": build.NewList("debian"),
 	}
 	opts2.Registries = registryAuth()
 

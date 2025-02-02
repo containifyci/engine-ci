@@ -81,7 +81,7 @@ func renderTestCommand(bs *BuildScript, m map[string]interface{}) string {
 	var cmd string
 	switch bs.CoverageMode {
 	case "binary":
-		cmd = "go test {{- .verbose }} -timeout 120s {{- .tags }} -cover ./... {{- .coverage}} "
+		cmd = "mkdir -p ${PWD}/.coverdata/unit\ngo test {{- .verbose }} -timeout 120s {{- .tags }} -cover ./... {{- .coverage}}"
 	case "text":
 		fallthrough
 	default:

@@ -52,6 +52,7 @@ git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
 cd /src
 env GOOS=darwin GOARCH=arm64 go build -o /src/test-darwin-arm64 /src/main.go
 env GOOS=linux GOARCH=amd64 go build -o /src/test-linux-amd64 /src/main.go
+mkdir -p ${PWD}/.coverdata/unit
 go test -timeout 120s -cover ./... -args -test.gocoverdir=${PWD}/.coverdata/unit
 `
 	script := bs.String()
