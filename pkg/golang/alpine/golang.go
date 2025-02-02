@@ -125,26 +125,6 @@ func LintImage() string {
 	return LINT_IMAGE
 }
 
-func (c *GoContainer) CopyLintScript() error {
-	tags := ""
-	if len(c.Tags) > 0 {
-		tags = "--build-tags " + strings.Join(c.Tags, ",")
-	}
-	script := fmt.Sprintf(`#!/bin/sh
-set -x
-mkdir -p ~/.ssh
-ssh-keyscan github.com >> ~/.ssh/known_hosts
-git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
-golangci-lint --out-format colored-line-number -v run %s --timeout=5m
-`, tags)
-	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
-	if err != nil {
-		slog.Error("Failed to copy script to container: %s", "error", err)
-		os.Exit(1)
-	}
-	return err
-}
-
 func (c *GoContainer) Lint() error {
 	image := c.GoImage()
 
@@ -199,7 +179,8 @@ func (c *GoContainer) Lint() error {
 		os.Exit(1)
 	}
 
-	err = c.CopyLintScript()
+	script := NewGolangCiLint().LintScript(c.Tags)
+	err = c.Container.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to start container", "error", err)
 		os.Exit(1)
