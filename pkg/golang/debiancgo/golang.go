@@ -196,7 +196,8 @@ func (c *GoContainer) BuildScript() string {
 		platforms = types.ParsePlatforms(c.GetBuild().Custom.Strings("platforms")...)
 	}
 	nocoverage := c.GetBuild().Custom.Bool("nocoverage")
-	return buildscript.NewBuildScript(c.App, c.File, c.Folder, c.Tags, c.Container.Verbose, nocoverage, platforms...).String()
+	coverageMode := buildscript.CoverageMode(c.GetBuild().Custom.String("coverage_mode"))
+	return buildscript.NewBuildScript(c.App, c.File, c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, platforms...).String()
 }
 
 func NewProd(build container.Build) build.Build {

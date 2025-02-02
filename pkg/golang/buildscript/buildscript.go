@@ -11,20 +11,23 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 )
 
+type CoverageMode string
+
 type Image string
 
 type BuildScript struct {
-	Tags       []string
-	AppName    string
-	MainFile   string
-	Folder     string
-	Output     string
-	Platforms  []*types.PlatformSpec
-	Verbose    bool
-	NoCoverage bool
+	Tags         []string
+	AppName      string
+	MainFile     string
+	Folder       string
+	Output       string
+	CoverageMode CoverageMode
+	Platforms    []*types.PlatformSpec
+	Verbose      bool
+	NoCoverage   bool
 }
 
-func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, platforms ...*types.PlatformSpec) *BuildScript {
+func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, coverageMode CoverageMode, platforms ...*types.PlatformSpec) *BuildScript {
 	output := "-o /src/{{.app}}-{{.os}}-{{.arch}}"
 	if mainfile == "" {
 		mainfile = "./..."
@@ -34,14 +37,15 @@ func NewBuildScript(appName, mainfile string, folder string, tags []string, verb
 		folder = "."
 	}
 	script := &BuildScript{
-		AppName:    appName,
-		MainFile:   mainfile,
-		Folder:     folder,
-		NoCoverage: nocoverage,
-		Output:     output,
-		Platforms:  platforms,
-		Tags:       tags,
-		Verbose:    verbose,
+		AppName:      appName,
+		CoverageMode: coverageMode,
+		Folder:       folder,
+		MainFile:     mainfile,
+		NoCoverage:   nocoverage,
+		Output:       output,
+		Platforms:    platforms,
+		Tags:         tags,
+		Verbose:      verbose,
 	}
 	return script
 }
@@ -73,11 +77,19 @@ func trim(str string, args ...any) string {
 	return fmt.Sprintf(s, args...)
 }
 
-func renderTestCommand(m map[string]interface{}) string {
+func renderTestCommand(bs *BuildScript, m map[string]interface{}) string {
+	var cmd string
+	switch bs.CoverageMode {
+	case "binary":
+		cmd = "go test {{- .verbose }} -timeout 120s {{- .tags }} -cover ./... {{- .coverage}} "
+	case "text":
+		fallthrough
+	default:
+		cmd = "go test {{- .verbose }} -timeout 120s {{- .tags }} {{- .coverage}} ./..."
+	}
+
 	t := template.Must(template.New("").
-		Parse(trim(`
-go test {{- .verbose }} -timeout 120s {{- .tags }} {{- .coverage}} ./...
-`)))
+		Parse(trim(cmd)))
 	buf := new(bytes.Buffer)
 	err := t.Execute(buf, m)
 	if err != nil {
@@ -101,11 +113,19 @@ env GOOS={{.os}} GOARCH={{ .arch }} go build {{- .tags }} {{- .verbose }} %s {{.
 	return buf.String()
 }
 
-func coverage(nocoverage bool) string {
+func coverage(nocoverage bool, coveragemode CoverageMode) string {
 	if nocoverage {
 		return ""
 	}
-	return " -cover -coverprofile coverage.txt"
+	switch coveragemode {
+	case "binary":
+		return " -args -test.gocoverdir=${PWD}/.coverdata/unit"
+	case "text":
+		fallthrough
+	default:
+		return " -cover -coverprofile coverage.txt"
+
+	}
 }
 
 func goBuildCmds(bs *BuildScript) string {
@@ -120,7 +140,7 @@ func goBuildCmds(bs *BuildScript) string {
 		}
 		cmds = append(cmds, bs.renderCompileCommand(m))
 	}
-	coverage := coverage(bs.NoCoverage)
+	coverage := coverage(bs.NoCoverage, bs.CoverageMode)
 	m := map[string]interface{}{"verbose": "", "tags": "", "cgo": 0, "coverage": coverage}
 	if bs.Verbose {
 		m["verbose"] = " -v"
@@ -128,6 +148,6 @@ func goBuildCmds(bs *BuildScript) string {
 	if len(bs.Tags) > 0 {
 		m["tags"] = " -tags " + strings.Join(bs.Tags, ",")
 	}
-	cmds = append(cmds, renderTestCommand(m))
+	cmds = append(cmds, renderTestCommand(bs, m))
 	return strings.Join(cmds, "\n")
 }

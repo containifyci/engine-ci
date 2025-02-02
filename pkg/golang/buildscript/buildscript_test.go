@@ -9,7 +9,7 @@ import (
 )
 
 func TestVerboseScript(t *testing.T) {
-	bs := NewBuildScript("test", "/src/main.go", "", []string{"build_tag"}, true, true, types.ParsePlatform("linux/amd64"), types.ParsePlatform("darwin/arm64"))
+	bs := NewBuildScript("test", "/src/main.go", "", []string{"build_tag"}, true, true, CoverageMode("text"), types.ParsePlatform("linux/amd64"), types.ParsePlatform("darwin/arm64"))
 	expected := `#!/bin/sh
 set -xe
 mkdir -p ~/.ssh
@@ -25,7 +25,7 @@ go test -v -timeout 120s -tags build_tag ./...
 }
 
 func TestSimpleScript(t *testing.T) {
-	bs := NewBuildScript("test", "/src/main.go","/src", nil, false, false, types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/amd64"))
+	bs := NewBuildScript("test", "/src/main.go", "/src", nil, false, false, CoverageMode(""), types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/amd64"))
 
 	expected := `#!/bin/sh
 set -xe
@@ -36,6 +36,23 @@ cd /src
 env GOOS=darwin GOARCH=arm64 go build -o /src/test-darwin-arm64 /src/main.go
 env GOOS=linux GOARCH=amd64 go build -o /src/test-linux-amd64 /src/main.go
 go test -timeout 120s -cover -coverprofile coverage.txt ./...
+`
+	script := bs.String()
+	assert.Equal(t, expected, script)
+}
+
+func TestSimpleScriptCoverageBinary(t *testing.T) {
+	bs := NewBuildScript("test", "/src/main.go", "/src", nil, false, false, CoverageMode("binary"), types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/amd64"))
+
+	expected := `#!/bin/sh
+set -xe
+mkdir -p ~/.ssh
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
+cd /src
+env GOOS=darwin GOARCH=arm64 go build -o /src/test-darwin-arm64 /src/main.go
+env GOOS=linux GOARCH=amd64 go build -o /src/test-linux-amd64 /src/main.go
+go test -timeout 120s -cover ./... -args -test.gocoverdir=${PWD}/.coverdata/unit
 `
 	script := bs.String()
 	assert.Equal(t, expected, script)
