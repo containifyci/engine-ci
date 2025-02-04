@@ -5,7 +5,7 @@ go 1.23
 toolchain go1.23.3
 
 require (
-	github.com/containifyci/engine-ci/client v0.10.0
+	github.com/containifyci/engine-ci/client v0.11.0
 	github.com/containifyci/engine-ci/protos2 v0.9.0
 )
 
