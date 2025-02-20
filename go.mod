@@ -8,7 +8,7 @@ require (
 	github.com/containers/common v0.62.0
 	github.com/containers/podman/v5 v5.4.0
 	github.com/containifyci/engine-ci/protos2 v0.10.0
-	github.com/docker/docker v27.5.1+incompatible
+	github.com/docker/docker v28.0.0+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
