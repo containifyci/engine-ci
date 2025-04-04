@@ -93,7 +93,7 @@ jobs:
         run: echo "COMMIT_SHA=$(if [ '${{ github.event_name }}' == 'pull_request' ]; then echo '${{ github.event.pull_request.head.sha }}'; else echo '${{ github.sha }}'; fi)" >> $GITHUB_ENV
 
       - name: Setup SSH agent for retrieving (private) Github dependencies
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.9.1
         if: env.CONTAINIFYCI_CI_SSH_PRIVATE_KEY != null
         env:
           CONTAINIFYCI_CI_SSH_PRIVATE_KEY: ${{ secrets.CONTAINIFYCI_CI_SSH_PRIVATE_KEY }}
