@@ -37,7 +37,6 @@ jobs:
           maxTagsToFetch: 50
       - name: Create Tag
         uses: actions/github-script@v7
-        if: steps.semver.outputs.next
         with:
           script: |
             const {TAG} = process.env
