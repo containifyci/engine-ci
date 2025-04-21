@@ -119,7 +119,6 @@ require (
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/opencontainers/cgroups v0.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/runc v1.2.6 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20250303011046-260e151b8552 // indirect
@@ -173,6 +172,7 @@ require (
 )
 
 replace (
+	github.com/containers/common => github.com/containers/common v0.62.3
 	// until https://github.com/containers/podman release a new version that includes docker v28.0.x
 	github.com/containers/image/v5 => github.com/containers/image/v5 v5.34.3
 	github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
