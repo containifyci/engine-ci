@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	IMAGE = "goreleaser/goreleaser:nigthly"
+	IMAGE = "goreleaser/goreleaser:nightly"
 )
 
 type GoReleaserContainer struct {
