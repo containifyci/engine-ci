@@ -97,7 +97,7 @@ func TestKeyValueStore_Set_InvalidRequest(t *testing.T) {
 }
 
 func TestStartHttpServer(t *testing.T) {
-	err, srv, fnc := StartHttpServer(NewKeyValueStore())
+	srv, fnc, err := StartHttpServer(NewKeyValueStore())
 	assert.NoError(t, err, "Failed to start HTTP server")
 
 	defer func() {

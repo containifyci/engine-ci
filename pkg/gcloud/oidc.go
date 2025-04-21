@@ -92,9 +92,9 @@ func (c *GCloudContainer) BuildImage() error {
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	c.Container.Source = d
+	c.Source = d
 
-	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
 func (c *GCloudContainer) Auth() error {
@@ -139,23 +139,23 @@ func (c *GCloudContainer) Auth() error {
 
 	// opts.Cmd = []string{"sleep", "300"}
 
-	err := c.Container.Create(opts)
+	err := c.Create(opts)
 	if err != nil {
 		return err
 	}
 
-	err = c.Container.CopyContentTo(c.applicationCredentials, "/tmp/.gcloud/adc.json")
+	err = c.CopyContentTo(c.applicationCredentials, "/tmp/.gcloud/adc.json")
 	if err != nil {
 		slog.Error("Failed to start container", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		return err
 	}
 
-	return c.Container.Wait()
+	return c.Wait()
 }
 
 func Image(build *container.Build) string {
@@ -191,7 +191,7 @@ func (c *GCloudContainer) Run() error {
 	}
 
 	err = c.Auth()
-	slog.Info("Container created", "containerId", c.Container.ID)
+	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		return err

@@ -445,7 +445,7 @@ func (d *DockerManager) CopyFileFromContainer(ctx context.Context, id string, sr
 
 	// reader, _, err := c.clientOld.CopyFromContainer(c.ctx, c.Resp.ID, srcPath)
 
-	if err != nil && types.SameError(err, fmt.Errorf("Error response from daemon: Could not find the file ")) {
+	if err != nil && types.SameError(err, fmt.Errorf("error response from daemon: Could not find the file ")) {
 		slog.Info("File not exists", "error", err, "file", srcPath)
 		return "", io.EOF
 	}

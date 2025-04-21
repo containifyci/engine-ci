@@ -83,7 +83,7 @@ func (c *ProtogufContainer) Pull() error {
 func (c *ProtogufContainer) CopyBuildScript() error {
 	// Create a temporary script in-memory
 	script := Script(NewBuildScript(c.Command, c.SourcePackages, c.SourceFiles, c.WithHttp, c.WithTag))
-	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
+	err := c.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)
 		os.Exit(1)
@@ -114,7 +114,7 @@ func (c *ProtogufContainer) Generate() error {
 
 	slog.Info("Protobuf container created")
 
-	err := c.Container.Create(opts)
+	err := c.Create(opts)
 	if err != nil {
 		slog.Error("Failed to create container", "error", err)
 		os.Exit(1)
@@ -126,13 +126,13 @@ func (c *ProtogufContainer) Generate() error {
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		slog.Error("Failed to start container", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Wait()
+	err = c.Wait()
 	if err != nil {
 		slog.Error("Failed to wait for container", "error", err)
 		os.Exit(1)
@@ -155,7 +155,7 @@ func (c *ProtogufContainer) Build() error {
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
 // TODO: provide a shorter checksum

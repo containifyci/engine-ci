@@ -112,7 +112,7 @@ func (c *MavenContainer) BuildMavenImage() error {
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	err = c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	err = c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 	if err != nil {
 		slog.Error("Failed to build maven image", "error", err)
 		os.Exit(1)
@@ -187,7 +187,7 @@ func (c *MavenContainer) Build() error {
 
 	opts.Script = c.BuildScript()
 
-	err = c.Container.BuildingContainer(opts)
+	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
 		os.Exit(1)
@@ -198,7 +198,7 @@ func (c *MavenContainer) Build() error {
 
 func (c *MavenContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return Script(NewBuildScript(c.Container.Verbose))
+	return Script(NewBuildScript(c.Verbose))
 }
 
 type MavenBuild struct {
@@ -237,44 +237,44 @@ func (c *MavenContainer) Prod() error {
 	opts.User = "185"
 	opts.WorkingDir = "/src"
 
-	err := c.Container.Create(opts)
+	err := c.Create(opts)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		slog.Error("Failed to start container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Exec("curl", "-Lo", "/deployments/dd-java-agent.jar", "https://dtdg.co/latest-java-tracer")
+	err = c.Exec("curl", "-Lo", "/deployments/dd-java-agent.jar", "https://dtdg.co/latest-java-tracer")
 	if err != nil {
 		slog.Error("Failed to execute command: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.CopyDirectoryTo(c.Folder, "/deployments")
+	err = c.CopyDirectoryTo(c.Folder, "/deployments")
 	if err != nil {
 		slog.Error("Failed to copy directory to container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	imageId, err := c.Container.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"/usr/local/s2i/run\"]", "USER 185")
+	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"/usr/local/s2i/run\"]", "USER 185")
 	if err != nil {
 		slog.Error("Failed to commit container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Stop()
+	err = c.Stop()
 	if err != nil {
 		slog.Error("Failed to stop container: %s", "error", err)
 		os.Exit(1)
 	}
 
 	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)
-	err = c.Container.Push(imageId, imageUri)
+	err = c.Push(imageId, imageUri)
 	if err != nil {
 		slog.Error("Failed to push image: %s", "error", err)
 		os.Exit(1)
@@ -297,7 +297,7 @@ func (c *MavenContainer) Run() error {
 	}
 
 	err = c.Build()
-	slog.Info("Container created", "containerId", c.Container.ID)
+	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		return err

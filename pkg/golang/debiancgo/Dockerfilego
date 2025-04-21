@@ -1,4 +1,4 @@
-FROM golang:1.23.5
+FROM golang:1.24.2
 
 RUN apt-get update && \
     apt-get install -y build-essential \
@@ -20,7 +20,7 @@ RUN apt-get update && \
   rm -rf /tmp/* /var/tmp/* && \
   rm -rf /var/lib/apt/lists/*
 
-# RUN go install github.com/pact-foundation/pact-go/v2@v2.0.8 && \
+# RUN go install github.com/pact-foundation/pact-go/v2@v2.4.1 && \
 #   pact-go -l DEBUG install && \
 #   go clean -cache && \
 #   go clean -modcache

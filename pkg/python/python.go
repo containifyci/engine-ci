@@ -131,7 +131,7 @@ RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --o
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
 func (c *PythonContainer) Address() *network.Address {
@@ -175,13 +175,13 @@ func (c *PythonContainer) Build() (string, error) {
 	opts = ssh.Apply(&opts)
 	opts.Script = c.BuildScript()
 
-	err = c.Container.BuildingContainer(opts)
+	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
 		os.Exit(1)
 	}
 
-	imageId, err := c.Container.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"python\", \"/src/run.py\"]") /*, "USER worker")*/
+	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"python\", \"/src/run.py\"]") /*, "USER worker")*/
 	if err != nil {
 		slog.Error("Failed to commit container: %s", "error", err)
 		os.Exit(1)
@@ -192,7 +192,7 @@ func (c *PythonContainer) Build() (string, error) {
 
 func (c *PythonContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return Script(NewBuildScript(c.Container.Verbose))
+	return Script(NewBuildScript(c.Verbose))
 }
 
 type PythonBuild struct {
@@ -227,44 +227,44 @@ func (c *PythonContainer) Prod() error {
 	opts.Cmd = []string{"sleep", "300"}
 	// opts.User = "185"
 
-	err := c.Container.Create(opts)
+	err := c.Create(opts)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		slog.Error("Failed to start container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.CopyDirectoryTo(c.Folder, "/app")
+	err = c.CopyDirectoryTo(c.Folder, "/app")
 	if err != nil {
 		slog.Error("Failed to copy directory to container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Exec([]string{"pip", "install", "--no-cache", "/app/wheels/*"}...)
+	err = c.Exec([]string{"pip", "install", "--no-cache", "/app/wheels/*"}...)
 	if err != nil {
 		slog.Error("Failed to install wheels: %s", "error", err)
 		os.Exit(1)
 	}
 
-	imageId, err := c.Container.Commit(opts.Image, "Created from container", "CMD [\"python\", \"/app/run.py\"]", "WORKDIR /app") /*, "USER 185")*/
+	imageId, err := c.Commit(opts.Image, "Created from container", "CMD [\"python\", \"/app/run.py\"]", "WORKDIR /app") /*, "USER 185")*/
 	if err != nil {
 		slog.Error("Failed to commit container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Stop()
+	err = c.Stop()
 	if err != nil {
 		slog.Error("Failed to stop container: %s", "error", err)
 		os.Exit(1)
 	}
 
 	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)
-	err = c.Container.Push(imageId, imageUri, container.PushOption{Remove: false})
+	err = c.Push(imageId, imageUri, container.PushOption{Remove: false})
 	if err != nil {
 		slog.Error("Failed to push image: %s", "error", err)
 		os.Exit(1)
@@ -287,13 +287,13 @@ func (c *PythonContainer) Run() error {
 	}
 
 	imageID, err := c.Build()
-	slog.Info("Container created", "containerId", c.Container.ID)
+	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		return err
 	}
 
-	err = c.Container.Tag(imageID, fmt.Sprintf("%s:%s", c.Image, c.ImageTag))
+	err = c.Tag(imageID, fmt.Sprintf("%s:%s", c.Image, c.ImageTag))
 	if err != nil {
 		slog.Error("Failed to tag image: %s", "error", err)
 		return err

@@ -66,7 +66,7 @@ func (cg *customGCL) Defaults() {
 }
 
 func (c GolangCiLint) Command(tags string) string {
-	cmd := fmt.Sprintf("golangci-lint --out-format colored-line-number -v run %s --timeout=5m", tags)
+	cmd := fmt.Sprintf("golangci-lint -v run %s --timeout=5m", tags)
 	if c.reader.FileExists(".custom-gcl.yml") {
 		cnt, err := c.reader.ReadFile(".custom-gcl.yml")
 		if err != nil {

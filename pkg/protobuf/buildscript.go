@@ -36,6 +36,7 @@ func script(bs *BuildScript) string {
 	// p := "--gohttp_out=/src/{{.package}}"
 	// t := "protoc -I=/src/{{.source}} --go-grpc_out=/src/{{.package}} --plugin=grpc --gotag_out=outdir=\"./{{.package}}\":./ /src/{{.file}}"
 	cmds := []string{}
+	// nolint:staticcheck
 	if bs.Command == "protoc" {
 		for i, pkg := range bs.TargetPackages {
 			m := map[string]interface{}{"source": filepath.Dir(bs.SourceFiles[i]), "package": pkg, "file": bs.SourceFiles[i], "WithTag": bs.WithTag, "WithHttp": bs.WithHttp}

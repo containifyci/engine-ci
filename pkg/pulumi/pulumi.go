@@ -90,7 +90,7 @@ func (c *PulumiContainer) BuildPulumiImage() error {
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	err = c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	err = c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 	if err != nil {
 		slog.Error("Failed to build maven image", "error", err)
 		os.Exit(1)
@@ -124,7 +124,7 @@ pulumi stack init %s || echo ignore if stack %s already exists
 pulumi stack select -c %s
 pulumi %s --non-interactive
 `
-	err := c.Container.CopyContentTo(fmt.Sprintf(script, stack, stack, stack, command), "/tmp/script.sh")
+	err := c.CopyContentTo(fmt.Sprintf(script, stack, stack, stack, command), "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)
 		os.Exit(1)
@@ -188,7 +188,7 @@ func (c *PulumiContainer) Release(env container.EnvType) error {
 
 	opts.Cmd = []string{"sh", "/tmp/script.sh"}
 
-	err = c.Container.Create(opts)
+	err = c.Create(opts)
 	if err != nil {
 		return err
 	}
@@ -199,12 +199,12 @@ func (c *PulumiContainer) Release(env container.EnvType) error {
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		return err
 	}
 
-	return c.Container.Wait()
+	return c.Wait()
 }
 
 func (c *PulumiContainer) Pull() error {

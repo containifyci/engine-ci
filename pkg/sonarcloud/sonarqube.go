@@ -64,7 +64,7 @@ func NewSonarQube(build container.Build) *SonarqubeContainer {
 }
 
 func (c *SonarqubeContainer) Pull() error {
-	return c.Container.PullDefault(sonarqube.Image)
+	return c.PullDefault(sonarqube.Image)
 }
 
 func (c *SonarqubeContainer) Images() []string {
@@ -107,7 +107,7 @@ func (c *SonarqubeContainer) Start() error {
 	opts.Memory = int64(3073741824)
 	opts.CPU = uint64(2048)
 
-	err = c.Container.Create(opts)
+	err = c.Create(opts)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (c *SonarqubeContainer) Start() error {
 		return err
 	}
 
-	err = c.Container.Ready()
+	err = c.Ready()
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func PostRequest(url, authHeader, data string) (*http.Response, error) {
 }
 
 func (c *SonarqubeContainer) Setup() (*string, error) {
-	cnt, err := c.Container.CopyFileFromContainer(SONARQUBE_PATH)
+	cnt, err := c.CopyFileFromContainer(SONARQUBE_PATH)
 	if err != nil && err != io.EOF {
 		slog.Error("Failed to copy metadata file from container", "error", err)
 		os.Exit(1)
@@ -235,7 +235,7 @@ func (c *SonarqubeContainer) Setup() (*string, error) {
 		os.Exit(1)
 	}
 
-	err = c.Container.CopyContentTo(string(meta), SONARQUBE_PATH)
+	err = c.CopyContentTo(string(meta), SONARQUBE_PATH)
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)
 		os.Exit(1)

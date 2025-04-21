@@ -134,13 +134,14 @@ func Pre(arg *container.Build) (*container.Build, *build.BuildSteps) {
 		case container.GoLang:
 			bs.Add(protobuf.New(*a))
 			//TODO: register different build images automatically or at least in the build implementation itself
-			if from == "debian" {
+			switch from {
+			case "debian":
 				bs.Add(golang.NewDebian(*a))
 				bs.Add(golang.NewProdDebian(*a))
-			} else if from == "debiancgo" {
+			case "debiancgo":
 				bs.Add(golang.NewCGO(*a))
 				bs.Add(golang.NewProdDebian(*a))
-			} else {
+			default:
 				bs.Add(golang.New(*a))
 				bs.Add(golang.NewProd(*a))
 			}
@@ -210,7 +211,7 @@ func (c *Command) AddTarget(name string, fnc func() error) {
 }
 
 func Start() (func(), network.Address) {
-	err, srv, fnc := kv.StartHttpServer(kv.NewKeyValueStore())
+	srv, fnc, err := kv.StartHttpServer(kv.NewKeyValueStore())
 	if err != nil {
 		slog.Error("Failed to start http server", "error", err)
 		os.Exit(1)

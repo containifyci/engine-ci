@@ -116,17 +116,17 @@ func (c *GoReleaserContainer) Release(env container.EnvType) error {
 	}
 
 	opts.Cmd = []string{"release", "--skip=validate", "--verbose", "--clean"}
-	err := c.Container.Create(opts)
+	err := c.Create(opts)
 	if err != nil {
 		return err
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		return err
 	}
 
-	return c.Container.Wait()
+	return c.Wait()
 }
 
 func (c *GoReleaserContainer) Pull() error {
