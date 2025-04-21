@@ -7,7 +7,7 @@ require (
 	github.com/containers/buildah v1.39.4
 	github.com/containers/common v0.63.0
 	github.com/containers/podman/v5 v5.4.2
-	github.com/containifyci/engine-ci/protos2 v0.12.1
+	github.com/containifyci/engine-ci/protos2 v0.12.2
 	github.com/docker/docker v28.0.4+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/dusted-go/logging v1.3.0
