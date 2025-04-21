@@ -100,11 +100,11 @@ func getRandomPort() (*Server, error) {
 	}
 }
 
-func StartHttpServer(kvStore *KeyValueStore) (error, *Server, func()) {
+func StartHttpServer(kvStore *KeyValueStore) (*Server, func(), error) {
 	srv, err := getRandomPort()
 	if err != nil {
 		slog.Error("Failed to find available port", "error", err)
-		return err, nil, nil
+		return nil, nil, err
 	}
 
 	handler := http.NewServeMux()
@@ -117,11 +117,11 @@ func StartHttpServer(kvStore *KeyValueStore) (error, *Server, func()) {
 	handler.Handle("GET /mem/{key}", http.HandlerFunc(kvStore.Get))
 	handler.Handle("POST /mem/{key}", http.HandlerFunc(kvStore.Set))
 
-	return nil, srv, func() {
+	return srv, func() {
 		if err := http.Serve(srv.Listener, handler); err != nil &&
 			!strings.HasSuffix(err.Error(), "use of closed network connection") {
 			slog.Error("Failed to start http server", "error", err)
 		}
-	}
+	}, nil
 
 }

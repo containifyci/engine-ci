@@ -34,6 +34,7 @@ func (a *Address) NewAddress(arg *container.Build) {
 	case "windows":
 		internalHost = hostname(scheme, "host.docker.internal", port)
 	case "darwin":
+		// nolint:staticcheck
 		if arg.Runtime == utils.Docker {
 			internalHost = hostname(scheme, "host.docker.internal", port)
 		} else if arg.Runtime == utils.Podman {

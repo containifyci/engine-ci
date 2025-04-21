@@ -14,7 +14,7 @@ func TestCopyLintScript(t *testing.T) {
 set -x
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
-golangci-lint --out-format colored-line-number -v run --build-tags build_tag --timeout=5m`, script)
+golangci-lint -v run --build-tags build_tag --timeout=5m`, script)
 }
 
 func TestCopyLintScriptGCL(t *testing.T) {

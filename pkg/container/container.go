@@ -308,7 +308,7 @@ func (c *Container) Wait() error {
 		log.Fatal(err)
 	}
 	if statusCode == nil {
-		log.Fatal(fmt.Errorf("Failed to wait for container status code is nil"))
+		log.Fatal(fmt.Errorf("failed to wait for container status code is nil"))
 	}
 	if *statusCode != 0 {
 		defer func() {

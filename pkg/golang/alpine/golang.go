@@ -143,7 +143,7 @@ func (c *GoContainer) Lint() error {
 	}...)
 	opts.Cmd = []string{"sh", "/tmp/script.sh"}
 	// opts.User = "golangci-lint"
-	if c.Container.Verbose {
+	if c.Verbose {
 		opts.Cmd = append(opts.Cmd, "-v")
 	}
 	// opts.Platform = "auto"
@@ -172,27 +172,27 @@ func (c *GoContainer) Lint() error {
 
 	opts = ssh.Apply(&opts)
 
-	err = c.Container.Create(opts)
-	slog.Info("Container created", "containerId", c.Container.ID)
+	err = c.Create(opts)
+	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		os.Exit(1)
 	}
 
 	script := NewGolangCiLint().LintScript(c.Tags)
-	err = c.Container.CopyContentTo(script, "/tmp/script.sh")
+	err = c.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to start container", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		slog.Error("Failed to start container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Wait()
+	err = c.Wait()
 	if err != nil {
 		slog.Error("Failed to wait for container: %s", "error", err)
 		// GIVE time to receive all logs
@@ -231,7 +231,7 @@ func (c *GoContainer) BuildGoImage() error {
 
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
-	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
 func (c *GoContainer) Build() error {
@@ -280,7 +280,7 @@ func (c *GoContainer) Build() error {
 	opts = ssh.Apply(&opts)
 	opts.Script = c.BuildScript()
 
-	err = c.Container.BuildingContainer(opts)
+	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
 		os.Exit(1)
@@ -326,31 +326,31 @@ func (c *GoContainer) Prod() error {
 	opts.Platform = types.AutoPlatform
 	opts.WorkingDir = "/src"
 
-	err := c.Container.Create(opts)
+	err := c.Create(opts)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		slog.Error("Failed to start container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Exec("addgroup", "-g", "11211", "app")
+	err = c.Exec("addgroup", "-g", "11211", "app")
 	if err != nil {
 		slog.Error("Failed to execute command: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Exec("adduser", "-D", "-u", "1121", "-G", "app", "app")
+	err = c.Exec("adduser", "-D", "-u", "1121", "-G", "app", "app")
 	if err != nil {
 		slog.Error("Failed to execute command", "error", err)
 		os.Exit(1)
 	}
 
-	containerInfo, err := c.Container.Inspect()
+	containerInfo, err := c.Inspect()
 	if err != nil {
 		slog.Error("Failed to inspect container", "error", err)
 		os.Exit(1)
@@ -358,26 +358,26 @@ func (c *GoContainer) Prod() error {
 
 	slog.Info("Container info", "name", containerInfo.Name, "image", containerInfo.Image, "arch", containerInfo.Platform.Container.Architecture, "os", containerInfo.Platform.Container.OS, "varian", containerInfo.Platform.Container.Variant)
 
-	err = c.Container.CopyFileTo(fmt.Sprintf("%s/%s-%s-%s", c.Folder, c.App, containerInfo.Platform.Container.OS, containerInfo.Platform.Container.Architecture), fmt.Sprintf("/app/%s", c.App))
+	err = c.CopyFileTo(fmt.Sprintf("%s/%s-%s-%s", c.Folder, c.App, containerInfo.Platform.Container.OS, containerInfo.Platform.Container.Architecture), fmt.Sprintf("/app/%s", c.App))
 	if err != nil {
 		slog.Error("Failed to copy file to container", "error", err)
 		os.Exit(1)
 	}
 
-	imageId, err := c.Container.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", fmt.Sprintf("CMD [\"/app/%s\"]", c.App), "USER app", "WORKDIR /app")
+	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", fmt.Sprintf("CMD [\"/app/%s\"]", c.App), "USER app", "WORKDIR /app")
 	if err != nil {
 		slog.Error("Failed to commit container", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Container.Stop()
+	err = c.Stop()
 	if err != nil {
 		slog.Error("Failed to stop container: %s", "error", err)
 		os.Exit(1)
 	}
 
 	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)
-	err = c.Container.Push(imageId, imageUri, container.PushOption{Remove: false})
+	err = c.Push(imageId, imageUri, container.PushOption{Remove: false})
 	if err != nil {
 		slog.Error("Failed to push image: %s", "error", err)
 		os.Exit(1)
@@ -400,7 +400,7 @@ func (c *GoContainer) Run() error {
 	}
 
 	err = c.Build()
-	slog.Info("Container created", "containerId", c.Container.ID)
+	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		return err
