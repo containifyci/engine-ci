@@ -19,8 +19,6 @@ permissions:
 jobs:
   build-engine-ci:
     runs-on: ubuntu-latest
-    env:
-      go_version: 1.23.0
     strategy:
       fail-fast: false
       matrix:
@@ -38,10 +36,10 @@ jobs:
       - name: Force access to Github repositories using SSH
         run: git config --global url.ssh://git@github.com/.insteadOf https://github.com/
 
-      - name: Install go ${{ env.go_version }}
+      - name: Install go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.go_version }}
+          go-version-file: go.mod
 
       - name: Build Go
         working-directory: ${{ matrix.target }}

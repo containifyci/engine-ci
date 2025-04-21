@@ -35,6 +35,7 @@ jobs:
           noVersionBumpBehavior: silent
           skipInvalidTags: true
           maxTagsToFetch: 50
+          patchAll: true
       - name: Create Tag
         uses: actions/github-script@v7
         with:
