@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	cloud.google.com/go/iam v1.5.2
 	github.com/containers/buildah v1.39.4
-	github.com/containers/common v0.63.0
+	github.com/containers/common v0.62.3
 	github.com/containers/podman/v5 v5.4.2
 	github.com/containifyci/engine-ci/protos2 v0.11.0
 	github.com/docker/docker v28.0.4+incompatible
@@ -119,7 +119,6 @@ require (
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/opencontainers/cgroups v0.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/runc v1.2.6 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20250303011046-260e151b8552 // indirect
@@ -170,4 +169,10 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 	tags.cncf.io/container-device-interface v1.0.1 // indirect
+)
+
+replace (
+  // until https://github.com/containers/podman release a new version that includes docker v28.0.x
+	github.com/containers/image/v5 => github.com/containers/image/v5 v5.34.3
+	github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
 )
