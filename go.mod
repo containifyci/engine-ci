@@ -1,8 +1,6 @@
 module github.com/containifyci/engine-ci
 
-go 1.23.0
-
-toolchain go1.23.5
+go 1.24.2
 
 require (
 	cloud.google.com/go/iam v1.5.0

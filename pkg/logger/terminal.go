@@ -111,7 +111,7 @@ func readFromChannel(la *LogAggregator) []string {
 	logMsg, ok := <-la.logChannel
 		if !ok {
 			// Channel is closed, break the loop to finish
-			close(la.flushDone) // Signal that flushing is done
+			la.flushDone <- struct{}{}
 			return nil
 		}
 		entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines), startTime: time.Now()})
@@ -140,6 +140,9 @@ func (la *LogAggregator) startLogDisplay() {
 	for {
 
 		routineOrder := readFromChannel(la)
+		if routineOrder == nil {
+			break // Exit if the channel is closed
+		}
 		// Clear screen by printing new lines
 		fmt.Print("\033[H\033[2J") // ANSI escape sequence to clear the screen
 		fmt.Println("Real-Time Log Aggregation")
@@ -247,6 +250,7 @@ func (la *LogAggregator) Flush() {
 		close(la.logChannel) // This will signal the flushing goroutine to finish
 		// Wait for the display goroutine to signal completion
 		<-la.flushDone
+		close(la.flushDone)
 		once.Reset()
 	}
 }

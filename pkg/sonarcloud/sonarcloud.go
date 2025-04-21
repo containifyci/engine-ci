@@ -71,7 +71,7 @@ func (c *SonarcloudContainer) CopyScript() error {
 set -xe
 sonar-scanner -X -Dsonar.projectBaseDir=/usr/src/%s -Dsonar.working.directory=/tmp/sonar
 `, c.Build.Folder)
-	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
+	err := c.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)
 		os.Exit(1)
@@ -95,6 +95,7 @@ func (c *SonarcloudContainer) Analyze(env container.EnvType, token *string, addr
 	}
 
 	// TODO get branch name from git
+	// nolint:staticcheck
 	if env == container.LocalEnv {
 		options = append(options,
 			// Needs Developer Edition
@@ -114,7 +115,7 @@ func (c *SonarcloudContainer) Analyze(env container.EnvType, token *string, addr
 		}
 	}
 
-	options = append(options, fmt.Sprintf("-Dsonar.verbose=%t", c.Container.Verbose))
+	options = append(options, fmt.Sprintf("-Dsonar.verbose=%t", c.Verbose))
 
 	if !filesystem.FileExists("sonar-project.properties") {
 		options = append(options,
@@ -171,7 +172,7 @@ func (c *SonarcloudContainer) Analyze(env container.EnvType, token *string, addr
 	opts.Cmd = []string{"sh", "/tmp/script.sh"}
 	// opts.Cmd = []string{"sonar-scanner", "-Dsonar.projectBaseDir=/usr/src"}
 	opts.Env = []string{fmt.Sprintf("SONAR_SCANNER_OPTS=%s", strings.Join(options, " ")), fmt.Sprintf("SONAR_TOKEN=%s", *token)}
-	err := c.Container.Create(opts)
+	err := c.Create(opts)
 	if err != nil {
 		return err
 	}
@@ -182,12 +183,12 @@ func (c *SonarcloudContainer) Analyze(env container.EnvType, token *string, addr
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		return err
 	}
 
-	return c.Container.Wait()
+	return c.Wait()
 }
 
 func (c *SonarcloudContainer) Pull() error {

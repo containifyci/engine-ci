@@ -116,6 +116,7 @@ func LoadCache() error {
 			slog.Error("Error parsing image", "error", err)
 			os.Exit(1)
 		}
+		// nolint:staticcheck
 		if arg.Runtime == utils.Docker {
 			cmd := fmt.Sprintf(`
 set -x

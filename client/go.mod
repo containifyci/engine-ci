@@ -1,6 +1,6 @@
 module github.com/containifyci/engine-ci/client
 
-go 1.23
+go 1.24.2
 
 require (
 	github.com/containifyci/engine-ci/protos2 v0.11.0

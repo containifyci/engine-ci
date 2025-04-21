@@ -65,7 +65,7 @@ func (c *TrivyContainer) CopyScript() error {
 	// TODO add the --podman-host /var/run/podman.sock  only when runtime is podman
 	image := c.GetBuild().ImageURI()
 	if c.GetBuild().Runtime == utils.Podman {
-		info, err := c.Container.InspectImage(image)
+		info, err := c.InspectImage(image)
 		if err != nil {
 			slog.Error("Failed to inspect image", "error", err)
 			os.Exit(1)
@@ -77,7 +77,7 @@ func (c *TrivyContainer) CopyScript() error {
 set -xe
 trivy image --podman-host /var/run/podman.sock --severity CRITICAL,HIGH --ignore-unfixed -d --scanners vuln --format json --output /usr/src/trivy.json %s || true
 `, image)
-	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
+	err := c.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)
 		os.Exit(1)
@@ -134,7 +134,7 @@ func (c *TrivyContainer) Scan() error {
 	// opts.Cmd = []string{"image", "--severity", "CRITICAL,HIGH", "--ignore-unfixed", "--scanners", "vuln", "--format", "json", "--output", "/usr/src/trivy.json", container.GetBuild().ImageURI()}
 
 	// opts.Cmd = []string{"sonar-scanner", "-Dsonar.projectBaseDir=/usr/src"}
-	err = c.Container.Create(opts)
+	err = c.Create(opts)
 	if err != nil {
 		return err
 	}
@@ -145,12 +145,12 @@ func (c *TrivyContainer) Scan() error {
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		return err
 	}
 
-	return c.Container.Wait()
+	return c.Wait()
 }
 
 func (c *TrivyContainer) Pull() error {

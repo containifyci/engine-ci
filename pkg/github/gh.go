@@ -51,7 +51,7 @@ func (c *GithubContainer) CopyScript() error {
 set -xe
 gh pr comment %s --repo %s --edit-last --body-file /src/trivy.md || gh pr comment %s --repo %s --body-file /src/trivy.md
 `, c.git.PrNum, c.git.FullRepo(), c.git.PrNum, c.git.FullRepo())
-	err := c.Container.CopyContentTo(script, "/tmp/script.sh")
+	err := c.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to copy script to container: %s", "error", err)
 		os.Exit(1)
@@ -83,7 +83,7 @@ func (c *GithubContainer) BuildImage() error {
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	return c.Container.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
 func (c *GithubContainer) Comment() error {
@@ -121,7 +121,7 @@ func (c *GithubContainer) Comment() error {
 	opts.Cmd = []string{"sh", "/tmp/script.sh"}
 	// opts.Cmd = []string{"pr", "comment", "4", "--repo", "containifyci/engine-ci-example", "--edit-last", "--body-file", "/src/trivy.json"}
 	opts.Env = []string{"GITHUB_TOKEN=" + container.GetEnv("CONTAINIFYCI_GITHUB_TOKEN")}
-	err = c.Container.Create(opts)
+	err = c.Create(opts)
 	if err != nil {
 		return err
 	}
@@ -132,12 +132,12 @@ func (c *GithubContainer) Comment() error {
 		os.Exit(1)
 	}
 
-	err = c.Container.Start()
+	err = c.Start()
 	if err != nil {
 		return err
 	}
 
-	return c.Container.Wait()
+	return c.Wait()
 }
 
 func (c *GithubContainer) Pull() error {
