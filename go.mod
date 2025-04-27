@@ -4,11 +4,11 @@ go 1.24.2
 
 require (
 	cloud.google.com/go/iam v1.5.2
-	github.com/containers/buildah v1.39.4
+	github.com/containers/buildah v1.40.0
 	github.com/containers/common v0.63.0
 	github.com/containers/podman/v5 v5.4.2
 	github.com/containifyci/engine-ci/protos2 v0.12.2
-	github.com/docker/docker v28.0.4+incompatible
+	github.com/docker/docker v28.1.0+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
@@ -20,7 +20,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.29.0
-	google.golang.org/api v0.229.0
+	google.golang.org/api v0.230.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -56,6 +56,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/disiqueira/gotree/v3 v3.0.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
+	github.com/docker/cli v28.0.4+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
