@@ -893,8 +893,8 @@ func DecodeRegistryAuth(authBase64 string) (*registry.AuthConfig, error) {
 
 	err = json.Unmarshal(base64Decoded, &authCfg)
 	if err != nil {
-		//TODO mask possible password leak in error message
-		slog.Error("Failed to unmarshal auth config", "error", err, "auth", string(base64Decoded))
+		// Mask sensitive auth data in error logs for security
+		slog.Error("Failed to unmarshal auth config", "error", err, "auth_length", len(base64Decoded))
 		return nil, err
 	}
 

@@ -165,10 +165,11 @@ func (c *SonarqubeContainer) Setup() (*string, error) {
 		var tokenResp map[string]string
 		err := yaml.Unmarshal([]byte(cnt), &tokenResp)
 		if err != nil {
-			slog.Error("Failed to marshal metadata: %s", "error", err)
-			os.Exit(1)
+			slog.Error("Failed to marshal metadata", "error", err)
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
-		slog.Info("Metadata file found so skip setup and read token from file", "token", tokenResp)
+		// Mask sensitive token data in logs for security
+		slog.Info("Metadata file found so skip setup and read token from file", "token_configured", len(tokenResp) > 0)
 
 		token, exists := tokenResp["token"]
 		if !exists {
