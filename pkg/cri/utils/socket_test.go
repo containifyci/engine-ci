@@ -1,11 +1,38 @@
 package utils
 
 import (
+	"os/exec"
 	"testing"
 
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/stretchr/testify/assert"
 )
+
+// isPodmanAvailable checks if podman is available and properly configured
+func isPodmanAvailable() bool {
+	_, err := exec.LookPath("podman")
+	if err != nil {
+		return false
+	}
+	
+	// Test if podman is properly configured by trying a simple command
+	cmd := exec.Command("podman", "info", "-f", "{{ .Host.RemoteSocket.Path }}")
+	err = cmd.Run()
+	return err == nil
+}
+
+// isDockerAvailable checks if docker is available and properly configured
+func isDockerAvailable() bool {
+	_, err := exec.LookPath("docker")
+	if err != nil {
+		return false
+	}
+	
+	// Test if docker is properly configured by trying a simple command
+	cmd := exec.Command("docker", "info")
+	err = cmd.Run()
+	return err == nil
+}
 
 func TestDockerSocket(t *testing.T) {
 	socket, err := DockerSocket()
@@ -17,8 +44,10 @@ func TestDockerSocket(t *testing.T) {
 }
 
 func TestPodmanSocket(t *testing.T) {
-	// Since calling PodmanSocket would require podman to be installed on the system, we can only run this test
-	// if Podman is available. For the purpose of this exercise, assume it is installed.
+	// Skip test if podman is not available
+	if !isPodmanAvailable() {
+		t.Skip("Podman not available, skipping test")
+	}
 
 	socket, err := PodmanSocket()
 
@@ -34,14 +63,19 @@ func TestSocket(t *testing.T) {
 		name        string
 		runtimeType RuntimeType
 		expectError bool
+		skipIf      func() bool
 	}{
-		{"Docker Socket", Docker, false},
-		{"Podman Socket", Podman, false},
-		{"Unknown Runtime", "unknown", true},
+		{"Docker Socket", Docker, false, func() bool { return !isDockerAvailable() }},
+		{"Podman Socket", Podman, false, func() bool { return !isPodmanAvailable() }},
+		{"Unknown Runtime", "unknown", true, func() bool { return false }},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.skipIf() {
+				t.Skipf("Skipping test - %s runtime not available", tt.runtimeType)
+			}
+			
 			socket, err := Socket(tt.runtimeType)
 			if tt.expectError {
 				assert.Error(t, err)
@@ -59,14 +93,19 @@ func TestApplySocket(t *testing.T) {
 		runtimeType RuntimeType
 		initialOpts types.ContainerConfig
 		expectedLen int
+		skipIf      func() bool
 	}{
-		{"Docker Apply", Docker, types.ContainerConfig{}, 1},
-		{"Podman Apply", Podman, types.ContainerConfig{}, 1},
-		{"Unknown Apply", "unknown", types.ContainerConfig{}, 0},
+		{"Docker Apply", Docker, types.ContainerConfig{}, 1, func() bool { return !isDockerAvailable() }},
+		{"Podman Apply", Podman, types.ContainerConfig{}, 1, func() bool { return !isPodmanAvailable() }},
+		{"Unknown Apply", "unknown", types.ContainerConfig{}, 0, func() bool { return false }},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.skipIf() {
+				t.Skipf("Skipping test - %s runtime not available", tt.runtimeType)
+			}
+			
 			result := ApplySocket(tt.runtimeType, &tt.initialOpts)
 			assert.Equal(t, tt.expectedLen, len(result.Volumes))
 		})
