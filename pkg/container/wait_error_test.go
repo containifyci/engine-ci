@@ -105,7 +105,6 @@ func (m *MockContainerManagerForErrorTesting) Name() string { return "mock" }
 func TestContainer_Wait_ErrorHandling(testT *testing.T) {
 	testT.Run("WaitContainer error returns error instead of log.Fatal", func(testT *testing.T) {
 		mockClient := &MockContainerManagerForErrorTesting{}
-
 		container := &Container{
 			t: t{
 				client: func() cri.ContainerManager { return mockClient },
@@ -121,7 +120,6 @@ func TestContainer_Wait_ErrorHandling(testT *testing.T) {
 
 		// This should return an error, not cause the process to exit with log.Fatal
 		err := container.Wait()
-
 		require.Error(testT, err)
 		assert.Contains(testT, err.Error(), "failed to wait for container")
 		assert.Contains(testT, err.Error(), "container wait failed")
@@ -130,7 +128,6 @@ func TestContainer_Wait_ErrorHandling(testT *testing.T) {
 
 	testT.Run("nil status code returns error instead of log.Fatal", func(testT *testing.T) {
 		mockClient := &MockContainerManagerForErrorTesting{}
-
 		container := &Container{
 			t: t{
 				client: func() cri.ContainerManager { return mockClient },
@@ -145,7 +142,6 @@ func TestContainer_Wait_ErrorHandling(testT *testing.T) {
 
 		// This should return an error, not cause the process to exit with log.Fatal
 		err := container.Wait()
-
 		require.Error(testT, err)
 		assert.Contains(testT, err.Error(), "failed to wait for container: status code is nil")
 		mockClient.AssertExpectations(testT)
@@ -178,7 +174,6 @@ func TestContainer_Start_ErrorHandling(testT *testing.T) {
 
 		// This should return an error instead of causing log.Fatal
 		err := container.Start()
-
 		require.Error(testT, err)
 		assert.Contains(testT, err.Error(), "failed to start container test-container-id")
 		assert.Contains(testT, err.Error(), "start failed")
@@ -204,7 +199,6 @@ func TestContainer_Stop_ErrorHandling(testT *testing.T) {
 
 		// This should return an error instead of causing log.Fatal
 		err := container.Stop()
-
 		require.Error(testT, err)
 		assert.Contains(testT, err.Error(), "stop failed")
 		mockClient.AssertExpectations(testT)
@@ -226,7 +220,6 @@ func TestContextUsage_BackgroundInsteadOfTODO(testT *testing.T) {
 		assert.Equal(testT, &build, container.Build)
 		assert.NotNil(testT, container.ctx)
 		assert.NotNil(testT, container.client)
-
 		// Context should not be cancelled or have deadline by default
 		select {
 		case <-container.ctx.Done():
