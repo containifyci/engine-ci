@@ -10,27 +10,27 @@ func TestGetEnvWithDefault(t *testing.T) {
 	t.Setenv("key", "value")
 	tests := []struct {
 		key  string
-		def func() string
+		def  func() string
 		want string
 	}{
 		{
 			key:  "key",
-			def: func() string { return "default" },
+			def:  func() string { return "default" },
 			want: "value",
 		},
 		{
 			key:  "key",
-			def: nil,
+			def:  nil,
 			want: "value",
 		},
 		{
 			key:  "key2",
-			def: func() string { return "default" },
+			def:  func() string { return "default" },
 			want: "default",
 		},
 		{
 			key:  "key2",
-			def: nil,
+			def:  nil,
 			want: "",
 		},
 	}

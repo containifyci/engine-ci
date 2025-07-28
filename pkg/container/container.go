@@ -249,8 +249,8 @@ func streamContainerLogs(ctx context.Context, cli cri.ContainerManager, containe
 }
 
 func (c *Container) Stop() error {
-	// Use context with timeout for container stop operations
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Use context with timeout for container stop operations (60s for CI environments)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	return c.client().StopContainer(ctx, c.ID, "SIGTERM")

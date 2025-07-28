@@ -1,4 +1,5 @@
 //go:build submodule
+
 package main
 
 //go:generate mv go.mod.embed go.mod

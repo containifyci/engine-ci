@@ -17,7 +17,7 @@ func TestMockContainer_ContainerLifecycle(t *testing.T) {
 
 	// Create a new container configuration
 	containerConfig := &types.ContainerConfig{
-		Name: "test-container",
+		Name:  "test-container",
 		Image: "test-image",
 	}
 
@@ -70,7 +70,7 @@ func TestMockContainer_ImageLifecycle(t *testing.T) {
 	// Create a new MockContainerManager
 	m, _ := NewMockContainerManager()
 
-	cnt, err := m.BuildImage(ctx, []byte("TestDockerFiles"),"test-image", "")
+	cnt, err := m.BuildImage(ctx, []byte("TestDockerFiles"), "test-image", "")
 	assert.NoError(t, err)
 	assert.NotNil(t, cnt)
 	var b bytes.Buffer

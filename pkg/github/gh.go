@@ -59,7 +59,7 @@ gh pr comment %s --repo %s --edit-last --body-file /src/trivy.md || gh pr commen
 	return err
 }
 
-func (c *GithubContainer)  Image() string {
+func (c *GithubContainer) Image() string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)

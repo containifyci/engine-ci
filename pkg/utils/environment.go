@@ -9,7 +9,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/kv"
 )
 
-func GetEnvWithDefault(key string, def func() string ) string {
+func GetEnvWithDefault(key string, def func() string) string {
 	env := os.Getenv(key)
 	if env == "" && def != nil {
 		return def()
@@ -39,7 +39,6 @@ func GetEnvs(key []string, envType string) string {
 	return ""
 }
 
-
 func GetAllEnvs(key []string, envType string) map[string]string {
 	envs := make(map[string]string)
 	for _, k := range key {
@@ -49,7 +48,6 @@ func GetAllEnvs(key []string, envType string) map[string]string {
 	}
 	return envs
 }
-
 
 func GetEnv(key string, envType string) string {
 	env := Getenv(key, envType)

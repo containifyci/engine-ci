@@ -29,9 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
 // var buildSteps = build.NewBuildSteps()
-
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
@@ -83,7 +81,7 @@ func Init(arg *container.Build) *container.Build {
 	// if len(args) <= 0 {
 	// 	arg = buildArgs
 	// } else {
-		// arg = args[0]
+	// arg = args[0]
 	// }
 	bld := container.NewBuild(arg)
 
@@ -111,7 +109,7 @@ func Init(arg *container.Build) *container.Build {
 	return arg
 }
 
-func (c *Command) Pre() (*container.Build,*build.BuildSteps) {
+func (c *Command) Pre() (*container.Build, *build.BuildSteps) {
 	a, bs := Pre(c.buildArgs)
 	return a, bs
 }
@@ -186,7 +184,7 @@ func (c *Command) RunBuild() {
 }
 
 type Command struct {
-	targets map[string]func() error
+	targets   map[string]func() error
 	buildArgs *container.Build
 }
 
@@ -194,7 +192,7 @@ func NewCommand(_buildArgs container.Build) *Command {
 	// buildArgs = &_buildArgs
 	_buildArgs.Defaults()
 	return &Command{
-		targets: map[string]func() error{},
+		targets:   map[string]func() error{},
 		buildArgs: &_buildArgs,
 	}
 }

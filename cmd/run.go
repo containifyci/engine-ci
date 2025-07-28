@@ -10,8 +10,8 @@ import (
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Command to start the containifyci pipeline execution",
-	Long: `Command to start the containifyci pipeline execution`,
-	RunE: RunCommand,
+	Long:  `Command to start the containifyci pipeline execution`,
+	RunE:  RunCommand,
 }
 
 func init() {
