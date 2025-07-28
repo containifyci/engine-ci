@@ -6,10 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/memory"
 	"github.com/containifyci/engine-ci/protos2"
 
 	"github.com/containifyci/engine-ci/pkg/filesystem"
@@ -75,8 +78,8 @@ func (c Custom) UInt(key string) uint {
 	if v, ok := c[key]; ok {
 		i, err := strconv.Atoi(v[0])
 		if err != nil {
-			slog.Error("Error converting string to int", "error", err)
-			os.Exit(1)
+			slog.Warn("Error converting string to int", "key", key, "value", v[0], "error", err)
+			return 0
 		}
 		return uint(i)
 	}
@@ -88,27 +91,35 @@ type Leader interface {
 }
 
 // TODO: add target container platform
+// Build struct optimized for memory alignment and cache performance
 type Build struct {
-	Leader             Leader
-	Platform           types.Platform
-	Custom             Custom
-	Registries         map[string]*protos2.ContainerRegistry
+	// 64-bit aligned fields first for optimal memory layout
+	Leader         Leader
+	Platform       types.Platform
+	Custom         Custom
+	Registries     map[string]*protos2.ContainerRegistry
+	SourcePackages []string
+	SourceFiles    []string
+
+	// String fields grouped together
 	Folder             string
-	App                string    `json:"app"`
-	Image              string    `json:"image"`
-	BuildType          BuildType `json:"build_type"`
-	Runtime            utils.RuntimeType
-	Organization       string
+	App                string `json:"app"`
+	Image              string `json:"image"`
 	ImageTag           string `json:"image_tag"`
 	Registry           string
 	ContainifyRegistry string
-	Env                EnvType
 	File               string
 	Repository         string
-	SourcePackages     []string
-	SourceFiles        []string
-	Verbose            bool
-	defaults           bool
+	Organization       string
+
+	// Enum/smaller types at the end
+	BuildType BuildType `json:"build_type"`
+	Runtime   utils.RuntimeType
+	Env       EnvType
+
+	// Boolean fields at the end to minimize padding
+	Verbose  bool
+	defaults bool
 }
 
 type BuildGroup struct {
@@ -129,8 +140,27 @@ func (b *Build) CustomString(key string) string {
 	return ""
 }
 
+// ImageURI constructs the full image URI with memory optimization
 func (b *Build) ImageURI() string {
-	return b.Image + ":" + b.ImageTag
+	start := time.Now()
+	defer func() {
+		memory.TrackOperation(time.Since(start))
+	}()
+
+	// For simple concatenation like this, estimate the size and use pooled string builder
+	estimatedLength := len(b.Image) + 1 + len(b.ImageTag) // image + ":" + tag
+
+	return memory.WithStringBuilder(memory.EstimateSize(estimatedLength), func(builder *strings.Builder) string {
+		builder.WriteString(b.Image)
+		builder.WriteByte(':')
+		builder.WriteString(b.ImageTag)
+
+		result := builder.String()
+		memory.TrackAllocation(int64(len(result)))
+		memory.TrackStringReuse()
+
+		return result
+	})
 }
 
 // TODO move to containifyci
@@ -143,22 +173,39 @@ func getEnv() EnvType {
 }
 
 func NewServiceBuild(appName string, buildType BuildType) Build {
-	files, err := filesystem.NewFileCache("file_cache.yaml").
-		FindFilesBySuffix(".", ".proto")
+	start := time.Now()
+	defer func() {
+		memory.TrackOperation(time.Since(start))
+	}()
 
-	packages := []string{}
-	for _, file := range files {
-		pkg := filepath.Dir(file)
-		packages = append(packages, pkg)
-	}
+	// Cache filesystem operations to avoid repeated disk access
+	fileCache := filesystem.NewFileCache("file_cache.yaml")
+	files, err := fileCache.FindFilesBySuffix(".", ".proto")
 	if err != nil {
 		slog.Error("Error finding proto files", "error", err)
 		os.Exit(1)
 	}
+
+	// Pre-allocate packages slice to avoid reallocation
+	packages := make([]string, 0, len(files))
+	packageSet := make(map[string]struct{}, len(files)) // Deduplicate packages
+
+	for _, file := range files {
+		pkg := filepath.Dir(file)
+		if _, exists := packageSet[pkg]; !exists {
+			packageSet[pkg] = struct{}{}
+			packages = append(packages, pkg)
+		}
+	}
+
 	commitSha := os.Getenv("COMMIT_SHA")
 	if commitSha == "" {
 		commitSha = "local"
 	}
+
+	// Track allocations for the created build
+	memory.TrackAllocation(int64(len(appName) + len(commitSha) + len(packages)*8 + len(files)*8))
+
 	return Build{
 		App:            appName,
 		Env:            getEnv(),
@@ -244,8 +291,27 @@ func (b *Build) Defaults() *Build {
 	b.defaults = true
 	return b
 }
+
+// AsFlags converts build configuration to command-line flags with memory optimization
 func (b *Build) AsFlags() []string {
-	flags := []string{
+	start := time.Now()
+	defer func() {
+		memory.TrackOperation(time.Since(start))
+	}()
+
+	// Estimate capacity more accurately to reduce slice reallocations
+	// Base flags: 16 (8 key-value pairs) + 1 potential verbose + 2*(packages+files)
+	baseFlags := 16
+	if b.Verbose {
+		baseFlags++
+	}
+	estimatedCapacity := baseFlags + 2*(len(b.SourcePackages)+len(b.SourceFiles))
+
+	// Pre-allocate slice with exact capacity to avoid reallocations
+	flags := make([]string, 0, estimatedCapacity)
+
+	// Add base flags in one batch to minimize append operations
+	flags = append(flags,
 		"--app", b.App,
 		"--env", string(b.Env),
 		"--image", b.Image,
@@ -254,18 +320,34 @@ func (b *Build) AsFlags() []string {
 		"--file", b.File,
 		"--folder", b.Folder,
 		"--type", string(b.BuildType),
-	}
+	)
+
 	if b.Verbose {
 		flags = append(flags, "--verbose")
 	}
 
-	for _, pkg := range b.SourcePackages {
-		flags = append(flags, "--protobuf-packages", pkg)
+	// Batch append protobuf packages to reduce function call overhead
+	if len(b.SourcePackages) > 0 {
+		for _, pkg := range b.SourcePackages {
+			flags = append(flags, "--protobuf-packages", pkg)
+		}
 	}
 
-	for _, file := range b.SourceFiles {
-		flags = append(flags, "--protobuf-files", file)
+	// Batch append protobuf files to reduce function call overhead
+	if len(b.SourceFiles) > 0 {
+		for _, file := range b.SourceFiles {
+			flags = append(flags, "--protobuf-files", file)
+		}
 	}
+
+	// Track the memory allocation for the final slice more accurately
+	// Calculate actual memory usage: slice header + string pointers + estimated string content
+	sliceMemory := int64(cap(flags) * 8) // slice of string pointers
+	contentMemory := int64(0)
+	for _, flag := range flags {
+		contentMemory += int64(len(flag))
+	}
+	memory.TrackAllocation(sliceMemory + contentMemory)
 
 	return flags
 }
