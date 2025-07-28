@@ -14,7 +14,7 @@ func isPodmanAvailable() bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// Test if podman is properly configured by trying a simple command
 	cmd := exec.Command("podman", "info", "-f", "{{ .Host.RemoteSocket.Path }}")
 	err = cmd.Run()
@@ -27,7 +27,7 @@ func isDockerAvailable() bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// Test if docker is properly configured by trying a simple command
 	cmd := exec.Command("docker", "info")
 	err = cmd.Run()
@@ -59,15 +59,15 @@ func TestPodmanSocket(t *testing.T) {
 }
 
 func TestSocket(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet
+		skipIf      func() bool
 		name        string
 		runtimeType RuntimeType
 		expectError bool
-		skipIf      func() bool
 	}{
-		{"Docker Socket", Docker, false, func() bool { return !isDockerAvailable() }},
-		{"Podman Socket", Podman, false, func() bool { return !isPodmanAvailable() }},
-		{"Unknown Runtime", "unknown", true, func() bool { return false }},
+		{func() bool { return !isDockerAvailable() }, "Docker Socket", Docker, false},
+		{func() bool { return !isPodmanAvailable() }, "Podman Socket", Podman, false},
+		{func() bool { return false }, "Unknown Runtime", "unknown", true},
 	}
 
 	for _, tt := range tests {
@@ -75,7 +75,7 @@ func TestSocket(t *testing.T) {
 			if tt.skipIf() {
 				t.Skipf("Skipping test - %s runtime not available", tt.runtimeType)
 			}
-			
+
 			socket, err := Socket(tt.runtimeType)
 			if tt.expectError {
 				assert.Error(t, err)
@@ -89,15 +89,15 @@ func TestSocket(t *testing.T) {
 
 func TestApplySocket(t *testing.T) {
 	tests := []struct {
+		skipIf      func() bool
 		name        string
 		runtimeType RuntimeType
 		initialOpts types.ContainerConfig
 		expectedLen int
-		skipIf      func() bool
 	}{
-		{"Docker Apply", Docker, types.ContainerConfig{}, 1, func() bool { return !isDockerAvailable() }},
-		{"Podman Apply", Podman, types.ContainerConfig{}, 1, func() bool { return !isPodmanAvailable() }},
-		{"Unknown Apply", "unknown", types.ContainerConfig{}, 0, func() bool { return false }},
+		{func() bool { return !isDockerAvailable() }, "Docker Apply", Docker, types.ContainerConfig{}, 1},
+		{func() bool { return !isPodmanAvailable() }, "Podman Apply", Podman, types.ContainerConfig{}, 1},
+		{func() bool { return false }, "Unknown Apply", "unknown", types.ContainerConfig{}, 0},
 	}
 
 	for _, tt := range tests {
@@ -105,7 +105,7 @@ func TestApplySocket(t *testing.T) {
 			if tt.skipIf() {
 				t.Skipf("Skipping test - %s runtime not available", tt.runtimeType)
 			}
-			
+
 			result := ApplySocket(tt.runtimeType, &tt.initialOpts)
 			assert.Equal(t, tt.expectedLen, len(result.Volumes))
 		})
