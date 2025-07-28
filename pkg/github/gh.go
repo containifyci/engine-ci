@@ -110,7 +110,11 @@ func (c *GithubContainer) Comment() error {
 		os.Exit(1)
 	}
 
-	comment := trivy.Parse(string(file))
+	comment, err := trivy.Parse(string(file))
+	if err != nil {
+		slog.Error("Failed to parse trivy JSON", "error", err)
+		return err
+	}
 
 	err = os.WriteFile("trivy.md", []byte(comment), 0644)
 	if err != nil {

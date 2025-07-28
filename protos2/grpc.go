@@ -66,15 +66,15 @@ type GRPCServerContainifyCIv1 struct {
 }
 
 func (m *GRPCServerContainifyCIv1) GetBuild(ctx context.Context, _ *Empty) (*BuildArgsResponse, error) {
-	return m.Impl.GetBuild(), nil
+	return m.Impl.GetBuild()
 }
 
-func (m *ContainifyCIv1GRPCClient) GetBuild() *BuildArgsResponse {
+func (m *ContainifyCIv1GRPCClient) GetBuild() (*BuildArgsResponse, error) {
 	args, err := m.client.GetBuild(context.Background(), &Empty{})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return args
+	return args, nil
 }
 
 type GRPCServerContainifyCIv2 struct {
@@ -87,13 +87,13 @@ type GRPCServerContainifyCIv2 struct {
 }
 
 func (m *GRPCServerContainifyCIv2) GetBuilds(ctx context.Context, _ *Empty) (*BuildArgsGroupResponse, error) {
-	return m.Impl.GetBuilds(), nil
+	return m.Impl.GetBuilds()
 }
 
-func (m *ContainifyCIv2GRPCClient) GetBuilds() *BuildArgsGroupResponse {
+func (m *ContainifyCIv2GRPCClient) GetBuilds() (*BuildArgsGroupResponse, error) {
 	args, err := m.client.GetBuilds(context.Background(), &Empty{})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return args
+	return args, nil
 }

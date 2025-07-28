@@ -8,18 +8,18 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
-func (p *Plugin) GetBuild() *protos2.BuildArgsResponse {
+func (p *Plugin) GetBuild() (*protos2.BuildArgsResponse, error) {
 	res := &protos2.BuildArgsResponse{
 		Args: []*protos2.BuildArgs{},
 	}
 	for _, arg := range p.builds.Args {
 		res.Args = append(res.Args, arg.Args...)
 	}
-	return res
+	return res, nil
 }
 
-func (p *Plugin) GetBuilds() *protos2.BuildArgsGroupResponse {
-	return &p.builds
+func (p *Plugin) GetBuilds() (*protos2.BuildArgsGroupResponse, error) {
+	return &p.builds, nil
 }
 
 type Plugin struct {

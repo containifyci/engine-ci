@@ -31,11 +31,11 @@ var PluginMap = map[int]plugin.PluginSet{
 }
 
 type ContainifyCIv2 interface {
-	GetBuilds() *BuildArgsGroupResponse
+	GetBuilds() (*BuildArgsGroupResponse, error)
 }
 
 type ContainifyCIv1 interface {
-	GetBuild() *BuildArgsResponse
+	GetBuild() (*BuildArgsResponse, error)
 }
 
 var _ plugin.GRPCPlugin = &ContainifyCIv2GRPCPlugin{}

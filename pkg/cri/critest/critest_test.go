@@ -11,7 +11,7 @@ import (
 )
 
 func TestMockContainer_ContainerLifecycle(t *testing.T) {
-	ctx := context.TODO()
+	ctx := context.Background()
 	// Create a new MockContainerManager
 	m, _ := NewMockContainerManager()
 
@@ -66,7 +66,7 @@ func TestMockContainer_ContainerLifecycle(t *testing.T) {
 }
 
 func TestMockContainer_ImageLifecycle(t *testing.T) {
-	ctx := context.TODO()
+	ctx := context.Background()
 	// Create a new MockContainerManager
 	m, _ := NewMockContainerManager()
 
