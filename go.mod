@@ -7,7 +7,7 @@ require (
 	github.com/containers/buildah v1.40.1
 	github.com/containers/common v0.63.1
 	github.com/containers/podman/v5 v5.4.2
-	github.com/containifyci/engine-ci/protos2 v0.12.3
+	github.com/containifyci/engine-ci/protos2 v0.12.7
 	github.com/docker/docker v28.1.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/dusted-go/logging v1.3.0
@@ -178,6 +178,5 @@ replace (
 	// until https://github.com/containers/podman release a new version that includes docker v28.0.x
 	github.com/containers/image/v5 => github.com/containers/image/v5 v5.34.3
 	// Use local protos2 instead of remote version
-	github.com/containifyci/engine-ci/protos2 => ./protos2
 	github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
 )
