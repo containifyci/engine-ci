@@ -18,7 +18,6 @@ type ContainifyCIv2GRPCPlugin struct {
 	Impl ContainifyCIv2
 }
 
-
 func (p *ContainifyCIv2GRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
 	RegisterContainifyCIEngineServer(s, &GRPCServerContainifyCIv2{Impl: p.Impl, broker: broker})
 	return nil
@@ -77,7 +76,6 @@ func (m *ContainifyCIv1GRPCClient) GetBuild() *BuildArgsResponse {
 	}
 	return args
 }
-
 
 type GRPCServerContainifyCIv2 struct {
 	// This is the real implementation

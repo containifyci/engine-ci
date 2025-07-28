@@ -65,10 +65,14 @@ func ToMounts(volumes []types.Volume) []spec.Mount {
 
 // NewPodmanManager returns a new PodmanManager
 func NewPodmanManager() (*PodmanManager, error) {
+	// Check if podman is available
+	if _, err := exec.LookPath("podman"); err != nil {
+		return nil, fmt.Errorf("podman not found in PATH: %w", err)
+	}
 
 	output, err := exec.Command("podman", "version", "-f", "{{.Version}}").Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get podman version: %w", err)
 	}
 
 	var podmanSocket string
@@ -77,13 +81,13 @@ func NewPodmanManager() (*PodmanManager, error) {
 		strings.HasPrefix(strings.TrimSpace(string(output)), "4.") {
 		cmd, err := exec.Command("podman", "info", "-f", "{{ .Host.RemoteSocket.Path }}").Output()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get podman socket info: %w", err)
 		}
 		podmanSocket = strings.TrimSpace(string(cmd))
 	} else {
 		cmd, err := exec.Command("podman", "machine", "inspect", "--format", "{{ .ConnectionInfo.PodmanSocket.Path }}").Output()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get podman machine socket: %w", err)
 		}
 		podmanSocket = strings.TrimSpace(string(cmd))
 	}
@@ -893,8 +897,8 @@ func DecodeRegistryAuth(authBase64 string) (*registry.AuthConfig, error) {
 
 	err = json.Unmarshal(base64Decoded, &authCfg)
 	if err != nil {
-		//TODO mask possible password leak in error message
-		slog.Error("Failed to unmarshal auth config", "error", err, "auth", string(base64Decoded))
+		// Mask sensitive auth data in error logs for security
+		slog.Error("Failed to unmarshal auth config", "error", err, "auth_length", len(base64Decoded))
 		return nil, err
 	}
 

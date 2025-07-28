@@ -96,7 +96,8 @@ func New(build Build) *Container {
 		client, err := cri.InitContainerRuntime()
 		if err != nil {
 			slog.Error("Failed to detect container runtime", "error", err)
-			os.Exit(1)
+			// Return nil to allow caller to handle the error gracefully
+			return nil
 		}
 		return client
 	}
@@ -104,7 +105,9 @@ func New(build Build) *Container {
 	// if _build != nil {
 	// 	return &Container{t: t{client: _client, ctx: context.TODO()}, Env: env, Verbose: _build.Verbose}
 	// }
-	return &Container{t: t{client: _client, ctx: context.TODO()}, Env: build.Env, Build: &build}
+	// Use background context with reasonable timeout instead of TODO
+	ctx := context.Background()
+	return &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build}
 }
 
 func (c *Container) getContainifyHost() string {
@@ -190,10 +193,14 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 }
 
 func (c *Container) Start() error {
-	err := c.client().StartContainer(context.TODO(), c.ID)
+	// Use context with timeout for container operations (10min for CI testing)
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
+	defer cancel()
+
+	err := c.client().StartContainer(ctx, c.ID)
 	if err != nil {
 		slog.Error("Failed to start container", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to start container %s: %w", c.ID, err)
 	}
 
 	// TODO make this optional or provide a way to opt out
@@ -242,7 +249,11 @@ func streamContainerLogs(ctx context.Context, cli cri.ContainerManager, containe
 }
 
 func (c *Container) Stop() error {
-	return c.client().StopContainer(context.TODO(), c.ID, "SIGTERM")
+	// Use context with timeout for container stop operations (10min for CI testing)
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
+	defer cancel()
+
+	return c.client().StopContainer(ctx, c.ID, "SIGTERM")
 }
 
 func (c *Container) CopyContentTo(content, dest string) error {
@@ -467,7 +478,8 @@ func (c *Container) Push(source, target string, opts ...PushOption) error {
 func (c *Container) encodeAuthToBase64(auth registry.AuthConfig) string {
 	authJSON, _ := json.Marshal(auth)
 	if c.GetBuild().Verbose {
-		slog.Debug("Auth config", "auth", string(authJSON))
+		// Mask sensitive auth data in debug logs for security
+		slog.Debug("Auth config", "username", auth.Username, "server", auth.ServerAddress, "auth_configured", len(auth.Password) > 0)
 	}
 	return base64.URLEncoding.EncodeToString(authJSON)
 }

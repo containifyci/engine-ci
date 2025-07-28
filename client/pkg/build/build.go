@@ -47,11 +47,11 @@ func NewServiceBuild(appName string, buildType protos2.BuildType) *BuildArgs {
 		commitSha = "local"
 	}
 	return &BuildArgs{
-		Application: appName,
-		Environment: getEnv(),
-		Image:       appName,
-		ImageTag:    commitSha,
-		BuildType:   buildType,
+		Application:    appName,
+		Environment:    getEnv(),
+		Image:          appName,
+		ImageTag:       commitSha,
+		BuildType:      buildType,
 		SourcePackages: packages,
 		SourceFiles:    files,
 	}

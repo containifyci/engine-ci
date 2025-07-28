@@ -1,0 +1,1 @@
+[".containifyci/containifyci.go","pkg/golang/alpine/Dockerfilego","pkg/golang/alpine/golang.go","pkg/golang/buildscript/buildscript.go","pkg/golang/buildscript/buildscript_test.go","pkg/golang/debian/Dockerfilego","pkg/golang/debian/golang.go","pkg/golang/debiancgo/Dockerfilego","pkg/golang/debiancgo/golang.go"]

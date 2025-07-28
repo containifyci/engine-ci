@@ -35,9 +35,14 @@ func DockerSocket() (*ContainerSocket, error) {
 }
 
 func PodmanSocket() (*ContainerSocket, error) {
+	// Check if podman is available
+	if _, err := exec.LookPath("podman"); err != nil {
+		return nil, fmt.Errorf("podman not found in PATH: %w", err)
+	}
+
 	cmd, err := exec.Command("podman", "info", "-f", "{{ .Host.RemoteSocket.Path }}").Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get podman socket info: %w", err)
 	}
 	podmanSocket := strings.TrimSpace(string(cmd))
 	return &ContainerSocket{

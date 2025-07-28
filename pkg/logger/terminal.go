@@ -109,28 +109,28 @@ func last5Messages(messages []string) []string {
 
 func readFromChannel(la *LogAggregator) []string {
 	logMsg, ok := <-la.logChannel
-		if !ok {
-			// Channel is closed, break the loop to finish
-			la.flushDone <- struct{}{}
-			return nil
-		}
-		entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines), startTime: time.Now()})
-		logEntry := entry.(*LogEntry)
+	if !ok {
+		// Channel is closed, break the loop to finish
+		la.flushDone <- struct{}{}
+		return nil
+	}
+	entry, _ := la.logMap.LoadOrStore(logMsg.routineID, &LogEntry{messages: make([]string, 0, maxLogLines), startTime: time.Now()})
+	logEntry := entry.(*LogEntry)
 
-		logEntry.addMessage(logMsg.message)
+	logEntry.addMessage(logMsg.message)
 
-		// If the routine is done, mark it
-		if logMsg.isDone {
-			logEntry.mu.Lock()
-			logEntry.isDone = logMsg.isDone
-			logEntry.isFailed = logMsg.isFailed
-			logEntry.endTime = time.Now()
-			logEntry.mu.Unlock()
-		}
-		if !slices.Contains(la.routineOrder, logMsg.routineID) {
-			la.routineOrder = append(la.routineOrder, logMsg.routineID)
-		}
-		return la.routineOrder
+	// If the routine is done, mark it
+	if logMsg.isDone {
+		logEntry.mu.Lock()
+		logEntry.isDone = logMsg.isDone
+		logEntry.isFailed = logMsg.isFailed
+		logEntry.endTime = time.Now()
+		logEntry.mu.Unlock()
+	}
+	if !slices.Contains(la.routineOrder, logMsg.routineID) {
+		la.routineOrder = append(la.routineOrder, logMsg.routineID)
+	}
+	return la.routineOrder
 }
 
 func (la *LogAggregator) startLogDisplay() {

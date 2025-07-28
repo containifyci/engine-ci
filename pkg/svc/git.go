@@ -135,7 +135,7 @@ func GitInfo() *Git {
 	return git
 }
 
-func SetUnknowGitInfo() (*Git) {
+func SetUnknowGitInfo() *Git {
 	git = &Git{
 		Owner:  "unknown",
 		Repo:   "unknown",

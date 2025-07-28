@@ -197,7 +197,7 @@ func (m *MockContainerManager) BuildImage(ctx context.Context, dockerfile []byte
 
 func (m *MockContainerManager) BuildMultiArchImage(ctx context.Context, dockerfile []byte, dockerCtx *bytes.Buffer, imageName string, platforms []string, authBase64 string) (io.ReadCloser, []string, error) {
 	for _, platform := range platforms {
-		_, err := m.BuildImage(ctx, dockerfile, imageName + "-" + platform, platform)
+		_, err := m.BuildImage(ctx, dockerfile, imageName+"-"+platform, platform)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -18,8 +18,8 @@ var mage []byte
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Command to generate containifyci.go file for containifyci usage",
-	Long: `Command to generate containifyci.go file for containifyci usage`,
-	Run: RunMage,
+	Long:  `Command to generate containifyci.go file for containifyci usage`,
+	Run:   RunMage,
 }
 
 func init() {

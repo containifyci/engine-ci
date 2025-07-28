@@ -1,0 +1,81 @@
+{
+  "SchemaVersion": 2,
+  "CreatedAt": "2024-11-30T12:56:09.278572052Z",
+  "ArtifactName": "engine-ci-debian:local",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "OS": {
+      "Family": "alpine",
+      "Name": "3.20.3"
+    },
+    "ImageID": "sha256:42b17bf07024b0ba51ea62ee4d323b5ecf7f9881d1a2d68c272f8897e7a5af31",
+    "DiffIDs": [
+      "sha256:651d9022c23486dfbd396c13db293af6845731cbd098a5f5606db4bc9f5573e8",
+      "sha256:3419e1dd2b0fd07db4b83f004562eeec9c4da3c30167af4259b09e92e8a3827b"
+    ],
+    "RepoTags": [
+      "containifyci/engine-ci-debian:local",
+      "engine-ci-debian:local"
+    ],
+    "RepoDigests": [
+      "containifyci/engine-ci-debian@sha256:d4e2baa396f99a6324cca755e4845c4488291c11f2eb8089f28da338c81167a8"
+    ],
+    "ImageConfig": {
+      "architecture": "arm64",
+      "created": "2024-11-30T12:55:15.70613718Z",
+      "docker_version": "27.2.0",
+      "history": [
+        {
+          "created": "2024-09-06T12:05:36Z",
+          "created_by": "ADD alpine-minirootfs-3.20.3-aarch64.tar.gz / # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2024-09-06T12:05:36Z",
+          "created_by": "CMD [\"/bin/sh\"]",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2024-11-30T12:55:15Z",
+          "created_by": "sleep 300",
+          "comment": "Created from container"
+        }
+      ],
+      "os": "linux",
+      "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+          "sha256:651d9022c23486dfbd396c13db293af6845731cbd098a5f5606db4bc9f5573e8",
+          "sha256:3419e1dd2b0fd07db4b83f004562eeec9c4da3c30167af4259b09e92e8a3827b"
+        ]
+      },
+      "config": {
+        "Cmd": [
+          "/app/engine-ci-debian"
+        ],
+        "Env": [
+          "CONTAINIFYCI_HOST=host.docker.internal:33705",
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        ],
+        "Hostname": "55c00a9ea22e",
+        "Image": "alpine",
+        "Tty": true,
+        "User": "app",
+        "WorkingDir": "/app"
+      }
+    }
+  },
+  "Results": [
+    {
+      "Target": "engine-ci-debian:local (alpine 3.20.3)",
+      "Class": "os-pkgs",
+      "Type": "alpine"
+    },
+    {
+      "Target": "app/engine-ci-debian",
+      "Class": "lang-pkgs",
+      "Type": "gobinary"
+    }
+  ]
+}

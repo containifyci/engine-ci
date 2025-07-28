@@ -26,7 +26,7 @@ type Plugin struct {
 	builds protos2.BuildArgsGroupResponse
 }
 
-//depreacted use Build
+// depreacted use Build
 func Serve(opts ...*protos2.BuildArgs) {
 	Build(opts...)
 }
@@ -42,7 +42,7 @@ func Build(opts ...*protos2.BuildArgs) {
 }
 
 func BuildAsync(opts ...*protos2.BuildArgs) {
-	args := []*protos2.BuildArgsGroup{ {
+	args := []*protos2.BuildArgsGroup{{
 		Args: opts,
 	}}
 	BuildGroups(args...)
