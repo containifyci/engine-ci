@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -316,10 +315,10 @@ func (c *Container) Wait() error {
 	statusCode, err := c.client().WaitContainer(c.ctx, c.ID, string(container.WaitConditionNotRunning))
 	if err != nil {
 		c.ctx.Done()
-		log.Fatal(err)
+		return fmt.Errorf("failed to wait for container: %w", err)
 	}
 	if statusCode == nil {
-		log.Fatal(fmt.Errorf("failed to wait for container status code is nil"))
+		return fmt.Errorf("failed to wait for container: status code is nil")
 	}
 	if *statusCode != 0 {
 		defer func() {

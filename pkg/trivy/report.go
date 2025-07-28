@@ -3,9 +3,7 @@ package trivy
 import (
 	_ "embed"
 	"encoding/json"
-	"log"
-	"log/slog"
-	"os"
+	"fmt"
 	"strings"
 	"text/template"
 	"time"
@@ -58,17 +56,17 @@ type Comment struct {
 	SchemaVersion int       `json:"SchemaVersion"`
 }
 
-func Parse(jsonData string) string {
+func Parse(jsonData string) (string, error) {
 	var comment Comment
 	err := json.Unmarshal([]byte(jsonData), &comment)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal JSON: %v", err)
+		return "", fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 
 	// Parse the template
 	tmpl, err := template.New("security-report").Funcs(template.FuncMap{"formatDate": formatDate}).Parse(reportTemplate)
 	if err != nil {
-		log.Fatalf("Failed to parse template: %v", err)
+		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
 
 	// Create a buffer to store the rendered template output
@@ -77,12 +75,11 @@ func Parse(jsonData string) string {
 	// Execute the template with the data and write to buffer
 	err = tmpl.Execute(&output, comment)
 	if err != nil {
-		slog.Error("Failed to execute template.", "error", err)
-		os.Exit(1)
+		return "", fmt.Errorf("failed to execute template: %w", err)
 	}
 
 	// Print the rendered template output
-	return output.String()
+	return output.String(), nil
 }
 
 func formatDate(dateString string) string {

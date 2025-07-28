@@ -196,7 +196,11 @@ func CallPlugin(logger hclog.Logger, plugin interface{}) []*protos2.BuildArgsGro
 	{
 		containifyci, ok := plugin.(protos2.ContainifyCIv2)
 		if ok {
-			resp := containifyci.GetBuilds()
+			resp, err := containifyci.GetBuilds()
+			if err != nil {
+				logger.Error("Failed to get builds from plugin", "error", err)
+				os.Exit(1)
+			}
 			return resp.Args
 		}
 	}
@@ -206,7 +210,11 @@ func CallPlugin(logger hclog.Logger, plugin interface{}) []*protos2.BuildArgsGro
 			logger.Error("Can't use v1 plugin version.")
 			os.Exit(1)
 		}
-		resp := containifyci.GetBuild()
+		resp, err := containifyci.GetBuild()
+		if err != nil {
+			logger.Error("Failed to get build from plugin", "error", err)
+			os.Exit(1)
+		}
 
 		groups := []*protos2.BuildArgsGroup{}
 		for _, a := range resp.Args {
