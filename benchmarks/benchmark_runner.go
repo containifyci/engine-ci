@@ -1,4 +1,4 @@
-package main
+package benchmarks
 
 import (
 	"bufio"
@@ -51,7 +51,8 @@ const (
 	HighMemoryThreshold      = 10000   // 10KB per op
 )
 
-func main() {
+// RunBenchmarkSuite runs the complete benchmark suite
+func RunBenchmarkSuite() {
 	fmt.Println("🚀 Engine-CI Performance Benchmark Suite")
 	fmt.Println("==========================================")
 

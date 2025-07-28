@@ -1,4 +1,4 @@
-package main
+package benchmarks
 
 import (
 	"encoding/json"
@@ -394,7 +394,7 @@ func findLatestResultsFile() string {
 	return latestFile
 }
 
-// Entry point for regression testing
-func main() {
+// RunRegressionTestSuite runs the regression test suite
+func RunRegressionTestSuite() {
 	runRegressionTests()
 }

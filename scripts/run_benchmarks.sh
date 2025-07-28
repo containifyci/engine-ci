@@ -105,10 +105,8 @@ run_full_suite() {
 run_benchmark_tool() {
     echo -e "${BLUE}🔧 Running benchmark analysis tool...${NC}"
     
-    if [ -f "$BENCHMARK_DIR/benchmark_runner.go" ]; then
-        cd "$BENCHMARK_DIR"
-        go run benchmark_runner.go
-        cd - > /dev/null
+    if [ -f "cmd/benchmark-runner/main.go" ]; then
+        go run cmd/benchmark-runner/main.go
     else
         echo -e "${RED}❌ Benchmark runner tool not found${NC}"
         return 1
@@ -125,10 +123,8 @@ run_regression_tests() {
         return 0
     fi
     
-    if [ -f "$BENCHMARK_DIR/regression_tests.go" ]; then
-        cd "$BENCHMARK_DIR"
-        go run regression_tests.go
-        cd - > /dev/null
+    if [ -f "cmd/regression-tester/main.go" ]; then
+        go run cmd/regression-tester/main.go
     else
         echo -e "${RED}❌ Regression test tool not found${NC}"
         return 1
