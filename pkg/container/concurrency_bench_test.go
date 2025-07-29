@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -24,11 +25,31 @@ type MockContainerManager struct {
 }
 
 func NewMockContainerManager(delay time.Duration, failureRate float64) *MockContainerManager {
+	// Reduce delays in CI environment
+	if isCI() {
+		delay = delay / 10 // 10x faster in CI
+		if delay < time.Millisecond {
+			delay = time.Millisecond
+		}
+	}
+	
 	return &MockContainerManager{
 		delay:       delay,
 		failureRate: failureRate,
 		callCount:   0,
 	}
+}
+
+// isCI detects if we're running in a CI environment
+func isCI() bool {
+	// Check common CI environment variables
+	ciVars := []string{"CI", "CONTINUOUS_INTEGRATION", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL"}
+	for _, env := range ciVars {
+		if os.Getenv(env) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *MockContainerManager) logOperation(op string) {
