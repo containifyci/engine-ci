@@ -75,10 +75,8 @@ func getRuntime() (ContainerManager, error) {
 		slog.Info("Using Host")
 		return host.NewHostManager(), nil
 	default:
-		slog.Error("unknown container runtime stop")
-		os.Exit(1)
+		return nil, fmt.Errorf("unknown container runtime stop")
 	}
-	return nil, fmt.Errorf("unknown container runtime stop")
 }
 
 func DetectContainerRuntime() utils.RuntimeType {
@@ -149,6 +147,5 @@ func detectRuntimeParallel() utils.RuntimeType {
 	}
 	
 	slog.Error("unknown container runtime")
-	os.Exit(1)
 	return utils.RuntimeType("unknown")
 }

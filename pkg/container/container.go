@@ -102,16 +102,17 @@ func New(build Build) *Container {
 	_client := func() cri.ContainerManager {
 		client, err := cri.InitContainerRuntime()
 		if err != nil {
-			slog.Error("Failed to detect container runtime", "error", err)
-			// Return nil to allow caller to handle the error gracefully
-			return nil
+			panic(fmt.Errorf("failed to detect container runtime: %w", err))
+			// slog.Error("Failed to detect container runtime", "error", err)
+			// // Return nil to allow caller to handle the error gracefully
+			// return nil
 		}
 		return client
 	}
 
 	// Use background context with reasonable timeout instead of TODO
 	ctx := context.Background()
-	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build}
+	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Verbose: build.Verbose}
 
 	// Initialize concurrency components
 	client := _client()
