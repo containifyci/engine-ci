@@ -24,6 +24,11 @@ const (
 	SmallBuffer = HashBuffer
 )
 
+// bufferWrapper wraps a byte slice for sync.Pool compatibility
+type bufferWrapper struct {
+	b []byte
+}
+
 // BufferPool manages reusable byte slices for I/O operations
 type BufferPool struct {
 	hash sync.Pool
@@ -47,7 +52,7 @@ func NewBufferPool() *BufferPool {
 	pool.hash = sync.Pool{
 		New: func() interface{} {
 			atomic.AddInt64(&pool.hashMisses, 1)
-			return make([]byte, HashBufferSize)
+			return &bufferWrapper{b: make([]byte, HashBufferSize)}
 		},
 	}
 
@@ -55,7 +60,7 @@ func NewBufferPool() *BufferPool {
 	pool.tar = sync.Pool{
 		New: func() interface{} {
 			atomic.AddInt64(&pool.tarMisses, 1)
-			return make([]byte, TarBufferSize)
+			return &bufferWrapper{b: make([]byte, TarBufferSize)}
 		},
 	}
 
@@ -67,14 +72,14 @@ func (p *BufferPool) Get(size BufferSize) []byte {
 	switch size {
 	case HashBuffer:
 		atomic.AddInt64(&p.hashHits, 1)
-		return p.hash.Get().([]byte)
+		return p.hash.Get().(*bufferWrapper).b
 	case TarBuffer:
 		atomic.AddInt64(&p.tarHits, 1)
-		return p.tar.Get().([]byte)
+		return p.tar.Get().(*bufferWrapper).b
 	default:
 		// Default to hash buffer
 		atomic.AddInt64(&p.hashHits, 1)
-		return p.hash.Get().([]byte)
+		return p.hash.Get().(*bufferWrapper).b
 	}
 }
 
@@ -91,13 +96,15 @@ func (p *BufferPool) Put(buffer []byte, size BufferSize) {
 		buffer[i] = 0
 	}
 
+	wrapper := &bufferWrapper{b: buffer}
+
 	switch size {
 	case HashBuffer:
-		p.hash.Put(buffer)
+		p.hash.Put(wrapper)
 	case TarBuffer:
-		p.tar.Put(buffer)
+		p.tar.Put(wrapper)
 	default:
-		p.hash.Put(buffer)
+		p.hash.Put(wrapper)
 	}
 }
 
