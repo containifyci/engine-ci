@@ -14,9 +14,6 @@ func TestBufferPool(t *testing.T) {
 		size         BufferSize
 		expectedSize int
 	}{
-		{"Small", SmallBuffer, SmallBufferSize},
-		{"Medium", MediumBuffer, MediumBufferSize},
-		{"Large", LargeBuffer, LargeBufferSize},
 		{"Hash", HashBuffer, HashBufferSize},
 		{"Tar", TarBuffer, TarBufferSize},
 	}
@@ -64,19 +61,19 @@ func TestBufferPoolMetrics(t *testing.T) {
 
 	// Get and put some buffers to generate metrics
 	for i := 0; i < 5; i++ {
-		buffer := pool.Get(MediumBuffer)
-		pool.Put(buffer, MediumBuffer)
+		buffer := pool.Get(HashBuffer)
+		pool.Put(buffer, HashBuffer)
 	}
 
 	metrics := pool.GetMetrics()
 
 	// Should have some hits and misses
-	if metrics.MediumHits == 0 {
-		t.Error("Expected some medium hits")
+	if metrics.HashHits == 0 {
+		t.Error("Expected some hash hits")
 	}
 
-	if metrics.MediumMisses == 0 {
-		t.Error("Expected some medium misses")
+	if metrics.HashMisses == 0 {
+		t.Error("Expected some hash misses")
 	}
 
 	// Test hit rate calculation
@@ -88,53 +85,53 @@ func TestBufferPoolMetrics(t *testing.T) {
 
 // TestWithBuffer tests the convenience function
 func TestWithBuffer(t *testing.T) {
-	var usedBuffer []byte
-
-	WithBuffer(SmallBuffer, func(buffer []byte) {
-		if len(buffer) != SmallBufferSize {
-			t.Errorf("Expected buffer size %d, got %d", SmallBufferSize, len(buffer))
+	WithBuffer(HashBuffer, func(buffer []byte) {
+		if len(buffer) != HashBufferSize {
+			t.Errorf("Expected buffer size %d, got %d", HashBufferSize, len(buffer))
 		}
-		usedBuffer = buffer
 		buffer[0] = 42
 	})
 
-	// Buffer should have been used
-	if usedBuffer == nil {
-		t.Error("Buffer was not used")
-	}
+	// After WithBuffer, the buffer should be returned to pool
+	// and the next use should get a zeroed buffer
+	WithBuffer(HashBuffer, func(buffer []byte) {
+		if buffer[0] != 0 {
+			t.Error("Expected zeroed buffer from pool")
+		}
+	})
 }
 
-// TestWithBufferReturn tests the convenience function with return value
+// TestWithBufferReturn tests the WithBufferReturn function
 func TestWithBufferReturn(t *testing.T) {
-	result := WithBufferReturn(MediumBuffer, func(buffer []byte) int {
-		if len(buffer) != MediumBufferSize {
-			t.Errorf("Expected buffer size %d, got %d", MediumBufferSize, len(buffer))
+	result := WithBufferReturn(TarBuffer, func(buffer []byte) string {
+		if len(buffer) != TarBufferSize {
+			t.Errorf("Expected buffer size %d, got %d", TarBufferSize, len(buffer))
 		}
-		return len(buffer)
+		return "test-result"
 	})
 
-	if result != MediumBufferSize {
-		t.Errorf("Expected result %d, got %d", MediumBufferSize, result)
+	if result != "test-result" {
+		t.Errorf("Expected 'test-result', got %s", result)
 	}
 }
 
-// TestEstimateBufferSize tests buffer size estimation
-func TestEstimateBufferSize(t *testing.T) {
-	testCases := []struct {
-		dataSize int
-		expected BufferSize
-	}{
-		{1000, SmallBuffer},
-		{10000, MediumBuffer},
-		{50000, LargeBuffer},
-		{200000, LargeBuffer},
-	}
+// TestOversizedBuffer tests that oversized buffers are not pooled
+func TestOversizedBuffer(t *testing.T) {
+	pool := NewBufferPool()
 
-	for _, tc := range testCases {
-		actual := EstimateBufferSize(tc.dataSize)
-		if actual != tc.expected {
-			t.Errorf("For data size %d, expected %v, got %v", tc.dataSize, tc.expected, actual)
-		}
+	// Create an oversized buffer
+	oversized := make([]byte, MaxRetainedBufferSize+1)
+	
+	// Try to put it back
+	pool.Put(oversized, HashBuffer)
+
+	// The next get should allocate a new buffer, not return the oversized one
+	buffer := pool.Get(HashBuffer)
+	if len(buffer) != HashBufferSize {
+		t.Errorf("Expected buffer size %d, got %d", HashBufferSize, len(buffer))
+	}
+	if cap(buffer) > MaxRetainedBufferSize {
+		t.Error("Pool returned an oversized buffer")
 	}
 }
 
@@ -142,34 +139,35 @@ func TestEstimateBufferSize(t *testing.T) {
 func BenchmarkBufferPool(b *testing.B) {
 	pool := NewBufferPool()
 
-	b.Run("WithPool", func(b *testing.B) {
-		b.ReportAllocs()
+	b.Run("Get/Put", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			buffer := pool.Get(MediumBuffer)
-			buffer[0] = byte(i % 256)
-			buffer[1] = byte((i * 2) % 256)
-			pool.Put(buffer, MediumBuffer)
+			buffer := pool.Get(HashBuffer)
+			// Simulate some work
+			buffer[0] = byte(i)
+			pool.Put(buffer, HashBuffer)
 		}
 	})
 
-	b.Run("WithoutPool", func(b *testing.B) {
-		b.ReportAllocs()
+	b.Run("WithBuffer", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			buffer := make([]byte, MediumBufferSize)
-			buffer[0] = byte(i % 256)
-			buffer[1] = byte((i * 2) % 256)
-			_ = buffer
+			WithBuffer(HashBuffer, func(buffer []byte) {
+				// Simulate some work
+				buffer[0] = byte(i)
+			})
 		}
 	})
 }
 
-// BenchmarkWithBuffer benchmarks the convenience function
-func BenchmarkWithBuffer(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		WithBuffer(MediumBuffer, func(buffer []byte) {
-			buffer[0] = byte(i % 256)
-			buffer[1] = byte((i * 2) % 256)
-		})
-	}
+// BenchmarkBufferPoolParallel benchmarks concurrent buffer pool usage
+func BenchmarkBufferPoolParallel(b *testing.B) {
+	pool := NewBufferPool()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			buffer := pool.Get(TarBuffer)
+			// Simulate some work
+			buffer[0] = 1
+			pool.Put(buffer, TarBuffer)
+		}
+	})
 }

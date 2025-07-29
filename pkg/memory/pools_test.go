@@ -9,68 +9,54 @@ import (
 func TestStringBuilderPool(t *testing.T) {
 	pool := NewStringBuilderPool()
 
-	// Test getting and putting builders of different sizes
-	testCases := []struct {
-		name string
-		size PoolSize
-	}{
-		{"Small", Small},
-		{"Medium", Medium},
-		{"Large", Large},
+	// Get a builder
+	builder := pool.Get()
+	if builder == nil {
+		t.Fatal("Expected non-nil builder")
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Get a builder
-			builder := pool.Get(tc.size)
-			if builder == nil {
-				t.Fatal("Expected non-nil builder")
-			}
-
-			// Test that builder is reset
-			if builder.Len() != 0 {
-				t.Error("Expected empty builder")
-			}
-
-			// Use the builder
-			builder.WriteString("test content")
-			if builder.String() != "test content" {
-				t.Error("Builder not working correctly")
-			}
-
-			// Put it back
-			pool.Put(builder, tc.size)
-
-			// Get another builder and verify it's reset
-			builder2 := pool.Get(tc.size)
-			if builder2.Len() != 0 {
-				t.Error("Expected reset builder from pool")
-			}
-
-			pool.Put(builder2, tc.size)
-		})
+	// Test that builder is reset
+	if builder.Len() != 0 {
+		t.Error("Expected empty builder")
 	}
+
+	// Use the builder
+	builder.WriteString("test content")
+	if builder.String() != "test content" {
+		t.Error("Builder not working correctly")
+	}
+
+	// Put it back
+	pool.Put(builder)
+
+	// Get another builder and verify it's reset
+	builder2 := pool.Get()
+	if builder2.Len() != 0 {
+		t.Error("Expected reset builder from pool")
+	}
+
+	pool.Put(builder2)
 }
 
-// TestStringBuilderPoolMetrics tests pool metrics collection
+// TestStringBuilderPoolMetrics tests string builder pool metrics collection
 func TestStringBuilderPoolMetrics(t *testing.T) {
 	pool := NewStringBuilderPool()
 
 	// Get and put some builders to generate metrics
 	for i := 0; i < 5; i++ {
-		builder := pool.Get(Small)
-		pool.Put(builder, Small)
+		builder := pool.Get()
+		pool.Put(builder)
 	}
 
 	metrics := pool.GetMetrics()
 
 	// Should have some hits and misses
-	if metrics.SmallHits == 0 {
-		t.Error("Expected some small hits")
+	if metrics.Hits == 0 {
+		t.Error("Expected some hits")
 	}
 
-	if metrics.SmallMisses == 0 {
-		t.Error("Expected some small misses")
+	if metrics.Misses == 0 {
+		t.Error("Expected some misses")
 	}
 
 	// Test hit rate calculation
@@ -82,71 +68,91 @@ func TestStringBuilderPoolMetrics(t *testing.T) {
 
 // TestWithStringBuilder tests the convenience function
 func TestWithStringBuilder(t *testing.T) {
-	result := WithStringBuilder(Medium, func(builder *strings.Builder) string {
+	result := WithStringBuilder(func(builder *strings.Builder) string {
 		builder.WriteString("Hello, ")
 		builder.WriteString("World!")
 		return builder.String()
 	})
 
 	if result != "Hello, World!" {
-		t.Errorf("Expected 'Hello, World!', got '%s'", result)
+		t.Errorf("Expected 'Hello, World!', got %s", result)
 	}
+
+	// Test that panic is handled and builder is still returned to pool
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("Expected panic to be propagated")
+			}
+		}()
+
+		WithStringBuilder(func(builder *strings.Builder) string {
+			panic("test panic")
+		})
+	}()
 }
 
-// TestEstimateSize tests size estimation
-func TestEstimateSize(t *testing.T) {
-	testCases := []struct {
-		length   int
-		expected PoolSize
-	}{
-		{100, Small},
-		{500, Medium},
-		{2000, Large},
-		{10000, Large},
+// TestOversizedStringBuilder tests that oversized builders are not pooled
+func TestOversizedStringBuilder(t *testing.T) {
+	pool := NewStringBuilderPool()
+
+	// Get a builder and grow it beyond the max retained capacity
+	builder := pool.Get()
+	for i := 0; i < StringBuilderSize*3; i++ {
+		builder.WriteByte('x')
 	}
 
-	for _, tc := range testCases {
-		actual := EstimateSize(tc.length)
-		if actual != tc.expected {
-			t.Errorf("For length %d, expected %v, got %v", tc.length, tc.expected, actual)
-		}
+	// Put it back
+	pool.Put(builder)
+
+	// The next get should return a new builder with normal capacity
+	builder2 := pool.Get()
+	if builder2.Cap() > StringBuilderSize*2 {
+		t.Error("Pool returned an oversized builder")
 	}
+	pool.Put(builder2)
 }
 
-// BenchmarkStringBuilderPool benchmarks pool performance
+// BenchmarkStringBuilderPool benchmarks string builder pool performance
 func BenchmarkStringBuilderPool(b *testing.B) {
 	pool := NewStringBuilderPool()
 
-	b.Run("WithPool", func(b *testing.B) {
-		b.ReportAllocs()
+	b.Run("Get/Put", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			builder := pool.Get(Medium)
-			builder.WriteString("test content that is moderately long")
-			_ = builder.String()
-			pool.Put(builder, Medium)
+			builder := pool.Get()
+			builder.WriteString("test")
+			pool.Put(builder)
 		}
 	})
 
-	b.Run("WithoutPool", func(b *testing.B) {
-		b.ReportAllocs()
+	b.Run("WithStringBuilder", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = WithStringBuilder(func(builder *strings.Builder) string {
+				builder.WriteString("test")
+				return builder.String()
+			})
+		}
+	})
+
+	b.Run("NoPool", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			builder := &strings.Builder{}
-			builder.Grow(MediumStringBuilderSize)
-			builder.WriteString("test content that is moderately long")
+			builder.WriteString("test")
 			_ = builder.String()
 		}
 	})
 }
 
-// BenchmarkWithStringBuilder benchmarks the convenience function
-func BenchmarkWithStringBuilder(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		result := WithStringBuilder(Medium, func(builder *strings.Builder) string {
-			builder.WriteString("Hello, ")
-			builder.WriteString("World!")
-			return builder.String()
-		})
-		_ = result
-	}
+// BenchmarkStringBuilderPoolParallel benchmarks concurrent string builder pool usage
+func BenchmarkStringBuilderPoolParallel(b *testing.B) {
+	pool := NewStringBuilderPool()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			builder := pool.Get()
+			builder.WriteString("parallel test")
+			_ = builder.String()
+			pool.Put(builder)
+		}
+	})
 }
