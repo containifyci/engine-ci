@@ -60,11 +60,11 @@ type Job struct {
 
 // JobResult represents the result of a job execution
 type JobResult struct {
-	Job       Job
 	StartTime time.Time
 	EndTime   time.Time
 	Result    interface{}
 	Error     error
+	Job       Job
 	Duration  time.Duration
 	WorkerID  int
 }

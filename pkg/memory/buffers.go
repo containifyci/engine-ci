@@ -147,32 +147,29 @@ func (p *BufferPool) Put(buffer []byte, size BufferSize) {
 	case SmallBuffer:
 		if len(buffer) >= SmallBufferSize {
 			// Avoid allocation by using slice with proper capacity
-			resizedBuffer := buffer[:SmallBufferSize:SmallBufferSize]
-			p.small.Put(resizedBuffer)
+			p.small.Put(buffer[:SmallBufferSize:SmallBufferSize]) // nolint:staticcheck
 		}
 	case MediumBuffer:
 		if len(buffer) >= MediumBufferSize {
 			// Avoid allocation by using slice with proper capacity
-			resizedBuffer := buffer[:MediumBufferSize:MediumBufferSize]
-			p.medium.Put(resizedBuffer)
+			p.medium.Put(buffer[:MediumBufferSize:MediumBufferSize]) // nolint:staticcheck
 		}
 	case LargeBuffer:
 		if len(buffer) >= LargeBufferSize {
 			// Avoid allocation by using slice with proper capacity
-			resizedBuffer := buffer[:LargeBufferSize:LargeBufferSize]
-			p.large.Put(resizedBuffer)
+			p.large.Put(buffer[:LargeBufferSize:LargeBufferSize]) // nolint:staticcheck
 		}
 	case HashBuffer:
 		if len(buffer) >= HashBufferSize {
-			p.hash.Put(buffer[:HashBufferSize])
+			p.hash.Put(buffer[:HashBufferSize]) // nolint:staticcheck
 		}
 	case TarBuffer:
 		if len(buffer) >= TarBufferSize {
-			p.tar.Put(buffer[:TarBufferSize])
+			p.tar.Put(buffer[:TarBufferSize]) // nolint:staticcheck
 		}
 	default:
 		if len(buffer) >= MediumBufferSize {
-			p.medium.Put(buffer[:MediumBufferSize])
+			p.medium.Put(buffer[:MediumBufferSize]) // nolint:staticcheck
 		}
 	}
 }

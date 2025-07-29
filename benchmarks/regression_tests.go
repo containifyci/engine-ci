@@ -24,10 +24,10 @@ type RegressionTestSuite struct {
 
 // RegressionResult represents the result of a regression test
 type RegressionResult struct {
-	Current  BenchmarkResult    `json:"current"`
-	Baseline BenchmarkResult    `json:"baseline"`
 	Message  string             `json:"message"`
 	Test     RegressionTest     `json:"test"`
+	Current  BenchmarkResult    `json:"current"`
+	Baseline BenchmarkResult    `json:"baseline"`
 	Changes  PerformanceChanges `json:"changes"`
 	Passed   bool               `json:"passed"`
 }
