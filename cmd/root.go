@@ -3,6 +3,11 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"runtime"
+	"runtime/pprof"
 
 	"github.com/containifyci/engine-ci/pkg/logger"
 
@@ -10,9 +15,13 @@ import (
 )
 
 type rootCmdArgs struct {
-	Progress string
-	Target   string
-	Verbose  bool
+	Progress   string
+	Target     string
+	CPUProfile string
+	MemProfile string
+	PProfPort  int
+	Verbose    bool
+	PProfHTTP  bool
 }
 
 var RootArgs = &rootCmdArgs{}
@@ -41,10 +50,59 @@ to quickly create a Cobra application.`,
 		logger := slog.New(logger.New(RootArgs.Progress, logOpts))
 		slog.SetDefault(logger)
 		slog.Info("Progress logging format", "format", RootArgs.Progress)
+
+		// Enable CPU profiling if requested
+		if RootArgs.CPUProfile != "" {
+			f, err := os.Create(RootArgs.CPUProfile)
+			if err != nil {
+				slog.Error("Could not create CPU profile", "error", err)
+				os.Exit(1)
+			}
+			if err := pprof.StartCPUProfile(f); err != nil {
+				slog.Error("Could not start CPU profile", "error", err)
+				f.Close()
+				os.Exit(1)
+			}
+			slog.Info("CPU profiling started", "file", RootArgs.CPUProfile)
+		}
+
+		// Enable HTTP pprof endpoint if requested
+		if RootArgs.PProfHTTP {
+			go func() {
+				addr := fmt.Sprintf("localhost:%d", RootArgs.PProfPort)
+				slog.Info("Starting pprof HTTP server", "addr", addr)
+				if err := http.ListenAndServe(addr, nil); err != nil {
+					slog.Error("pprof server failed", "error", err)
+				}
+			}()
+		}
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		slog.Info("Flushing logs")
 		logger.GetLogAggregator().Flush()
+
+		// Stop CPU profiling if it was started
+		if RootArgs.CPUProfile != "" {
+			pprof.StopCPUProfile()
+			slog.Info("CPU profiling stopped", "file", RootArgs.CPUProfile)
+		}
+
+		// Write memory profile if requested
+		if RootArgs.MemProfile != "" {
+			f, err := os.Create(RootArgs.MemProfile)
+			if err != nil {
+				slog.Error("Could not create memory profile", "error", err)
+				return
+			}
+			defer f.Close()
+
+			runtime.GC() // get up-to-date statistics
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				slog.Error("Could not write memory profile", "error", err)
+			} else {
+				slog.Info("Memory profile written", "file", RootArgs.MemProfile)
+			}
+		}
 	},
 }
 
@@ -66,6 +124,12 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&RootArgs.Verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringVarP(&RootArgs.Target, "target", "t", "all", "The build target to run")
 	rootCmd.PersistentFlags().StringVar(&RootArgs.Progress, "progress", "plain", "The progress logging format to use. Options are: progress, plain")
+
+	// Profiling flags
+	rootCmd.PersistentFlags().StringVar(&RootArgs.CPUProfile, "cpuprofile", "", "write cpu profile to file")
+	rootCmd.PersistentFlags().StringVar(&RootArgs.MemProfile, "memprofile", "", "write memory profile to file")
+	rootCmd.PersistentFlags().BoolVar(&RootArgs.PProfHTTP, "pprof-http", false, "enable HTTP pprof endpoint")
+	rootCmd.PersistentFlags().IntVar(&RootArgs.PProfPort, "pprof-port", 6060, "HTTP pprof port")
 }
 
 // func All(opts *container.Build) error {
