@@ -70,20 +70,18 @@ func (e *EnvType) Type() string {
 
 type Container struct {
 	t
-	Source  fs.ReadDirFS
-	Build   *Build
-	ID      string
-	Name    string
-	Image   string
-	Env     EnvType
-	Prefix  string
-	Opts    types.ContainerConfig
-	Verbose bool
-
-	// Concurrency support
-	concurrentManager *ConcurrentContainerManager
-	workerPool        *WorkerPool
+	Source            fs.ReadDirFS
+	Build             *Build
 	imagePuller       *ConcurrentImagePuller
+	workerPool        *WorkerPool
+	concurrentManager *ConcurrentContainerManager
+	Env               EnvType
+	Prefix            string
+	Image             string
+	Name              string
+	ID                string
+	Opts              types.ContainerConfig
+	Verbose           bool
 }
 
 type PushOption struct {
@@ -840,13 +838,13 @@ func ComputeChecksumConcurrent(data []byte, numWorkers int) string {
 
 	// Create channels for work distribution and result collection
 	type chunkResult struct {
-		index int
 		hash  []byte
+		index int
 	}
 
 	chunks := make(chan struct {
-		index int
 		data  []byte
+		index int
 	}, numWorkers)
 	results := make(chan chunkResult, numWorkers)
 
@@ -893,8 +891,8 @@ func ComputeChecksumConcurrent(data []byte, numWorkers int) string {
 			}
 
 			chunks <- struct {
-				index int
 				data  []byte
+				index int
 			}{
 				index: i,
 				data:  data[start:end],
@@ -1096,8 +1094,8 @@ func TarDirConcurrent(src fs.ReadDirFS, fileCount int, totalSize int64) (*bytes.
 
 	// Collect all file entries first
 	type fileEntry struct {
-		path string
 		info fs.FileInfo
+		path string
 	}
 
 	var files []fileEntry
@@ -1125,10 +1123,10 @@ func TarDirConcurrent(src fs.ReadDirFS, fileCount int, totalSize int64) (*bytes.
 
 	// Channel for processed file data
 	type processedFile struct {
-		path    string
-		header  *tar.Header
-		content []byte
 		err     error
+		header  *tar.Header
+		path    string
+		content []byte
 		index   int
 	}
 

@@ -93,33 +93,26 @@ type Leader interface {
 // TODO: add target container platform
 // Build struct optimized for memory alignment and cache performance
 type Build struct {
-	// 64-bit aligned fields first for optimal memory layout
-	Leader         Leader
-	Platform       types.Platform
-	Custom         Custom
-	Registries     map[string]*protos2.ContainerRegistry
-	SourcePackages []string
-	SourceFiles    []string
-
-	// String fields grouped together
+	Leader             Leader
+	Platform           types.Platform
+	Custom             Custom
+	Registries         map[string]*protos2.ContainerRegistry
+	BuildType          BuildType `json:"build_type"`
+	ContainifyRegistry string
 	Folder             string
 	App                string `json:"app"`
 	Image              string `json:"image"`
 	ImageTag           string `json:"image_tag"`
 	Registry           string
-	ContainifyRegistry string
+	Env                EnvType
 	File               string
 	Repository         string
 	Organization       string
-
-	// Enum/smaller types at the end
-	BuildType BuildType `json:"build_type"`
-	Runtime   utils.RuntimeType
-	Env       EnvType
-
-	// Boolean fields at the end to minimize padding
-	Verbose  bool
-	defaults bool
+	Runtime            utils.RuntimeType
+	SourcePackages     []string
+	SourceFiles        []string
+	Verbose            bool
+	defaults           bool
 }
 
 type BuildGroup struct {

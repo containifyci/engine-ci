@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -56,23 +55,19 @@ type (
 
 	// LogAggregator manages log aggregation with memory optimization and concurrency
 	LogAggregator struct {
-		logChannel   chan LogMessage
-		flushDone    chan struct{}
-		logMap       sync.Map
-		routineOrder []string
-		format       string
-
-		// Memory optimization pools
-		entryPool   sync.Pool // Pool for LogEntry reuse
-		messagePool sync.Pool // Pool for message string slices
-		
-		// Concurrency improvements
-		processWorkers int
-		batchSize      int
-		batchTimeout   time.Duration
-		workerWg       sync.WaitGroup
+		entryPool      sync.Pool
+		messagePool    sync.Pool
 		shutdown       chan struct{}
+		flushDone      chan struct{}
+		logChannel     chan LogMessage
 		batchProcessor *BatchProcessor
+		logMap         sync.Map
+		format         string
+		routineOrder   []string
+		workerWg       sync.WaitGroup
+		batchTimeout   time.Duration
+		batchSize      int
+		processWorkers int
 	}
 
 	// LogMessage represents a single log message with optimized layout
@@ -83,14 +78,14 @@ type (
 		isDone   bool
 		isFailed bool
 	}
-	
+
 	// BatchProcessor handles batched log message processing for better performance
 	BatchProcessor struct {
-		batchSize    int
-		batchTimeout time.Duration
 		inputChan    chan LogMessage
 		processChan  chan []LogMessage
 		aggregator   *LogAggregator
+		batchSize    int
+		batchTimeout time.Duration
 		mu           sync.Mutex
 		shutdown     bool
 	}
@@ -132,8 +127,8 @@ func NewLogAggregator(format string) *LogAggregator {
 			logChannel:     make(chan LogMessage, 1000), // Buffered channel for better performance
 			flushDone:      make(chan struct{}),
 			format:         format,
-			processWorkers: 2,                 // Number of worker goroutines for processing
-			batchSize:      10,                // Process messages in batches
+			processWorkers: 2,                     // Number of worker goroutines for processing
+			batchSize:      10,                    // Process messages in batches
 			batchTimeout:   50 * time.Millisecond, // Maximum time to wait for a batch
 			shutdown:       make(chan struct{}),
 		}
@@ -163,7 +158,7 @@ func NewLogAggregator(format string) *LogAggregator {
 				processChan:  make(chan []LogMessage, 100),
 				aggregator:   instance,
 			}
-			
+
 			// Start batch processor
 			go instance.batchProcessor.start()
 			go instance.startLogDisplayConcurrent()
@@ -186,127 +181,6 @@ func last5Messages(messages []string) []string {
 	return messages[len(messages)-5:]
 }
 
-// readFromChannel reads from the log channel with memory optimization
-func readFromChannel(la *LogAggregator) []string {
-	logMsg, ok := <-la.logChannel
-	if !ok {
-		// Channel is closed, break the loop to finish
-		la.flushDone <- struct{}{}
-		return nil
-	}
-
-	// Try to load existing entry, or create new one with pooled LogEntry
-	var logEntry *LogEntry
-	if entry, loaded := la.logMap.Load(logMsg.routineID); loaded {
-		// Use existing entry
-		logEntry = entry.(*LogEntry)
-	} else {
-		// Create new entry using pooled LogEntry
-		pooledEntry := la.entryPool.Get().(*LogEntry)
-
-		// Reset the pooled entry for reuse
-		pooledEntry.startTime = time.Now()
-		pooledEntry.endTime = time.Time{}
-		pooledEntry.messages = pooledEntry.messages[:0] // Reset slice but keep capacity
-		pooledEntry.isDone = false
-		pooledEntry.isFailed = false
-
-		// Try to store, but use whichever wins the race
-		if actualEntry, loaded := la.logMap.LoadOrStore(logMsg.routineID, pooledEntry); loaded {
-			// Someone else created it first, return pooled entry and use the actual one
-			la.entryPool.Put(pooledEntry)
-			logEntry = actualEntry.(*LogEntry)
-		} else {
-			// We successfully stored our pooled entry
-			logEntry = pooledEntry
-			memory.TrackBufferReuse() // Track pool reuse for new entries
-		}
-	}
-
-	logEntry.addMessage(logMsg.message)
-
-	// If the routine is done, mark it
-	if logMsg.isDone {
-		logEntry.mu.Lock()
-		logEntry.isDone = logMsg.isDone
-		logEntry.isFailed = logMsg.isFailed
-		logEntry.endTime = time.Now()
-		logEntry.mu.Unlock()
-	}
-
-	if !slices.Contains(la.routineOrder, logMsg.routineID) {
-		la.routineOrder = append(la.routineOrder, logMsg.routineID)
-	}
-
-	return la.routineOrder
-}
-
-func (la *LogAggregator) startLogDisplay() {
-	fmt.Println("Starting Real-Time Log Aggregation...")
-
-	// Continuously update the console with the current log state
-	for {
-
-		routineOrder := readFromChannel(la)
-		if routineOrder == nil {
-			break // Exit if the channel is closed
-		}
-		// Clear screen by printing new lines
-		fmt.Print("\033[H\033[2J") // ANSI escape sequence to clear the screen
-		fmt.Println("Real-Time Log Aggregation")
-
-		// Display completed log entries first
-		for _, id := range routineOrder {
-			value, ok := la.logMap.Load(id)
-			if !ok {
-				continue
-			}
-
-			logEntry := value.(*LogEntry)
-
-			// Display recent log lines with indentation
-			logEntry.mu.Lock()
-			if logEntry.isDone {
-				elapsed := logEntry.endTime.Sub(logEntry.startTime)
-				if !logEntry.isFailed {
-					logEntry.messages = []string{} // Remove the "Done" message
-					fmt.Printf("%s%s (Completed in %v)%s\n", green, id, elapsed, reset)
-				} else {
-					logEntry.messages = last5Messages(logEntry.messages[:len(logEntry.messages)])
-					fmt.Printf("%s%s (Failed in in %v)%s\n", red, id, elapsed, reset)
-				}
-			} else {
-				logEntry.mu.Unlock()
-				continue
-			}
-			for _, msg := range logEntry.messages {
-				fmt.Printf("   %s\n", msg)
-			}
-			logEntry.mu.Unlock()
-		}
-
-		// Display in-progress entries after completed ones
-		for _, id := range routineOrder {
-			value, ok := la.logMap.Load(id)
-			if !ok {
-				continue
-			}
-
-			logEntry := value.(*LogEntry)
-
-			logEntry.mu.Lock()
-			elapsed := time.Since(logEntry.startTime)
-
-			if !logEntry.isDone {
-				fmt.Printf("%s%s %v :%s\n", grayscale, id, elapsed, reset)
-				for _, msg := range logEntry.messages {
-					fmt.Printf("   %s\n", msg)
-				}
-			}
-			logEntry.mu.Unlock()
-		}
-	}
-}
 
 func (la *LogAggregator) LogMessage(routineID string, msg string) {
 	la.logMessage(routineID, msg, false, false)
@@ -357,12 +231,12 @@ func (la *LogAggregator) Flush() {
 	if la.format == "progress" {
 		// Signal shutdown to batch processor
 		close(la.shutdown)
-		
+
 		// Stop batch processor
 		if la.batchProcessor != nil {
 			la.batchProcessor.stop()
 		}
-		
+
 		close(la.logChannel) // This will signal the flushing goroutine to finish
 		// Wait for the display goroutine to signal completion
 		<-la.flushDone
@@ -378,7 +252,7 @@ func (bp *BatchProcessor) start() {
 	batch := make([]LogMessage, 0, bp.batchSize)
 	timer := time.NewTimer(bp.batchTimeout)
 	timer.Stop() // Stop initially
-	
+
 	for {
 		select {
 		case msg, ok := <-bp.inputChan:
@@ -390,28 +264,28 @@ func (bp *BatchProcessor) start() {
 				close(bp.processChan)
 				return
 			}
-			
+
 			batch = append(batch, msg)
-			
+
 			// Start timer if this is the first message in the batch
 			if len(batch) == 1 {
 				timer.Reset(bp.batchTimeout)
 			}
-			
+
 			// Send batch if it's full
 			if len(batch) >= bp.batchSize {
 				bp.processChan <- batch
 				batch = make([]LogMessage, 0, bp.batchSize)
 				timer.Stop()
 			}
-			
+
 		case <-timer.C:
 			// Timeout reached, send current batch
 			if len(batch) > 0 {
 				bp.processChan <- batch
 				batch = make([]LogMessage, 0, bp.batchSize)
 			}
-			
+
 		case <-bp.aggregator.shutdown:
 			// Shutdown signal, flush remaining batch
 			if len(batch) > 0 {
@@ -442,7 +316,7 @@ func (la *LogAggregator) startLogDisplayConcurrent() {
 
 	// Start display goroutine
 	go la.displayLoop()
-	
+
 	// Wait for all workers to finish
 	la.workerWg.Wait()
 }
@@ -450,7 +324,7 @@ func (la *LogAggregator) startLogDisplayConcurrent() {
 // processBatchWorker processes batches of log messages
 func (la *LogAggregator) processBatchWorker(workerID int) {
 	defer la.workerWg.Done()
-	
+
 	for batch := range la.batchProcessor.processChan {
 		la.processBatch(batch, workerID)
 	}
@@ -459,7 +333,7 @@ func (la *LogAggregator) processBatchWorker(workerID int) {
 // processBatch processes a batch of log messages efficiently
 func (la *LogAggregator) processBatch(batch []LogMessage, workerID int) {
 	routineOrderMap := make(map[string]bool)
-	
+
 	for _, logMsg := range batch {
 		// Process message similar to readFromChannel but in batch
 		var logEntry *LogEntry
@@ -473,7 +347,7 @@ func (la *LogAggregator) processBatch(batch []LogMessage, workerID int) {
 			pooledEntry.isDone = false
 			pooledEntry.isFailed = false
 
-			if actualEntry, loaded := la.logMap.LoadOrStore(logMsg.routineID, pooledEntry); loaded {
+			if actualEntry, entryLoaded := la.logMap.LoadOrStore(logMsg.routineID, pooledEntry); entryLoaded {
 				la.entryPool.Put(pooledEntry)
 				logEntry = actualEntry.(*LogEntry)
 			} else {
@@ -515,7 +389,7 @@ func (la *LogAggregator) processBatch(batch []LogMessage, workerID int) {
 func (la *LogAggregator) displayLoop() {
 	ticker := time.NewTicker(100 * time.Millisecond) // Update display every 100ms
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -543,7 +417,7 @@ func (la *LogAggregator) updateDisplay() {
 
 		logEntry := value.(*LogEntry)
 		logEntry.mu.Lock()
-		
+
 		if logEntry.isDone {
 			elapsed := logEntry.endTime.Sub(logEntry.startTime)
 			if !logEntry.isFailed {
@@ -557,7 +431,7 @@ func (la *LogAggregator) updateDisplay() {
 				}
 			}
 		}
-		
+
 		logEntry.mu.Unlock()
 	}
 
@@ -570,7 +444,7 @@ func (la *LogAggregator) updateDisplay() {
 
 		logEntry := value.(*LogEntry)
 		logEntry.mu.Lock()
-		
+
 		if !logEntry.isDone {
 			elapsed := time.Since(logEntry.startTime)
 			fmt.Printf("%s%s %v :%s\n", grayscale, id, elapsed, reset)
@@ -578,7 +452,7 @@ func (la *LogAggregator) updateDisplay() {
 				fmt.Printf("   %s\n", msg)
 			}
 		}
-		
+
 		logEntry.mu.Unlock()
 	}
 }

@@ -17,13 +17,13 @@ import (
 // BenchmarkResult represents a single benchmark result
 type BenchmarkResult struct {
 	Name        string  `json:"name"`
+	Package     string  `json:"package"`
+	Timestamp   string  `json:"timestamp"`
 	Iterations  int64   `json:"iterations"`
 	NsPerOp     float64 `json:"ns_per_op"`
 	MBPerSec    float64 `json:"mb_per_sec,omitempty"`
 	AllocsPerOp int64   `json:"allocs_per_op,omitempty"`
 	BytesPerOp  int64   `json:"bytes_per_op,omitempty"`
-	Package     string  `json:"package"`
-	Timestamp   string  `json:"timestamp"`
 }
 
 // BenchmarkSuite represents a collection of benchmark results
@@ -37,11 +37,11 @@ type BenchmarkSuite struct {
 
 // BenchmarkSummary provides high-level statistics
 type BenchmarkSummary struct {
-	TotalBenchmarks   int               `json:"total_benchmarks"`
 	PackageBreakdown  map[string]int    `json:"package_breakdown"`
 	PerformanceFlags  []string          `json:"performance_flags"`
 	TopSlowestOps     []BenchmarkResult `json:"top_slowest_ops"`
 	HighestAllocators []BenchmarkResult `json:"highest_allocators"`
+	TotalBenchmarks   int               `json:"total_benchmarks"`
 }
 
 const (

@@ -21,57 +21,52 @@ const (
 
 // WorkerPool manages a pool of workers for concurrent container operations
 type WorkerPool struct {
-	// Worker configuration
-	size       int
-	jobQueue   chan Job
-	resultChan chan JobResult
-	workers    []*Worker
-	wg         sync.WaitGroup
-	ctx        context.Context
-	cancel     context.CancelFunc
-
-	// Metrics
-	jobsSubmitted   int64
+	ctx             context.Context
+	cancel          context.CancelFunc
+	jobQueue        chan Job
+	resultChan      chan JobResult
+	workers         []*Worker
+	wg              sync.WaitGroup
 	jobsCompleted   int64
+	jobsSubmitted   int64
+	size            int
 	jobsFailed      int64
 	totalQueueTime  int64
 	totalExecTime   int64
 	peakQueueDepth  int64
 	currentQueueLen int64
-
-	// Synchronization
-	mu       sync.RWMutex
-	started  bool
-	shutdown bool
+	mu              sync.RWMutex
+	started         bool
+	shutdown        bool
 }
 
 // Worker represents a single worker in the pool
 type Worker struct {
-	id       int
 	jobQueue chan Job
 	quit     chan bool
 	pool     *WorkerPool
+	id       int
 }
 
 // Job represents a unit of work to be executed by a worker
 type Job struct {
+	SubmittedAt time.Time
+	Payload     interface{}
+	Context     context.Context
 	ID          string
 	Type        JobType
-	Payload     interface{}
 	Priority    Priority
-	SubmittedAt time.Time
-	Context     context.Context
 }
 
 // JobResult represents the result of a job execution
 type JobResult struct {
 	Job       Job
+	StartTime time.Time
+	EndTime   time.Time
 	Result    interface{}
 	Error     error
 	Duration  time.Duration
 	WorkerID  int
-	StartTime time.Time
-	EndTime   time.Time
 }
 
 // JobType represents different types of container operations
@@ -506,11 +501,11 @@ func estimateJobResultSize(result interface{}) int {
 	}
 
 	// Rough estimates based on typical result types
-	switch result.(type) {
+	switch r := result.(type) {
 	case string:
-		return len(result.(string)) + 16 // string header
+		return len(r) + 16 // string header
 	case []byte:
-		return len(result.([]byte)) + 24 // slice header
+		return len(r) + 24 // slice header
 	default:
 		return 64 // generic estimate
 	}

@@ -54,9 +54,9 @@ type StopContainerPayload struct {
 // BuildImagePayload contains data for image building
 type BuildImagePayload struct {
 	Client     cri.ContainerManager
-	Dockerfile []byte
 	ImageName  string
 	Platform   string
+	Dockerfile []byte
 }
 
 // CopyFilesPayload contains data for file copy operations
@@ -443,9 +443,9 @@ func (ccm *ConcurrentContainerManager) WaitContainersParallel(ctx context.Contex
 
 // ImagePullResult represents the result of an image pull operation
 type ImagePullResult struct {
-	Image  string
 	Reader io.ReadCloser
 	Error  error
+	Image  string
 }
 
 // ContainerCreateRequest represents a request to create a container
@@ -456,9 +456,9 @@ type ContainerCreateRequest struct {
 
 // ContainerCreateResult represents the result of a container creation
 type ContainerCreateResult struct {
+	Error       error
 	Name        string
 	ContainerID string
-	Error       error
 }
 
 // ContainerStopRequest represents a request to stop a container
@@ -469,8 +469,8 @@ type ContainerStopRequest struct {
 
 // ContainerOperationResult represents the result of a container operation
 type ContainerOperationResult struct {
-	ContainerID string
 	Error       error
+	ContainerID string
 }
 
 // ContainerWaitRequest represents a request to wait for a container
@@ -481,9 +481,9 @@ type ContainerWaitRequest struct {
 
 // ContainerWaitResult represents the result of waiting for a container
 type ContainerWaitResult struct {
-	ContainerID string
-	StatusCode  *int64
 	Error       error
+	StatusCode  *int64
+	ContainerID string
 }
 
 // BatchImageOperations provides batch operations for images
@@ -572,8 +572,8 @@ func (bio *BatchImageOperations) CheckImagesExistParallel(ctx context.Context, i
 					return
 				}
 
-				images, err := bio.client.ListImage(ctx, image)
-				exists := len(images) > 0 && err == nil
+				imageList, err := bio.client.ListImage(ctx, image)
+				exists := len(imageList) > 0 && err == nil
 
 				resultChan <- ImageExistsResult{
 					Image:  image,
@@ -591,16 +591,16 @@ func (bio *BatchImageOperations) CheckImagesExistParallel(ctx context.Context, i
 
 // ImageInspectResult represents the result of an image inspection
 type ImageInspectResult struct {
-	Image string
-	Info  *types.ImageInfo
 	Error error
+	Info  *types.ImageInfo
+	Image string
 }
 
 // ImageExistsResult represents the result of checking if an image exists
 type ImageExistsResult struct {
+	Error  error
 	Image  string
 	Exists bool
-	Error  error
 }
 
 // Semaphore provides a simple semaphore implementation for rate limiting

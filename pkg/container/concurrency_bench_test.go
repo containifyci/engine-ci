@@ -1,3 +1,5 @@
+// +build integration_test
+
 package container
 
 import (
@@ -187,6 +189,11 @@ func (m *MockContainerManager) Name() string {
 
 // Benchmark concurrent image pulling
 func BenchmarkConcurrentImagePulling(b *testing.B) {
+	// Skip intensive benchmarks in CI environment to prevent timeouts
+	if isCI() {
+		b.Skip("Skipping intensive benchmark in CI environment")
+	}
+	
 	// Reset memory tracking
 	memory.ResetBufferPoolMetrics()
 	memory.ResetPoolMetrics()
@@ -266,6 +273,11 @@ func BenchmarkConcurrentImagePulling(b *testing.B) {
 
 // Benchmark worker pool performance
 func BenchmarkWorkerPool(b *testing.B) {
+	// Skip intensive benchmarks in CI environment to prevent timeouts
+	if isCI() {
+		b.Skip("Skipping intensive benchmark in CI environment")
+	}
+	
 	testCases := []struct {
 		name    string
 		workers int
@@ -332,6 +344,11 @@ func BenchmarkWorkerPool(b *testing.B) {
 
 // Benchmark batch image operations
 func BenchmarkBatchImageOperations(b *testing.B) {
+	// Skip intensive benchmarks in CI environment to prevent timeouts
+	if isCI() {
+		b.Skip("Skipping intensive benchmark in CI environment")
+	}
+	
 	testCases := []struct {
 		name          string
 		imageCount    int

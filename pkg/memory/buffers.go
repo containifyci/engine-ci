@@ -146,15 +146,21 @@ func (p *BufferPool) Put(buffer []byte, size BufferSize) {
 	switch size {
 	case SmallBuffer:
 		if len(buffer) >= SmallBufferSize {
-			p.small.Put(buffer[:SmallBufferSize])
+			// Avoid allocation by using slice with proper capacity
+			resizedBuffer := buffer[:SmallBufferSize:SmallBufferSize]
+			p.small.Put(resizedBuffer)
 		}
 	case MediumBuffer:
 		if len(buffer) >= MediumBufferSize {
-			p.medium.Put(buffer[:MediumBufferSize])
+			// Avoid allocation by using slice with proper capacity
+			resizedBuffer := buffer[:MediumBufferSize:MediumBufferSize]
+			p.medium.Put(resizedBuffer)
 		}
 	case LargeBuffer:
 		if len(buffer) >= LargeBufferSize {
-			p.large.Put(buffer[:LargeBufferSize])
+			// Avoid allocation by using slice with proper capacity
+			resizedBuffer := buffer[:LargeBufferSize:LargeBufferSize]
+			p.large.Put(resizedBuffer)
 		}
 	case HashBuffer:
 		if len(buffer) >= HashBufferSize {

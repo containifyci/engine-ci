@@ -149,12 +149,12 @@ func (mt *MemoryTracker) Reset() {
 
 // MemoryMetrics contains memory usage and performance statistics
 type MemoryMetrics struct {
+	LastGCTimestamp  time.Time
 	TotalAllocations int64
 	TotalAllocBytes  int64
 	PeakAllocBytes   int64
 	OperationCount   int64
 	TotalDuration    time.Duration
-	LastGCTimestamp  time.Time
 	PoolHitRate      float64
 	BufferReuseCount int64
 	StringReuseCount int64
@@ -187,20 +187,20 @@ func (m MemoryMetrics) ReuseEfficiency() float64 {
 
 // SystemMemoryStats returns current system memory statistics
 type SystemMemoryStats struct {
-	Alloc         uint64    // bytes allocated and not yet freed
-	TotalAlloc    uint64    // bytes allocated (even if freed)
-	Sys           uint64    // bytes obtained from system
-	Lookups       uint64    // number of pointer lookups
-	Mallocs       uint64    // number of mallocs
-	Frees         uint64    // number of frees
-	HeapAlloc     uint64    // bytes allocated and not yet freed (same as Alloc)
-	HeapSys       uint64    // bytes obtained from system
-	HeapIdle      uint64    // bytes in idle spans
-	HeapInuse     uint64    // bytes in non-idle spans
-	HeapReleased  uint64    // bytes released to the OS
-	GCCPUFraction float64   // fraction of CPU time used by GC
-	NumGC         uint32    // number of GC cycles
-	LastGC        time.Time // time of last GC
+	LastGC        time.Time
+	HeapAlloc     uint64
+	Sys           uint64
+	Lookups       uint64
+	Mallocs       uint64
+	Frees         uint64
+	Alloc         uint64
+	HeapSys       uint64
+	HeapIdle      uint64
+	HeapInuse     uint64
+	HeapReleased  uint64
+	GCCPUFraction float64
+	TotalAlloc    uint64
+	NumGC         uint32
 }
 
 // GetSystemMemoryStats returns current system memory statistics
