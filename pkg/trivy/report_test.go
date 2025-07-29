@@ -113,7 +113,6 @@ func TestParse_ValidJSONWithEmptyResults(t *testing.T) {
 	}`
 
 	result, err := Parse(validEmptyJSON)
-
 	require.NoError(t, err)
 	assert.NotEmpty(t, result)
 	assert.Contains(t, result, "Container Security Risks")
@@ -139,7 +138,6 @@ func TestParse_NullValues(t *testing.T) {
 	}`
 
 	result, err := Parse(nullJSON)
-
 	require.NoError(t, err)
 	assert.NotEmpty(t, result)
 }
@@ -189,7 +187,6 @@ func TestParse_LargeJSON(t *testing.T) {
 	}`
 
 	result, err := Parse(largeJSON)
-
 	require.NoError(t, err)
 	assert.NotEmpty(t, result)
 	assert.Contains(t, result, "Container Security Risks")
@@ -199,7 +196,6 @@ func TestFormatDate_ValidDate(t *testing.T) {
 	// Test formatDate function with valid RFC3339 date
 	validDate := "2023-01-01T12:34:56Z"
 	result := formatDate(validDate)
-
 	assert.Equal(t, "2023-01-01", result)
 }
 
@@ -207,7 +203,6 @@ func TestFormatDate_InvalidDate(t *testing.T) {
 	// Test formatDate function with invalid date - should return as-is
 	invalidDate := "invalid-date"
 	result := formatDate(invalidDate)
-
 	assert.Equal(t, "invalid-date", result)
 }
 
@@ -215,7 +210,6 @@ func TestFormatDate_EmptyDate(t *testing.T) {
 	// Test formatDate function with empty date
 	emptyDate := ""
 	result := formatDate(emptyDate)
-
 	assert.Equal(t, "", result)
 }
 
@@ -293,7 +287,6 @@ func TestParse_TemplateExecutionErrors(t *testing.T) {
 
 	// This should still work since the template system should handle this gracefully
 	result, err := Parse(jsonWithSpecialChars)
-
 	require.NoError(t, err)
 	assert.NotEmpty(t, result)
 }
