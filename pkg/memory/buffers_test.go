@@ -4,55 +4,43 @@ import (
 	"testing"
 )
 
-// TestBufferPool tests the buffer pool functionality
+// TestBufferPool tests the TAR buffer pool functionality
 func TestBufferPool(t *testing.T) {
 	pool := NewBufferPool()
 
-	// Test getting and putting buffers of different sizes
-	testCases := []struct {
-		name         string
-		size         BufferSize
-		expectedSize int
-	}{
-		{"Hash", HashBuffer, HashBufferSize},
-		{"Tar", TarBuffer, TarBufferSize},
-	}
+	t.Run("TarBuffer", func(t *testing.T) {
+		// Get a buffer
+		buffer := pool.Get(TarBuffer)
+		if buffer == nil {
+			t.Fatal("Expected non-nil buffer")
+		}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Get a buffer
-			buffer := pool.Get(tc.size)
-			if buffer == nil {
-				t.Fatal("Expected non-nil buffer")
+		if len(buffer) != TarBufferSize {
+			t.Errorf("Expected buffer size %d, got %d", TarBufferSize, len(buffer))
+		}
+
+		// Test that buffer is zeroed
+		for i, b := range buffer {
+			if b != 0 {
+				t.Errorf("Expected zero byte at index %d, got %d", i, b)
 			}
+		}
 
-			if len(buffer) != tc.expectedSize {
-				t.Errorf("Expected buffer size %d, got %d", tc.expectedSize, len(buffer))
-			}
+		// Use the buffer
+		buffer[0] = 1
+		buffer[1] = 2
 
-			// Test that buffer is zeroed
-			for i, b := range buffer {
-				if b != 0 {
-					t.Errorf("Expected zero byte at index %d, got %d", i, b)
-				}
-			}
+		// Put it back
+		pool.Put(buffer, TarBuffer)
 
-			// Use the buffer
-			buffer[0] = 1
-			buffer[1] = 2
+		// Get another buffer and verify it's zeroed
+		buffer2 := pool.Get(TarBuffer)
+		if buffer2[0] != 0 || buffer2[1] != 0 {
+			t.Error("Expected zeroed buffer from pool")
+		}
 
-			// Put it back
-			pool.Put(buffer, tc.size)
-
-			// Get another buffer and verify it's zeroed
-			buffer2 := pool.Get(tc.size)
-			if buffer2[0] != 0 || buffer2[1] != 0 {
-				t.Error("Expected zeroed buffer from pool")
-			}
-
-			pool.Put(buffer2, tc.size)
-		})
-	}
+		pool.Put(buffer2, TarBuffer)
+	})
 }
 
 // TestBufferPoolMetrics tests buffer pool metrics collection
@@ -61,19 +49,19 @@ func TestBufferPoolMetrics(t *testing.T) {
 
 	// Get and put some buffers to generate metrics
 	for i := 0; i < 5; i++ {
-		buffer := pool.Get(HashBuffer)
-		pool.Put(buffer, HashBuffer)
+		buffer := pool.Get(TarBuffer)
+		pool.Put(buffer, TarBuffer)
 	}
 
 	metrics := pool.GetMetrics()
 
 	// Should have some hits and misses
-	if metrics.HashHits == 0 {
-		t.Error("Expected some hash hits")
+	if metrics.TarHits == 0 {
+		t.Error("Expected some tar hits")
 	}
 
-	if metrics.HashMisses == 0 {
-		t.Error("Expected some hash misses")
+	if metrics.TarMisses == 0 {
+		t.Error("Expected some tar misses")
 	}
 
 	// Test hit rate calculation
@@ -85,16 +73,16 @@ func TestBufferPoolMetrics(t *testing.T) {
 
 // TestWithBuffer tests the convenience function
 func TestWithBuffer(t *testing.T) {
-	WithBuffer(HashBuffer, func(buffer []byte) {
-		if len(buffer) != HashBufferSize {
-			t.Errorf("Expected buffer size %d, got %d", HashBufferSize, len(buffer))
+	WithBuffer(TarBuffer, func(buffer []byte) {
+		if len(buffer) != TarBufferSize {
+			t.Errorf("Expected buffer size %d, got %d", TarBufferSize, len(buffer))
 		}
 		buffer[0] = 42
 	})
 
 	// After WithBuffer, the buffer should be returned to pool
 	// and the next use should get a zeroed buffer
-	WithBuffer(HashBuffer, func(buffer []byte) {
+	WithBuffer(TarBuffer, func(buffer []byte) {
 		if buffer[0] != 0 {
 			t.Error("Expected zeroed buffer from pool")
 		}
@@ -123,34 +111,34 @@ func TestOversizedBuffer(t *testing.T) {
 	oversized := make([]byte, MaxRetainedBufferSize+1)
 	
 	// Try to put it back
-	pool.Put(oversized, HashBuffer)
+	pool.Put(oversized, TarBuffer)
 
 	// The next get should allocate a new buffer, not return the oversized one
-	buffer := pool.Get(HashBuffer)
-	if len(buffer) != HashBufferSize {
-		t.Errorf("Expected buffer size %d, got %d", HashBufferSize, len(buffer))
+	buffer := pool.Get(TarBuffer)
+	if len(buffer) != TarBufferSize {
+		t.Errorf("Expected buffer size %d, got %d", TarBufferSize, len(buffer))
 	}
 	if cap(buffer) > MaxRetainedBufferSize {
 		t.Error("Pool returned an oversized buffer")
 	}
 }
 
-// BenchmarkBufferPool benchmarks buffer pool performance
+// BenchmarkBufferPool benchmarks TAR buffer pool performance
 func BenchmarkBufferPool(b *testing.B) {
 	pool := NewBufferPool()
 
 	b.Run("Get/Put", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			buffer := pool.Get(HashBuffer)
+			buffer := pool.Get(TarBuffer)
 			// Simulate some work
 			buffer[0] = byte(i)
-			pool.Put(buffer, HashBuffer)
+			pool.Put(buffer, TarBuffer)
 		}
 	})
 
 	b.Run("WithBuffer", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			WithBuffer(HashBuffer, func(buffer []byte) {
+			WithBuffer(TarBuffer, func(buffer []byte) {
 				// Simulate some work
 				buffer[0] = byte(i)
 			})
@@ -158,7 +146,7 @@ func BenchmarkBufferPool(b *testing.B) {
 	})
 }
 
-// BenchmarkBufferPoolParallel benchmarks concurrent buffer pool usage
+// BenchmarkBufferPoolParallel benchmarks concurrent TAR buffer pool usage
 func BenchmarkBufferPoolParallel(b *testing.B) {
 	pool := NewBufferPool()
 
