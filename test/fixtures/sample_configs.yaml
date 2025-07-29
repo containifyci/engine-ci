@@ -1,0 +1,514 @@
+# Sample configurations for testing the engine-ci configuration system
+
+# Basic development configuration
+development:
+  version: "dev"
+  language:
+    go:
+      version: "1.24.2"
+      lint_image: "golangci/golangci-lint:v2.1.2"
+      test_timeout: "2m"
+      build_timeout: "10m"
+      coverage_mode: "text"
+      project_mount: "/src"
+      output_dir: "/out"
+      build_tags: ["dev", "local"]
+      variants:
+        alpine:
+          base_image: "golang:1.24.2-alpine"
+          cgo_enabled: false
+        debian:
+          base_image: "golang:1.24.2"
+          cgo_enabled: false
+        debian_cgo:
+          base_image: "golang:1.24.2"
+          cgo_enabled: true
+      environment:
+        CGO_ENABLED: "0"
+        GOOS: "linux"
+        GOARCH: "amd64"
+    maven:
+      prod_image: "registry.access.redhat.com/ubi8/openjdk-17:latest"
+      base_image: "maven:3-eclipse-temurin-17-alpine"
+      cache_location: "/root/.m2"
+      java_version: "17"
+      maven_version: "3.9.0"
+      java_opts: "-Xms512m -Xmx1g"
+      maven_opts: "-Dmaven.test.skip=false"
+    python:
+      base_image: "python:3.11-slim-bookworm"
+      version: "3.11"
+      cache_location: "/root/.cache/pip"
+      uv_enabled: true
+      uv_cache_dir: "/root/.cache/uv"
+      pip_no_cache: false
+      requirements: ["requirements.txt", "requirements-dev.txt"]
+  container:
+    registry: "dev-registry.io"
+    images:
+      pull_policy: "never"
+      tag_policy: "latest"
+    timeouts:
+      container: "1h"
+      container_start: "30s"
+      container_stop: "10s"
+      build: "1h"
+      test: "10m"
+      pull: "5m"
+      push: "5m"
+    resources:
+      memory_limit: "2Gi"
+      cpu_limit: "2"
+  cache:
+    enabled: true
+    cleanup_policy: "lru"
+    max_size: "5GB"
+    directories:
+      go: "/tmp/go-cache"
+      maven: "/tmp/maven-cache"
+      python: "/tmp/python-cache"
+      trivy: "/tmp/trivy-cache"
+  logging:
+    level: "debug"
+    format: "text"
+    output: "stdout"
+    add_source: true
+  environment:
+    type: "local"
+
+---
+
+# Production configuration
+production:
+  version: "prod-1.0"
+  language:
+    go:
+      version: "1.24.2"
+      lint_image: "golangci/golangci-lint:v2.1.2"
+      test_timeout: "5m"
+      build_timeout: "30m"
+      coverage_mode: "binary"
+      project_mount: "/workspace"
+      output_dir: "/artifacts"
+      build_tags: ["prod", "release"]
+      variants:
+        alpine:
+          base_image: "golang:1.24.2-alpine"
+          cgo_enabled: false
+          dependencies: ["ca-certificates", "tzdata"]
+        debian:
+          base_image: "golang:1.24.2"
+          cgo_enabled: false
+        debian_cgo:
+          base_image: "golang:1.24.2"
+          cgo_enabled: true
+          dependencies: ["gcc", "libc6-dev"]
+      environment:
+        CGO_ENABLED: "0"
+        GOOS: "linux"
+        GOARCH: "amd64"
+        GO111MODULE: "on"
+    maven:
+      prod_image: "registry.access.redhat.com/ubi8/openjdk-17:latest"
+      base_image: "maven:3-eclipse-temurin-17-alpine"
+      cache_location: "/root/.m2"
+      java_version: "17"
+      maven_version: "3.9.0"
+      java_opts: "-Xms1g -Xmx4g -XX:MaxDirectMemorySize=1g"
+      maven_opts: "-Dmaven.test.skip=false -Dmaven.compiler.source=17 -Dmaven.compiler.target=17"
+      test_timeout: "30m"
+      build_timeout: "1h"
+    python:
+      base_image: "python:3.11-slim-bookworm"
+      version: "3.11"
+      cache_location: "/root/.cache/pip"
+      uv_enabled: true
+      uv_cache_dir: "/root/.cache/uv"
+      pip_no_cache: false
+      test_timeout: "20m"
+      build_timeout: "45m"
+      requirements: ["requirements.txt"]
+  container:
+    registry: "prod-registry.company.com"
+    images:
+      pull_policy: "always"
+      tag_policy: "semver"
+    timeouts:
+      container: "4h"
+      container_start: "2m"
+      container_stop: "30s"
+      build: "4h"
+      test: "1h"
+      pull: "30m"
+      push: "30m"
+    resources:
+      memory_limit: "8Gi"
+      memory_request: "4Gi"
+      cpu_limit: "4"
+      cpu_request: "2"
+    volumes:
+      source_mount: "/workspace"
+      output_dir: "/artifacts"
+      cache_dir: "/cache"
+      temp_dir: "/tmp"
+      script_path: "/scripts"
+  cache:
+    enabled: true
+    cleanup_policy: "size_based"
+    max_size: "50GB"
+    directories:
+      go: "/cache/go"
+      maven: "/cache/maven"
+      python: "/cache/python"
+      trivy: "/cache/trivy"
+      docker: "/cache/docker"
+    permissions:
+      mode: "0755"
+      owner: "builduser"
+      group: "buildgroup"
+  security:
+    user_management:
+      create_non_root_user: true
+      uid: "1001"
+      gid: "1001"
+      username: "builduser"
+      group: "buildgroup"
+      home: "/home/builduser"
+      shell: "/bin/sh"
+    registries:
+      verify_tls: true
+      default_registry: "prod-registry.company.com"
+    secrets:
+      provider: "vault"
+      vault:
+        address: "https://vault.company.com"
+        path: "secret/ci"
+    scanning:
+      trivy:
+        image: "aquasec/trivy:latest"
+        cache_dir: "/cache/trivy"
+        severity: ["HIGH", "CRITICAL"]
+        ignore_unfixed: false
+        timeout: "10m"
+        scanners: ["vuln", "secret"]
+        format: "sarif"
+        output_path: "/artifacts/trivy-report.sarif"
+  logging:
+    level: "warn"
+    format: "json"
+    output: "file"
+    file_path: "/logs/engine-ci.log"
+    max_size: "100MB"
+    max_backups: 5
+    max_age: "30d"
+    compress: true
+    add_source: false
+    sample_rate: 0.1
+  network:
+    ssh_forwarding: false
+    proxy:
+      enabled: true
+      http_proxy: "http://proxy.company.com:8080"
+      https_proxy: "https://proxy.company.com:8443"
+      no_proxy: "localhost,127.0.0.1,.company.com"
+  environment:
+    type: "production"
+
+---
+
+# CI/CD Build configuration
+ci:
+  version: "ci-2.1"
+  language:
+    go:
+      version: "1.24.2"
+      lint_image: "golangci/golangci-lint:v2.1.2"
+      test_timeout: "10m"
+      build_timeout: "20m"
+      coverage_mode: "text"
+      project_mount: "/workspace"
+      output_dir: "/output"
+      build_tags: ["ci", "integration"]
+      mod_cache: "/cache/go/mod"
+      variants:
+        alpine:
+          base_image: "golang:1.24.2-alpine"
+        debian:
+          base_image: "golang:1.24.2"
+        debian_cgo:
+          base_image: "golang:1.24.2"
+          cgo_enabled: true
+      environment:
+        GOPRIVATE: "github.com/company/*"
+        GOPROXY: "https://proxy.golang.org,direct"
+        GOSUMDB: "sum.golang.org"
+    maven:
+      base_image: "maven:3-eclipse-temurin-17"
+      java_version: "17"
+      cache_location: "/cache/maven"
+      test_timeout: "20m"
+      build_timeout: "45m"
+      java_opts: "-Xms1g -Xmx3g"
+      maven_opts: "-Dmaven.repo.local=/cache/maven -Dmaven.test.failure.ignore=false"
+    python:
+      base_image: "python:3.11-slim"
+      version: "3.11"
+      cache_location: "/cache/python"
+      test_timeout: "15m"
+      build_timeout: "30m"
+      uv_enabled: true
+      requirements: ["requirements.txt", "requirements-test.txt"]
+  container:
+    registry: "ci-registry.company.com"
+    images:
+      pull_policy: "if_not_present"
+      tag_policy: "commit"
+    timeouts:
+      container: "2h"
+      container_start: "1m"
+      container_stop: "20s"
+      build: "2h"
+      test: "30m"
+      pull: "10m"
+      push: "10m"
+    resources:
+      memory_limit: "4Gi"
+      memory_request: "2Gi"
+      cpu_limit: "2"
+      cpu_request: "1"
+  cache:
+    enabled: true
+    cleanup_policy: "age_based"
+    max_size: "20GB"
+    directories:
+      go: "/cache/go"
+      maven: "/cache/maven"
+      python: "/cache/python"
+      trivy: "/cache/trivy"
+  security:
+    user_management:
+      create_non_root_user: true
+      uid: "1000"
+      gid: "1000"
+      username: "ci"
+      group: "ci"
+      home: "/home/ci"
+    registries:
+      verify_tls: true
+    scanning:
+      trivy:
+        image: "aquasec/trivy:latest"
+        severity: ["MEDIUM", "HIGH", "CRITICAL"]
+        timeout: "5m"
+        format: "json"
+  logging:
+    level: "info"
+    format: "structured"
+    output: "stdout"
+    add_source: true
+    progress_format: "plain"
+  network:
+    ssh_forwarding: true
+  environment:
+    type: "build"
+
+---
+
+# Minimal configuration for testing
+minimal:
+  version: "minimal"
+  language:
+    go:
+      version: "1.24.2"
+      lint_image: "golangci/golangci-lint:v2.1.2"
+      project_mount: "/src"
+      output_dir: "/out"
+
+---
+
+# Edge case configuration with unusual values
+edge_case:
+  version: "edge-1.0"
+  language:
+    go:
+      version: "1.23"
+      lint_image: "custom/golangci-lint:experimental"
+      test_timeout: "30s"
+      build_timeout: "5h"
+      coverage_mode: "binary"
+      project_mount: "/workspace/src"
+      output_dir: "/workspace/artifacts"
+      build_tags: ["experimental", "edge", "test-feature"]
+      mod_cache: "/custom/cache/go"
+      variants:
+        alpine:
+          base_image: "golang:1.23-alpine3.18"
+          image_suffix: "-edge"
+          dependencies: ["git", "ca-certificates", "tzdata", "curl"]
+        debian:
+          base_image: "golang:1.23-bullseye"
+          dependencies: ["git", "ca-certificates"]
+        debian_cgo:
+          base_image: "golang:1.23-bullseye"
+          cgo_enabled: true
+          dependencies: ["gcc", "g++", "libc6-dev", "make"]
+      environment:
+        CGO_ENABLED: "1"
+        GOOS: "linux"
+        GOARCH: "arm64"
+        GOEXPERIMENT: "arenas"
+        GODEBUG: "gctrace=1"
+        GO111MODULE: "on"
+        GOPROXY: "direct"
+        GOSUMDB: "off"
+    maven:
+      prod_image: "openjdk:21-jdk-slim"
+      base_image: "maven:3-openjdk-21-slim"
+      cache_location: "/workspace/cache/maven"
+      java_version: "21"
+      maven_version: "3.9.5"
+      java_opts: "-Xms2g -Xmx6g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+      maven_opts: "-Dmaven.repo.local=/workspace/cache/maven -Duser.timezone=UTC"
+      test_timeout: "45m"
+      build_timeout: "2h"
+    python:
+      base_image: "python:3.12-slim-bookworm"
+      version: "3.12"
+      cache_location: "/workspace/cache/python"
+      test_timeout: "25m"
+      build_timeout: "1h"
+      uv_enabled: true
+      uv_cache_dir: "/workspace/cache/uv"
+      pip_no_cache: true
+      requirements: ["pyproject.toml", "requirements-dev.txt", "requirements-test.txt"]
+  container:
+    registry: "edge-registry.test.com"
+    images:
+      pull_policy: "always"
+      tag_policy: "latest"
+      base_images:
+        golang: "golang:1.23-alpine3.18"
+        maven: "maven:3-openjdk-21-slim"
+        python: "python:3.12-slim-bookworm"
+    timeouts:
+      container: "6h"
+      container_start: "5m"
+      container_stop: "1m"
+      build: "6h"
+      test: "2h"
+      pull: "45m"
+      push: "45m"
+      script: "30m"
+    resources:
+      memory_limit: "16Gi"
+      memory_request: "8Gi"
+      cpu_limit: "8"
+      cpu_request: "4"
+      disk_limit: "100Gi"
+    volumes:
+      source_mount: "/workspace/src"
+      output_dir: "/workspace/artifacts"
+      cache_dir: "/workspace/cache"
+      temp_dir: "/workspace/tmp"
+      script_path: "/workspace/scripts"
+      custom_mounts:
+        "/workspace/secrets": "/secrets"
+        "/workspace/tools": "/tools"
+    runtime:
+      type: "podman"
+      socket_path: "/run/user/1000/podman/podman.sock"
+      options:
+        storage-driver: "overlay"
+        storage-opt: "overlay.mount_program=/usr/bin/fuse-overlayfs"
+  cache:
+    enabled: true
+    cleanup_policy: "custom"
+    max_size: "100GB"
+    directories:
+      go: "/workspace/cache/go"
+      maven: "/workspace/cache/maven"
+      python: "/workspace/cache/python"
+      trivy: "/workspace/cache/trivy"
+      docker: "/workspace/cache/docker"
+      custom:
+        nodejs: "/workspace/cache/nodejs"
+        rust: "/workspace/cache/rust"
+    permissions:
+      mode: "0755"
+      owner: "edge-user"
+      group: "edge-group"
+  security:
+    user_management:
+      create_non_root_user: true
+      uid: "2000"
+      gid: "2000"
+      username: "edge-user"
+      group: "edge-group"
+      home: "/home/edge-user"
+      shell: "/bin/bash"
+    registries:
+      verify_tls: false
+      default_registry: "edge-registry.test.com"
+      insecure_registries: ["localhost:5000", "test-registry:5000"]
+      auth_config_path: "/workspace/secrets/docker-config.json"
+    secrets:
+      provider: "file"
+      file:
+        path: "/workspace/secrets"
+        permissions: "0600"
+    scanning:
+      trivy:
+        image: "aquasec/trivy:edge"
+        cache_dir: "/workspace/cache/trivy"
+        severity: ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        ignore_unfixed: true
+        timeout: "30m"
+        scanners: ["vuln", "secret", "config"]
+        format: "table"
+        output_path: "/workspace/artifacts/security-report.txt"
+        environment:
+          TRIVY_TIMEOUT: "30m"
+          TRIVY_QUIET: "false"
+          TRIVY_DEBUG: "true"
+  logging:
+    level: "trace"
+    format: "json"
+    output: "file"
+    file_path: "/workspace/logs/engine-ci.log"
+    max_size: "500MB"
+    max_backups: 10
+    max_age: "7d"
+    compress: true
+    add_source: true
+    sample_rate: 1.0
+    progress_format: "json"
+    custom_fields:
+      service: "engine-ci"
+      environment: "edge"
+      version: "edge-1.0"
+  network:
+    ssh_forwarding: true
+    proxy:
+      enabled: true
+      http_proxy: "http://proxy.edge.com:3128"
+      https_proxy: "https://proxy.edge.com:3129"
+      no_proxy: "localhost,127.0.0.1,*.edge.com,*.test.com"
+    dns:
+      servers: ["8.8.8.8", "1.1.1.1"]
+      search_domains: ["edge.com", "test.com"]
+      options: ["ndots:2", "timeout:5"]
+  environment:
+    type: "local"
+    profiles:
+      local:
+        verbose: true
+        pull_policy: "never"
+        security_hardening: false
+        resource_limits_enforced: false
+        log_level: "trace"
+        cache_enabled: true
+        parallel_builds: 4
+        custom_settings:
+          experimental_features: true
+          debug_mode: true
+          profiling_enabled: true
