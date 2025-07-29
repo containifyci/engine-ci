@@ -6,11 +6,6 @@ import (
 )
 
 const (
-	// Buffer size categories for different use cases
-	SmallBufferSize  = 4096   // 4KB - for small I/O operations
-	MediumBufferSize = 32768  // 32KB - for medium I/O operations
-	LargeBufferSize  = 131072 // 128KB - for large I/O operations
-
 	// Specialized buffer sizes
 	HashBufferSize = 65536 // 64KB - optimized for hash operations
 	TarBufferSize  = 65536 // 64KB - optimized for tar operations
@@ -23,32 +18,27 @@ const (
 type BufferSize int
 
 const (
-	SmallBuffer BufferSize = iota
-	MediumBuffer
-	LargeBuffer
-	HashBuffer
+	HashBuffer BufferSize = iota
 	TarBuffer
+	// Alias for backward compatibility
+	SmallBuffer = HashBuffer
 )
+
+// bufferWrapper wraps a byte slice for sync.Pool compatibility
+type bufferWrapper struct {
+	b []byte
+}
 
 // BufferPool manages reusable byte slices for I/O operations
 type BufferPool struct {
-	small  sync.Pool
-	medium sync.Pool
-	large  sync.Pool
-	hash   sync.Pool
-	tar    sync.Pool
+	hash sync.Pool
+	tar  sync.Pool
 
 	// Metrics for monitoring pool efficiency
-	smallHits    int64
-	mediumHits   int64
-	largeHits    int64
-	hashHits     int64
-	tarHits      int64
-	smallMisses  int64
-	mediumMisses int64
-	largeMisses  int64
-	hashMisses   int64
-	tarMisses    int64
+	hashHits   int64
+	tarHits    int64
+	hashMisses int64
+	tarMisses  int64
 }
 
 // Global buffer pool instance
@@ -58,35 +48,11 @@ var defaultBufferPool = NewBufferPool()
 func NewBufferPool() *BufferPool {
 	pool := &BufferPool{}
 
-	// Initialize small buffer pool (for small I/O operations)
-	pool.small = sync.Pool{
-		New: func() interface{} {
-			atomic.AddInt64(&pool.smallMisses, 1)
-			return make([]byte, SmallBufferSize)
-		},
-	}
-
-	// Initialize medium buffer pool (for typical I/O operations)
-	pool.medium = sync.Pool{
-		New: func() interface{} {
-			atomic.AddInt64(&pool.mediumMisses, 1)
-			return make([]byte, MediumBufferSize)
-		},
-	}
-
-	// Initialize large buffer pool (for large I/O operations)
-	pool.large = sync.Pool{
-		New: func() interface{} {
-			atomic.AddInt64(&pool.largeMisses, 1)
-			return make([]byte, LargeBufferSize)
-		},
-	}
-
 	// Initialize specialized hash buffer pool
 	pool.hash = sync.Pool{
 		New: func() interface{} {
 			atomic.AddInt64(&pool.hashMisses, 1)
-			return make([]byte, HashBufferSize)
+			return &bufferWrapper{b: make([]byte, HashBufferSize)}
 		},
 	}
 
@@ -94,120 +60,76 @@ func NewBufferPool() *BufferPool {
 	pool.tar = sync.Pool{
 		New: func() interface{} {
 			atomic.AddInt64(&pool.tarMisses, 1)
-			return make([]byte, TarBufferSize)
+			return &bufferWrapper{b: make([]byte, TarBufferSize)}
 		},
 	}
 
 	return pool
 }
 
-// Get retrieves a byte slice from the appropriate pool
+// Get retrieves a buffer from the appropriate pool
 func (p *BufferPool) Get(size BufferSize) []byte {
-	var buffer []byte
-
 	switch size {
-	case SmallBuffer:
-		atomic.AddInt64(&p.smallHits, 1)
-		buffer = p.small.Get().([]byte)
-	case MediumBuffer:
-		atomic.AddInt64(&p.mediumHits, 1)
-		buffer = p.medium.Get().([]byte)
-	case LargeBuffer:
-		atomic.AddInt64(&p.largeHits, 1)
-		buffer = p.large.Get().([]byte)
 	case HashBuffer:
 		atomic.AddInt64(&p.hashHits, 1)
-		buffer = p.hash.Get().([]byte)
+		return p.hash.Get().(*bufferWrapper).b
 	case TarBuffer:
 		atomic.AddInt64(&p.tarHits, 1)
-		buffer = p.tar.Get().([]byte)
+		return p.tar.Get().(*bufferWrapper).b
 	default:
-		// Default to medium size
-		atomic.AddInt64(&p.mediumHits, 1)
-		buffer = p.medium.Get().([]byte)
+		// Default to hash buffer
+		atomic.AddInt64(&p.hashHits, 1)
+		return p.hash.Get().(*bufferWrapper).b
 	}
-
-	// Clear the buffer before returning (security and correctness)
-	for i := range buffer {
-		buffer[i] = 0
-	}
-
-	return buffer
 }
 
-// Put returns a byte slice to the appropriate pool
+// Put returns a buffer to the appropriate pool
 func (p *BufferPool) Put(buffer []byte, size BufferSize) {
 	// Only return to pool if capacity is reasonable to avoid memory bloat
-	if len(buffer) > MaxRetainedBufferSize {
+	if cap(buffer) > MaxRetainedBufferSize {
 		// Don't return oversized buffers to pool
 		return
 	}
 
+	// Clear the buffer for security and cleanliness
+	for i := range buffer {
+		buffer[i] = 0
+	}
+
+	wrapper := &bufferWrapper{b: buffer}
+
 	switch size {
-	case SmallBuffer:
-		if len(buffer) >= SmallBufferSize {
-			// Avoid allocation by using slice with proper capacity
-			p.small.Put(buffer[:SmallBufferSize:SmallBufferSize]) // nolint:staticcheck
-		}
-	case MediumBuffer:
-		if len(buffer) >= MediumBufferSize {
-			// Avoid allocation by using slice with proper capacity
-			p.medium.Put(buffer[:MediumBufferSize:MediumBufferSize]) // nolint:staticcheck
-		}
-	case LargeBuffer:
-		if len(buffer) >= LargeBufferSize {
-			// Avoid allocation by using slice with proper capacity
-			p.large.Put(buffer[:LargeBufferSize:LargeBufferSize]) // nolint:staticcheck
-		}
 	case HashBuffer:
-		if len(buffer) >= HashBufferSize {
-			p.hash.Put(buffer[:HashBufferSize]) // nolint:staticcheck
-		}
+		p.hash.Put(wrapper)
 	case TarBuffer:
-		if len(buffer) >= TarBufferSize {
-			p.tar.Put(buffer[:TarBufferSize]) // nolint:staticcheck
-		}
+		p.tar.Put(wrapper)
 	default:
-		if len(buffer) >= MediumBufferSize {
-			p.medium.Put(buffer[:MediumBufferSize]) // nolint:staticcheck
-		}
+		p.hash.Put(wrapper)
 	}
 }
 
-// GetMetrics returns buffer pool efficiency metrics
+// GetMetrics returns pool efficiency metrics
 func (p *BufferPool) GetMetrics() BufferPoolMetrics {
 	return BufferPoolMetrics{
-		SmallHits:    atomic.LoadInt64(&p.smallHits),
-		SmallMisses:  atomic.LoadInt64(&p.smallMisses),
-		MediumHits:   atomic.LoadInt64(&p.mediumHits),
-		MediumMisses: atomic.LoadInt64(&p.mediumMisses),
-		LargeHits:    atomic.LoadInt64(&p.largeHits),
-		LargeMisses:  atomic.LoadInt64(&p.largeMisses),
-		HashHits:     atomic.LoadInt64(&p.hashHits),
-		HashMisses:   atomic.LoadInt64(&p.hashMisses),
-		TarHits:      atomic.LoadInt64(&p.tarHits),
-		TarMisses:    atomic.LoadInt64(&p.tarMisses),
+		HashHits:   atomic.LoadInt64(&p.hashHits),
+		HashMisses: atomic.LoadInt64(&p.hashMisses),
+		TarHits:    atomic.LoadInt64(&p.tarHits),
+		TarMisses:  atomic.LoadInt64(&p.tarMisses),
 	}
 }
 
 // BufferPoolMetrics contains statistics about buffer pool usage
 type BufferPoolMetrics struct {
-	SmallHits    int64
-	SmallMisses  int64
-	MediumHits   int64
-	MediumMisses int64
-	LargeHits    int64
-	LargeMisses  int64
-	HashHits     int64
-	HashMisses   int64
-	TarHits      int64
-	TarMisses    int64
+	HashHits   int64
+	HashMisses int64
+	TarHits    int64
+	TarMisses  int64
 }
 
-// HitRate calculates the overall hit rate across all buffer pools
+// HitRate calculates the overall hit rate across all pools
 func (m BufferPoolMetrics) HitRate() float64 {
-	totalHits := m.SmallHits + m.MediumHits + m.LargeHits + m.HashHits + m.TarHits
-	totalMisses := m.SmallMisses + m.MediumMisses + m.LargeMisses + m.HashMisses + m.TarMisses
+	totalHits := m.HashHits + m.TarHits
+	totalMisses := m.HashMisses + m.TarMisses
 	total := totalHits + totalMisses
 
 	if total == 0 {
@@ -217,7 +139,7 @@ func (m BufferPoolMetrics) HitRate() float64 {
 	return float64(totalHits) / float64(total)
 }
 
-// Convenience functions for the default buffer pool
+// Convenience functions for the default pool
 
 // GetBuffer gets a buffer from the default pool
 func GetBuffer(size BufferSize) []byte {
@@ -229,14 +151,9 @@ func PutBuffer(buffer []byte, size BufferSize) {
 	defaultBufferPool.Put(buffer, size)
 }
 
-// GetBufferPoolMetrics returns metrics for the default buffer pool
+// GetBufferPoolMetrics returns metrics for the default pool
 func GetBufferPoolMetrics() BufferPoolMetrics {
 	return defaultBufferPool.GetMetrics()
-}
-
-// ResetBufferPoolMetrics resets all buffer pool metrics (useful for testing)
-func ResetBufferPoolMetrics() {
-	defaultBufferPool = NewBufferPool()
 }
 
 // WithBuffer executes a function with a pooled buffer
@@ -247,24 +164,10 @@ func WithBuffer(size BufferSize, fn func([]byte)) {
 	fn(buffer)
 }
 
-// WithBufferReturn executes a function with a pooled buffer and returns a result
+// WithBufferReturn executes a function with a pooled buffer and returns a value
 // This ensures proper cleanup even if the function panics
 func WithBufferReturn[T any](size BufferSize, fn func([]byte) T) T {
 	buffer := GetBuffer(size)
 	defer PutBuffer(buffer, size)
 	return fn(buffer)
-}
-
-// EstimateBufferSize estimates the appropriate buffer size based on expected data size
-func EstimateBufferSize(estimatedDataSize int) BufferSize {
-	switch {
-	case estimatedDataSize <= SmallBufferSize:
-		return SmallBuffer
-	case estimatedDataSize <= MediumBufferSize:
-		return MediumBuffer
-	case estimatedDataSize <= LargeBufferSize:
-		return LargeBuffer
-	default:
-		return LargeBuffer
-	}
 }

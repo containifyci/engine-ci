@@ -140,10 +140,8 @@ func (b *Build) ImageURI() string {
 		memory.TrackOperation(time.Since(start))
 	}()
 
-	// For simple concatenation like this, estimate the size and use pooled string builder
-	estimatedLength := len(b.Image) + 1 + len(b.ImageTag) // image + ":" + tag
-
-	return memory.WithStringBuilder(memory.EstimateSize(estimatedLength), func(builder *strings.Builder) string {
+	// Use pooled string builder for concatenation
+	return memory.WithStringBuilder(func(builder *strings.Builder) string {
 		builder.WriteString(b.Image)
 		builder.WriteByte(':')
 		builder.WriteString(b.ImageTag)
