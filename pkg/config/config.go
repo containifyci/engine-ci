@@ -43,6 +43,7 @@ type LanguageConfig struct {
 	Environment   map[string]string `yaml:"environment"`
 	BaseImage     string            `yaml:"base_image" validate:"required"`
 	CacheLocation string            `yaml:"cache_location" validate:"required"`
+	WorkingDir    string            `yaml:"working_dir"`
 	ProdImage     string            `yaml:"prod_image,omitempty"`
 	CustomArgs    []string          `yaml:"custom_args"`
 	BuildTimeout  time.Duration     `yaml:"build_timeout" validate:"min=1m,max=2h"`
