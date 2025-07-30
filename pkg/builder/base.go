@@ -14,18 +14,12 @@ import (
 // This struct implements shared patterns and reduces code duplication across implementations.
 type BaseBuilder struct {
 	*container.Container
-	
-	// Configuration
-	Config     BuildConfiguration
-	Defaults   common.LanguageDefaults
-	
-	// Image management
-	images     []string
-	baseImage  string
-	
-	// Cache and paths
-	cacheDir   string
-	sourceDir  string
+	baseImage string
+	cacheDir  string
+	sourceDir string
+	Defaults  common.LanguageDefaults
+	images    []string
+	Config    BuildConfiguration
 }
 
 // NewBaseBuilder creates a new BaseBuilder instance with common initialization.
@@ -45,7 +39,7 @@ func NewBaseBuilder(build container.Build, defaults common.LanguageDefaults) *Ba
 		Tags:        build.Custom.Strings("tags"),
 		Custom:      build.Custom,
 	}
-	
+
 	return &BaseBuilder{
 		Container: container.New(build),
 		Config:    config,
@@ -71,7 +65,7 @@ func (b *BaseBuilder) Images() []string {
 	if len(b.images) == 0 {
 		// Build default image list
 		b.images = []string{b.baseImage}
-		
+
 		// Add intermediate image if different
 		if intermediateImg := b.IntermediateImage(); intermediateImg != b.baseImage {
 			b.images = append(b.images, intermediateImg)
@@ -101,7 +95,7 @@ func (b *BaseBuilder) ApplyContainerOptions(opts *types.ContainerConfig) {
 	if opts.WorkingDir == "" {
 		opts.WorkingDir = "/src"
 	}
-	
+
 	// Apply verbose flag if set
 	if b.Config.Verbose && len(opts.Cmd) > 0 && opts.Cmd[0] == "sh" {
 		opts.Cmd = append(opts.Cmd, "-v")
@@ -112,17 +106,17 @@ func (b *BaseBuilder) ApplyContainerOptions(opts *types.ContainerConfig) {
 func (b *BaseBuilder) SetupContainerEnvironment(opts *types.ContainerConfig) {
 	// Apply base configuration
 	b.ApplyContainerOptions(opts)
-	
+
 	// Set up environment variables
 	if opts.Env == nil {
 		opts.Env = []string{}
 	}
-	
+
 	// Add language-specific environment variables
 	for key, value := range b.Defaults.DefaultEnv {
 		opts.Env = append(opts.Env, fmt.Sprintf("%s=%s", key, value))
 	}
-	
+
 	// Add containify host if configured
 	if host := common.GetContainifyHost(b.Config.Custom); host != "" {
 		opts.Env = append(opts.Env, fmt.Sprintf("CONTAINIFYCI_HOST=%s", host))
@@ -131,12 +125,10 @@ func (b *BaseBuilder) SetupContainerEnvironment(opts *types.ContainerConfig) {
 
 // SetupContainerVolumes prepares common volume mounts for the container.
 func (b *BaseBuilder) SetupContainerVolumes(opts *types.ContainerConfig) {
-	// Determine source directory
+	// Always mount the project root directory (not the specific folder)
+	// The build script will cd into the specific folder as needed
 	sourceDir := b.sourceDir
-	if b.Config.Folder != "" {
-		sourceDir = b.Config.Folder
-	}
-	
+
 	// Set up common volumes (source + cache)
 	opts.Volumes = common.SetupCommonVolumes(
 		sourceDir,
@@ -153,7 +145,7 @@ func (b *BaseBuilder) SetupSSHForwarding(opts *types.ContainerConfig) error {
 		slog.Error("Failed to forward SSH", "error", err)
 		return fmt.Errorf("failed to setup SSH forwarding: %w", err)
 	}
-	
+
 	*opts = ssh.Apply(opts)
 	return nil
 }
@@ -165,23 +157,23 @@ func (b *BaseBuilder) ExecuteBuildContainer(imageTag, script string) error {
 		WorkingDir: b.Defaults.SourceMount,
 		Script:     script,
 	}
-	
+
 	// Apply common container setup
 	b.SetupContainerEnvironment(&opts)
 	b.SetupContainerVolumes(&opts)
-	
+
 	// Setup SSH forwarding
 	if err := b.SetupSSHForwarding(&opts); err != nil {
 		return err
 	}
-	
+
 	// Execute the build
 	err := b.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
 		return fmt.Errorf("build failed: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -191,7 +183,7 @@ func (b *BaseBuilder) ValidateProject() error {
 	if b.Config.Folder != "" {
 		projectDir = b.Config.Folder
 	}
-	
+
 	return common.ValidateRequiredFiles(projectDir, b.Defaults.RequiredFiles)
 }
 
@@ -201,31 +193,31 @@ func (b *BaseBuilder) CreateProductionContainer(prodImage string) error {
 		slog.Info("Skip building prod image in local environment")
 		return nil
 	}
-	
+
 	if b.Config.Image == "" {
 		slog.Info("Skip No image specified to push")
 		return nil
 	}
-	
+
 	return common.CreateProdContainer(b.Container, prodImage)
 }
 
 // CommitProductionImage creates and tags the final production image.
 func (b *BaseBuilder) CommitProductionImage(cmd, user, workdir string) (string, error) {
 	imageUri := fmt.Sprintf("%s:%s", b.Config.Image, b.Config.ImageTag)
-	
+
 	commitArgs := []string{
 		fmt.Sprintf("CMD [%s]", cmd),
 	}
-	
+
 	if user != "" {
 		commitArgs = append(commitArgs, fmt.Sprintf("USER %s", user))
 	}
-	
+
 	if workdir != "" {
 		commitArgs = append(commitArgs, fmt.Sprintf("WORKDIR %s", workdir))
 	}
-	
+
 	return b.Commit(imageUri, "Created from container", commitArgs...)
 }
 
@@ -242,14 +234,14 @@ func (b *BaseBuilder) CopyApplicationToContainer(sourcePath, targetPath string) 
 		slog.Error("Failed to inspect container", "error", err)
 		return fmt.Errorf("failed to inspect container: %w", err)
 	}
-	
+
 	slog.Info("Container info",
 		"name", containerInfo.Name,
 		"image", containerInfo.Image,
 		"arch", containerInfo.Platform.Container.Architecture,
 		"os", containerInfo.Platform.Container.OS,
 	)
-	
+
 	// Build architecture-specific source path if needed
 	if b.Config.App != "" {
 		sourcePath = fmt.Sprintf("%s/%s-%s-%s",
@@ -258,10 +250,10 @@ func (b *BaseBuilder) CopyApplicationToContainer(sourcePath, targetPath string) 
 			containerInfo.Platform.Container.OS,
 			containerInfo.Platform.Container.Architecture,
 		)
-		
+
 		targetPath = fmt.Sprintf("%s/%s", targetPath, b.Config.App)
 	}
-	
+
 	return b.CopyFileTo(sourcePath, targetPath)
 }
 
@@ -269,13 +261,13 @@ func (b *BaseBuilder) CopyApplicationToContainer(sourcePath, targetPath string) 
 func (b *BaseBuilder) DefaultPullImages(additionalImages ...string) error {
 	imagesToPull := []string{b.baseImage}
 	imagesToPull = append(imagesToPull, additionalImages...)
-	
+
 	for _, image := range imagesToPull {
 		if err := b.Container.Pull(image); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", image, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -311,7 +303,7 @@ func (b *BaseBuilder) Build() error {
 	if err := b.ValidateProject(); err != nil {
 		return fmt.Errorf("project validation failed: %w", err)
 	}
-	
+
 	// Default implementation calls ExecuteBuildContainer
 	return b.ExecuteBuildContainer(b.IntermediateImage(), b.BuildScript())
 }
@@ -330,19 +322,19 @@ func (b *BaseBuilder) Run() error {
 		slog.Error("Failed to pull base images", "error", err)
 		return err
 	}
-	
+
 	// Build intermediate image
 	if err := b.BuildIntermediateImage(); err != nil {
 		slog.Error("Failed to build intermediate image", "error", err)
 		return err
 	}
-	
+
 	// Execute main build
 	if err := b.Build(); err != nil {
 		slog.Error("Failed to execute build", "error", err)
 		return err
 	}
-	
+
 	slog.Info("Build completed successfully", "containerId", b.ID)
 	return nil
 }

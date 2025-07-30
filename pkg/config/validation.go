@@ -88,7 +88,7 @@ func validateBasicConfig(config *Config, errors *ValidationErrors) error {
 			Field:   "Language.Maven.ProdImage",
 			Message: "Maven production image is required",
 			Code:    "required",
-		}) 
+		})
 	}
 
 	if config.Language.Maven.BaseImage == "" {
@@ -215,6 +215,11 @@ func validateCustomRules(config *Config) error {
 		return err
 	}
 
+	// Validate enum values
+	if err := validateEnumValues(config); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -222,19 +227,19 @@ func validateCustomRules(config *Config) error {
 func validateLanguageVersions(config *Config) error {
 	// Validate Go version
 	if !isValidSemanticVersion(config.Language.Go.Version) {
-		return fmt.Errorf("invalid Go version format: %s", config.Language.Go.Version)
+		return fmt.Errorf("invalid go version format: %s", config.Language.Go.Version)
 	}
 
 	// Validate Java version (can be semantic version or major version)
 	if config.Language.Maven.JavaVersion != "" {
 		if !isValidJavaVersion(config.Language.Maven.JavaVersion) {
-			return fmt.Errorf("invalid Java version format: %s", config.Language.Maven.JavaVersion)
+			return fmt.Errorf("invalid java version format: %s", config.Language.Maven.JavaVersion)
 		}
 	}
 
 	// Validate Python version
 	if !isValidPythonVersion(config.Language.Python.Version) {
-		return fmt.Errorf("invalid Python version format: %s", config.Language.Python.Version)
+		return fmt.Errorf("invalid python version format: %s", config.Language.Python.Version)
 	}
 
 	return nil
@@ -242,6 +247,39 @@ func validateLanguageVersions(config *Config) error {
 
 // validateTimeouts ensures timeout relationships make sense.
 func validateTimeouts(config *Config) error {
+	// Validate Go test timeout
+	if config.Language.Go.TestTimeout < 10*time.Second {
+		return fmt.Errorf("go test timeout too short: %v (min: 10s)", config.Language.Go.TestTimeout)
+	}
+	if config.Language.Go.TestTimeout > 30*time.Minute {
+		return fmt.Errorf("go test timeout too long: %v (max: 30m)", config.Language.Go.TestTimeout)
+	}
+	
+	// Validate Go build timeout
+	if config.Language.Go.BuildTimeout < 1*time.Minute {
+		return fmt.Errorf("go build timeout too short: %v (min: 1m)", config.Language.Go.BuildTimeout)
+	}
+	if config.Language.Go.BuildTimeout > 2*time.Hour {
+		return fmt.Errorf("go build timeout too long: %v (max: 2h)", config.Language.Go.BuildTimeout)
+	}
+	
+	// Validate Maven timeouts
+	if config.Language.Maven.TestTimeout < 30*time.Second {
+		return fmt.Errorf("maven test timeout too short: %v (min: 30s)", config.Language.Maven.TestTimeout)
+	}
+	if config.Language.Maven.TestTimeout > 1*time.Hour {
+		return fmt.Errorf("maven test timeout too long: %v (max: 1h)", config.Language.Maven.TestTimeout)
+	}
+	
+	// Validate Python timeouts
+	if config.Language.Python.TestTimeout < 30*time.Second {
+		return fmt.Errorf("python test timeout too short: %v (min: 30s)", config.Language.Python.TestTimeout)
+	}
+	if config.Language.Python.TestTimeout > 1*time.Hour {
+		return fmt.Errorf("python test timeout too long: %v (max: 1h)", config.Language.Python.TestTimeout)
+	}
+	
+	// Validate container timeouts
 	timeouts := config.Container.Timeouts
 
 	// Container start timeout should be reasonable
@@ -251,7 +289,7 @@ func validateTimeouts(config *Config) error {
 
 	// Test timeout should be less than build timeout
 	if timeouts.Test > timeouts.Build {
-		return fmt.Errorf("test timeout (%v) cannot be greater than build timeout (%v)", 
+		return fmt.Errorf("test timeout (%v) cannot be greater than build timeout (%v)",
 			timeouts.Test, timeouts.Build)
 	}
 
@@ -289,17 +327,17 @@ func validateSecuritySettings(config *Config) error {
 	// Validate UID/GID format
 	if config.Security.UserManagement.CreateNonRootUser {
 		if _, err := strconv.Atoi(config.Security.UserManagement.UID); err != nil {
-			return fmt.Errorf("invalid UID format: %s", config.Security.UserManagement.UID)
+			return fmt.Errorf("invalid uid format: %s", config.Security.UserManagement.UID)
 		}
-		
+
 		if _, err := strconv.Atoi(config.Security.UserManagement.GID); err != nil {
-			return fmt.Errorf("invalid GID format: %s", config.Security.UserManagement.GID)
+			return fmt.Errorf("invalid gid format: %s", config.Security.UserManagement.GID)
 		}
 
 		// Ensure non-root UID
 		uid, _ := strconv.Atoi(config.Security.UserManagement.UID)
 		if uid == 0 {
-			return fmt.Errorf("UID cannot be 0 (root) when creating non-root user")
+			return fmt.Errorf("uid cannot be 0 (root) when creating non-root user")
 		}
 	}
 
@@ -415,7 +453,7 @@ func isValidRegistryURL(registryURL string) bool {
 		// Simple registry name
 		return regexp.MustCompile(`^[a-zA-Z0-9.-]+$`).MatchString(registryURL)
 	}
-	
+
 	// Full URL
 	_, err := url.Parse(registryURL)
 	return err == nil
@@ -423,7 +461,8 @@ func isValidRegistryURL(registryURL string) bool {
 
 func isValidResourceQuantity(quantity string) bool {
 	// Kubernetes-style resource quantities (1GB, 500MB, 2Gi, etc.)
-	quantityRegex := regexp.MustCompile(`^\d+(\.\d+)?(Ki|Mi|Gi|Ti|Pi|Ei|K|M|G|T|P|E|B|b)?$`)
+	// Support both single-letter (K, M, G) and double-letter (KB, MB, GB) suffixes
+	quantityRegex := regexp.MustCompile(`^\d+(\.\d+)?(Ki|Mi|Gi|Ti|Pi|Ei|KB|MB|GB|TB|PB|EB|K|M|G|T|P|E|B|b)?$`)
 	return quantityRegex.MatchString(strings.ReplaceAll(quantity, " ", ""))
 }
 
@@ -431,6 +470,63 @@ func isValidCPUQuantity(quantity string) bool {
 	// CPU can be decimal (0.5, 1.5) or millicpu (500m, 1500m)
 	cpuRegex := regexp.MustCompile(`^\d+(\.\d+)?m?$`)
 	return cpuRegex.MatchString(strings.ReplaceAll(quantity, " ", ""))
+}
+
+// validateEnumValues validates that enum fields have valid values.
+func validateEnumValues(config *Config) error {
+	// Validate pull policy
+	validPullPolicies := []string{"always", "never", "if_not_present"}
+	if !contains(validPullPolicies, config.Container.Images.PullPolicy) {
+		return fmt.Errorf("invalid pull policy: %s (valid: %v)", config.Container.Images.PullPolicy, validPullPolicies)
+	}
+
+	// Validate log level
+	validLogLevels := []string{"debug", "info", "warn", "error", "trace"}
+	if !contains(validLogLevels, config.Logging.Level) {
+		return fmt.Errorf("invalid log level: %s (valid: %v)", config.Logging.Level, validLogLevels)
+	}
+
+	// Validate log format
+	validLogFormats := []string{"text", "json", "structured"}
+	if !contains(validLogFormats, config.Logging.Format) {
+		return fmt.Errorf("invalid log format: %s (valid: %v)", config.Logging.Format, validLogFormats)
+	}
+
+	// Validate log output
+	validLogOutputs := []string{"stdout", "stderr", "file"}
+	if config.Logging.Output != "" && !contains(validLogOutputs, config.Logging.Output) {
+		return fmt.Errorf("invalid log output: %s (valid: %v)", config.Logging.Output, validLogOutputs)
+	}
+
+	// Validate container runtime type
+	validRuntimeTypes := []string{"docker", "podman", "containerd"}
+	if config.Container.Runtime.Type != "" && !contains(validRuntimeTypes, config.Container.Runtime.Type) {
+		return fmt.Errorf("invalid container runtime type: %s (valid: %v)", config.Container.Runtime.Type, validRuntimeTypes)
+	}
+
+	// Validate cache cleanup policy
+	validCleanupPolicies := []string{"30d", "7d", "14d", "60d", "90d", "aggressive", "conservative"}
+	if config.Cache.CleanupPolicy != "" && !contains(validCleanupPolicies, config.Cache.CleanupPolicy) && !isValidDuration(config.Cache.CleanupPolicy) {
+		return fmt.Errorf("invalid cache cleanup policy: %s", config.Cache.CleanupPolicy)
+	}
+
+	return nil
+}
+
+// contains checks if a string slice contains a specific value.
+func contains(slice []string, value string) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+// isValidDuration checks if a string is a valid duration format.
+func isValidDuration(s string) bool {
+	_, err := time.ParseDuration(s)
+	return err == nil
 }
 
 // Validation helper functions that can be used throughout the codebase
@@ -471,7 +567,7 @@ func ValidatePartialConfig(config interface{}) error {
 
 func validateGoConfig(config *GoConfig) error {
 	var errors ValidationErrors
-	
+
 	if config.Version == "" {
 		errors = append(errors, ValidationError{
 			Field:   "Version",
@@ -485,7 +581,7 @@ func validateGoConfig(config *GoConfig) error {
 			Code:    "invalid_format",
 		})
 	}
-	
+
 	if config.LintImage == "" {
 		errors = append(errors, ValidationError{
 			Field:   "LintImage",
@@ -493,17 +589,17 @@ func validateGoConfig(config *GoConfig) error {
 			Code:    "required",
 		})
 	}
-	
+
 	if len(errors) > 0 {
 		return errors
 	}
-	
+
 	return nil
 }
 
 func validateMavenConfig(config *MavenConfig) error {
 	var errors ValidationErrors
-	
+
 	if config.ProdImage == "" {
 		errors = append(errors, ValidationError{
 			Field:   "ProdImage",
@@ -511,7 +607,7 @@ func validateMavenConfig(config *MavenConfig) error {
 			Code:    "required",
 		})
 	}
-	
+
 	if config.JavaVersion == "" {
 		errors = append(errors, ValidationError{
 			Field:   "JavaVersion",
@@ -519,17 +615,17 @@ func validateMavenConfig(config *MavenConfig) error {
 			Code:    "required",
 		})
 	}
-	
+
 	if len(errors) > 0 {
 		return errors
 	}
-	
+
 	return nil
 }
 
 func validatePythonConfig(config *PythonConfig) error {
 	var errors ValidationErrors
-	
+
 	if config.BaseImage == "" {
 		errors = append(errors, ValidationError{
 			Field:   "BaseImage",
@@ -537,7 +633,7 @@ func validatePythonConfig(config *PythonConfig) error {
 			Code:    "required",
 		})
 	}
-	
+
 	if config.Version == "" {
 		errors = append(errors, ValidationError{
 			Field:   "Version",
@@ -545,18 +641,18 @@ func validatePythonConfig(config *PythonConfig) error {
 			Code:    "required",
 		})
 	}
-	
+
 	if len(errors) > 0 {
 		return errors
 	}
-	
+
 	return nil
 }
 
 // ValidateLanguageConfig validates language-specific configuration.
 func ValidateLanguageConfig(langConfig *LanguageConfig) error {
 	var errors ValidationErrors
-	
+
 	if err := validateGoConfig(&langConfig.Go); err != nil {
 		if ve, ok := err.(ValidationErrors); ok {
 			errors = append(errors, ve...)
@@ -568,7 +664,7 @@ func ValidateLanguageConfig(langConfig *LanguageConfig) error {
 			})
 		}
 	}
-	
+
 	if err := validateMavenConfig(&langConfig.Maven); err != nil {
 		if ve, ok := err.(ValidationErrors); ok {
 			errors = append(errors, ve...)
@@ -580,7 +676,7 @@ func ValidateLanguageConfig(langConfig *LanguageConfig) error {
 			})
 		}
 	}
-	
+
 	if err := validatePythonConfig(&langConfig.Python); err != nil {
 		if ve, ok := err.(ValidationErrors); ok {
 			errors = append(errors, ve...)
@@ -592,11 +688,11 @@ func ValidateLanguageConfig(langConfig *LanguageConfig) error {
 			})
 		}
 	}
-	
+
 	if len(errors) > 0 {
 		return errors
 	}
-	
+
 	return nil
 }
 
@@ -606,11 +702,11 @@ func ValidateContainerConfig(containerConfig *ContainerConfig) error {
 	if containerConfig.Volumes.SourceMount == "" {
 		return fmt.Errorf("source mount path is required")
 	}
-	
+
 	if !ValidateAbsolutePath(containerConfig.Volumes.SourceMount) {
 		return fmt.Errorf("source mount path must be absolute: %s", containerConfig.Volumes.SourceMount)
 	}
-	
+
 	return nil
 }
 
@@ -644,36 +740,36 @@ func IsValidConfig(config *Config) bool {
 // ValidateAndFixConfig attempts to validate and automatically fix common configuration issues.
 func ValidateAndFixConfig(config *Config) (*Config, []string, error) {
 	var warnings []string
-	
+
 	// Make a copy to avoid modifying the original
 	fixedConfig := *config
-	
+
 	// Fix common issues
 	if fixedConfig.Container.Timeouts.ContainerStart == 0 {
 		fixedConfig.Container.Timeouts.ContainerStart = 30 * time.Second
 		warnings = append(warnings, "Set container start timeout to default 30s")
 	}
-	
+
 	if fixedConfig.Container.Timeouts.ContainerStop == 0 {
 		fixedConfig.Container.Timeouts.ContainerStop = 10 * time.Second
 		warnings = append(warnings, "Set container stop timeout to default 10s")
 	}
-	
+
 	// Fix empty required fields with defaults
 	if fixedConfig.Language.Go.Version == "" {
 		fixedConfig.Language.Go.Version = "1.24.2"
 		warnings = append(warnings, "Set Go version to default 1.24.2")
 	}
-	
+
 	if fixedConfig.Language.Go.LintImage == "" {
 		fixedConfig.Language.Go.LintImage = "golangci/golangci-lint:v2.1.2"
 		warnings = append(warnings, "Set Go lint image to default")
 	}
-	
+
 	// Validate the fixed configuration
 	if err := ValidateConfig(&fixedConfig); err != nil {
 		return nil, warnings, err
 	}
-	
+
 	return &fixedConfig, warnings, nil
 }

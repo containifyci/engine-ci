@@ -48,46 +48,30 @@ func (l *LanguageBuild) IsAsync() bool {
 // ContainerConfig encapsulates common container configuration patterns
 // used across all language builders.
 type ContainerConfig struct {
-	// Base configuration
 	Image      string
 	WorkingDir string
 	Platform   string
-	
-	// Environment and command
-	Env    []string
-	Cmd    []string
-	Script string
-	
-	// Resource limits
-	Memory int64
-	CPU    uint64
-	
-	// User configuration for production
-	User string
+	Script     string
+	User       string
+	Env        []string
+	Cmd        []string
+	Memory     int64
+	CPU        uint64
 }
 
 // BuildOptions contains common options used during the build process
 // across all language builders.
 type BuildOptions struct {
-	// Build configuration
-	Verbose    bool
-	NoCoverage bool
-	
-	// Cache configuration
-	CacheDir   string
-	CacheMount string
-	
-	// Source configuration
+	CacheDir    string
+	CacheMount  string
 	SourceDir   string
 	SourceMount string
-	
-	// Output configuration
-	OutputDir string
-	
-	// Custom build arguments
-	Tags    []string
-	Flags   []string
-	Targets []string
+	OutputDir   string
+	Tags        []string
+	Flags       []string
+	Targets     []string
+	Verbose     bool
+	NoCoverage  bool
 }
 
 // ImageConfiguration defines how Docker images are configured and built
@@ -98,12 +82,12 @@ type ImageConfiguration struct {
 	IntermediateImg string
 	ProductionImg   string
 	LintImage       string
-	
+
 	// Image building
-	DockerfilePath  string
-	BuildContext    string
-	BuildArgs       map[string]string
-	
+	DockerfilePath string
+	BuildContext   string
+	BuildArgs      map[string]string
+
 	// Registry configuration
 	Registry     string
 	Organization string
@@ -112,78 +96,61 @@ type ImageConfiguration struct {
 
 // CacheConfiguration defines cache settings for different language builders.
 type CacheConfiguration struct {
-	// Cache directories (host paths)
+	CacheEnvVars    map[string]string
 	HostCacheDir    string
 	HostBuildCache  string
-	
-	// Container mount paths
 	ContainerCache  string
 	ContainerBuild  string
-	
-	// Environment variables for cache
-	CacheEnvVars    map[string]string
-	
-	// Cache validation
 	ValidateCache   bool
 	CreateIfMissing bool
 }
 
 // NetworkConfiguration defines network settings for container builds.
 type NetworkConfiguration struct {
-	// SSH forwarding
-	EnableSSH      bool
-	SSHAgent       string
-	
-	// Network access
-	NetworkMode    string
-	ExposedPorts   []string
-	
-	// Host configuration for testcontainers
+	SSHAgent          string
+	NetworkMode       string
 	TestcontainerHost string
 	DockerHost        string
+	ExposedPorts      []string
+	EnableSSH         bool
 }
 
 // SecurityConfiguration defines security settings for container builds.
 type SecurityConfiguration struct {
-	// User and permissions
-	RunAsUser     string
-	RunAsGroup    string
-	UserName      string
-	GroupName     string
-	
-	// Security options
-	Privileged    bool
-	ReadOnly      bool
-	NoNewPrivs    bool
-	
-	// Capabilities
-	AddCaps       []string
-	DropCaps      []string
+	RunAsUser  string
+	RunAsGroup string
+	UserName   string
+	GroupName  string
+	AddCaps    []string
+	DropCaps   []string
+	Privileged bool
+	ReadOnly   bool
+	NoNewPrivs bool
 }
 
 // LanguageDefaults provides default configuration values for specific languages.
 // This helps maintain consistency and reduces configuration overhead.
 type LanguageDefaults struct {
 	// Language identification
-	Language      string
-	BuildType     container.BuildType
-	
+	Language  string
+	BuildType container.BuildType
+
 	// Default images
-	BaseImage     string
-	LintImage     string
-	
+	BaseImage string
+	LintImage string
+
 	// Default versions
 	LanguageVersion string
 	ToolVersions    map[string]string
-	
+
 	// Default paths
-	SourceMount   string
-	CacheMount    string
-	OutputDir     string
-	
+	SourceMount string
+	CacheMount  string
+	OutputDir   string
+
 	// Default environment variables
-	DefaultEnv    map[string]string
-	
+	DefaultEnv map[string]string
+
 	// Required files for validation
 	RequiredFiles []string
 }

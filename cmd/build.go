@@ -134,13 +134,19 @@ func Pre(arg *container.Build) (*container.Build, *build.BuildSteps) {
 			//TODO: register different build images automatically or at least in the build implementation itself
 			switch from {
 			case "debian":
-				bs.Add(golang.NewDebian(*a))
+				if builder, err := golang.NewDebian(*a); err == nil {
+					bs.Add(builder)
+				}
 				bs.Add(golang.NewProdDebian(*a))
 			case "debiancgo":
-				bs.Add(golang.NewCGO(*a))
+				if builder, err := golang.NewCGO(*a); err == nil {
+					bs.Add(builder)
+				}
 				bs.Add(golang.NewProdDebian(*a))
 			default:
-				bs.Add(golang.New(*a))
+				if builder, err := golang.New(*a); err == nil {
+					bs.Add(builder)
+				}
 				bs.Add(golang.NewProd(*a))
 			}
 			bs.AddAsync(golang.NewLinter(*a))

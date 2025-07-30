@@ -82,7 +82,9 @@ func NewGoBuilder(build container.Build, variant GoVariant) (*GoBuilder, error) 
 
 // Name returns the builder name with variant information.
 func (g *GoBuilder) Name() string {
-	return fmt.Sprintf("golang-%s", g.Variant)
+	// Return "golang" for backward compatibility with build system
+	// that expects all Go builders to have the same name regardless of variant
+	return "golang"
 }
 
 // CacheFolder returns the Go module cache directory.
@@ -110,7 +112,7 @@ func (g *GoBuilder) CacheFolder() string {
 func (g *GoBuilder) Pull() error {
 	var baseImage string
 	goVersion := "1.24.2" // TODO: Use g.Config.Language.Go.Version once config is fixed
-	
+
 	switch g.Variant {
 	case VariantAlpine:
 		baseImage = fmt.Sprintf("golang:%s-alpine", goVersion)
@@ -152,7 +154,7 @@ func (g *GoBuilder) IntermediateImage() string {
 	// Build image name based on variant
 	var imageName string
 	goVersion := "1.24.2" // TODO: Use g.Config.Language.Go.Version once config is fixed
-	
+
 	switch g.Variant {
 	case VariantAlpine:
 		imageName = fmt.Sprintf("golang-%s-alpine", goVersion)
@@ -328,7 +330,7 @@ func (g *GoBuilder) Prod() error {
 func (g *GoBuilder) Images() []string {
 	var baseImage string
 	goVersion := "1.24.2" // TODO: Use g.Config.Language.Go.Version once config is fixed
-	
+
 	switch g.Variant {
 	case VariantAlpine:
 		baseImage = fmt.Sprintf("golang:%s-alpine", goVersion)
@@ -359,7 +361,7 @@ func (g *GoBuilder) Lint() error {
 	// Setup container configuration
 	opts := types.ContainerConfig{
 		Image:      image,
-		WorkingDir: g.Defaults.SourceMount, // Use defaults from BaseBuilder  
+		WorkingDir: g.Defaults.SourceMount, // Use defaults from BaseBuilder
 		Cmd:        []string{"sh", "/tmp/script.sh"},
 	}
 
@@ -437,4 +439,14 @@ ssh-keyscan github.com >> ~/.ssh/known_hosts
 %s`, cmd)
 
 	return script
+}
+
+// Run executes the main build process (Build interface compatibility).
+func (g *GoBuilder) Run() error {
+	return g.Build()
+}
+
+// IsAsync returns whether this builder should run asynchronously (Build interface compatibility).
+func (g *GoBuilder) IsAsync() bool {
+	return false // Go builders run synchronously by default
 }

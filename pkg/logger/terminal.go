@@ -181,7 +181,6 @@ func last5Messages(messages []string) []string {
 	return messages[len(messages)-5:]
 }
 
-
 func (la *LogAggregator) LogMessage(routineID string, msg string) {
 	la.logMessage(routineID, msg, false, false)
 }

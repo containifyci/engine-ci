@@ -36,31 +36,31 @@ func getDefaultLanguageConfig() LanguageConfig {
 // Values match the hardcoded constants from pkg/golang/ packages.
 func getDefaultGoConfig() GoConfig {
 	return GoConfig{
-		Version:      "1.24.2", // DEFAULT_GO from golang packages
+		Version:      "1.24.2",                        // DEFAULT_GO from golang packages
 		LintImage:    "golangci/golangci-lint:v2.1.2", // LINT_IMAGE from golang packages
-		TestTimeout:  2 * time.Minute, // 120s from buildscript templates
+		TestTimeout:  2 * time.Minute,                 // 120s from buildscript templates
 		BuildTimeout: 10 * time.Minute,
 		CoverageMode: "text",
 		BuildTags:    []string{},
-		ProjectMount: "/src", // PROJ_MOUNT from golang packages
+		ProjectMount: "/src",  // PROJ_MOUNT from golang packages
 		OutputDir:    "/out/", // OUT_DIR from golang packages
 		Variants: GoVariantConfig{
 			Alpine: GoVariantSpec{
-				BaseImage:   "golang:1.24.2-alpine",
-				ImageSuffix: "alpine",
-				CGOEnabled:  false,
+				BaseImage:    "golang:1.24.2-alpine",
+				ImageSuffix:  "alpine",
+				CGOEnabled:   false,
 				Dependencies: []string{"alpine:latest"},
 			},
 			Debian: GoVariantSpec{
-				BaseImage:   "golang:1.24.2",
-				ImageSuffix: "",
-				CGOEnabled:  false,
+				BaseImage:    "golang:1.24.2",
+				ImageSuffix:  "",
+				CGOEnabled:   false,
 				Dependencies: []string{"alpine:latest"},
 			},
 			DebianCGO: GoVariantSpec{
-				BaseImage:   "golang:1.24.2",
-				ImageSuffix: "cgo",
-				CGOEnabled:  true,
+				BaseImage:    "golang:1.24.2",
+				ImageSuffix:  "cgo",
+				CGOEnabled:   true,
 				Dependencies: []string{"alpine:latest"},
 			},
 		},
@@ -136,7 +136,7 @@ func getDefaultContainerConfig() ContainerConfig {
 			ContainerStart: 30 * time.Second, // context.WithTimeout(30*time.Second) from container.go
 			ContainerStop:  10 * time.Second, // context.WithTimeout(10*time.Second) from container.go
 			Build:          1 * time.Hour,
-			Test:           2 * time.Minute,   // 120s from buildscript
+			Test:           2 * time.Minute, // 120s from buildscript
 			Pull:           5 * time.Minute,
 			Push:           10 * time.Minute,
 			Script:         30 * time.Second,
@@ -149,8 +149,8 @@ func getDefaultContainerConfig() ContainerConfig {
 			DiskLimit:     "10GB",
 		},
 		Volumes: VolumeConfig{
-			SourceMount:  "/src",           // PROJ_MOUNT from golang packages
-			OutputDir:    "/out",           // OUT_DIR from golang packages
+			SourceMount:  "/src", // PROJ_MOUNT from golang packages
+			OutputDir:    "/out", // OUT_DIR from golang packages
 			CacheDir:     "/cache",
 			TempDir:      "/tmp",
 			ScriptPath:   "/tmp/script.sh", // Script path used throughout codebase
@@ -219,10 +219,10 @@ func getDefaultSecurityConfig() SecurityConfig {
 			Shell:             "/bin/sh",
 		},
 		Registries: RegistryConfig{
-			VerifyTLS:           true,
-			AuthConfigPath:      "~/.docker/config.json",
-			DefaultRegistry:     "docker.io",
-			InsecureRegistries:  []string{},
+			VerifyTLS:          true,
+			AuthConfigPath:     "~/.docker/config.json",
+			DefaultRegistry:    "docker.io",
+			InsecureRegistries: []string{},
 		},
 		Secrets: SecretsConfig{
 			Provider: "env",
@@ -246,17 +246,17 @@ func getDefaultSecurityConfig() SecurityConfig {
 // Values match hardcoded settings from pkg/trivy/ package.
 func getTrivyDefaultConfig() TrivyConfig {
 	return TrivyConfig{
-		Image:         "aquasec/trivy:latest", // IMAGE from trivy
-		CacheDir:      "/root/.cache/trivy",   // TRIVY_CACHE_DIR from trivy
+		Image:         "aquasec/trivy:latest",       // IMAGE from trivy
+		CacheDir:      "/root/.cache/trivy",         // TRIVY_CACHE_DIR from trivy
 		Severity:      []string{"CRITICAL", "HIGH"}, // Default severity from trivy script
-		IgnoreUnfixed: true,  // --ignore-unfixed from trivy script
+		IgnoreUnfixed: true,                         // --ignore-unfixed from trivy script
 		Timeout:       5 * time.Minute,
-		Scanners:      []string{"vuln"}, // --scanners vuln from trivy script
-		Format:        "json", // --format json from trivy script
+		Scanners:      []string{"vuln"},      // --scanners vuln from trivy script
+		Format:        "json",                // --format json from trivy script
 		OutputPath:    "/usr/src/trivy.json", // --output path from trivy script
 		Environment: map[string]string{
-			"TRIVY_INSECURE":  "true", // From trivy.go
-			"TRIVY_NON_SSL":   "true", // From trivy.go
+			"TRIVY_INSECURE": "true", // From trivy.go
+			"TRIVY_NON_SSL":  "true", // From trivy.go
 		},
 	}
 }
@@ -264,18 +264,18 @@ func getTrivyDefaultConfig() TrivyConfig {
 // getDefaultLoggingConfig returns default logging configuration.
 func getDefaultLoggingConfig() LoggingConfig {
 	return LoggingConfig{
-		Level:           "info",
-		Format:          "structured",
-		Output:          "stdout",
-		FilePath:        "",
-		MaxSize:         "100MB",
-		MaxBackups:      3,
-		MaxAge:          "30d",
-		Compress:        true,
-		AddSource:       false,
-		SampleRate:      1.0,
-		ProgressFormat:  "auto", // Progress format from root.go
-		CustomFields:    make(map[string]string),
+		Level:          "info",
+		Format:         "structured",
+		Output:         "stdout",
+		FilePath:       "",
+		MaxSize:        "100MB",
+		MaxBackups:     3,
+		MaxAge:         "30d",
+		Compress:       true,
+		AddSource:      false,
+		SampleRate:     1.0,
+		ProgressFormat: "auto", // Progress format from root.go
+		CustomFields:   make(map[string]string),
 	}
 }
 
@@ -286,33 +286,33 @@ func getDefaultEnvironmentConfig() EnvironmentConfig {
 		Profiles: ProfilesConfig{
 			Local: EnvironmentProfile{
 				Verbose:                true,
-				PullPolicy:            "never",
-				SecurityHardening:     false,
+				PullPolicy:             "never",
+				SecurityHardening:      false,
 				ResourceLimitsEnforced: false,
-				LogLevel:              "debug",
-				CacheEnabled:          true,
-				ParallelBuilds:        1,
-				CustomSettings:        make(map[string]interface{}),
+				LogLevel:               "debug",
+				CacheEnabled:           true,
+				ParallelBuilds:         1,
+				CustomSettings:         make(map[string]interface{}),
 			},
 			Build: EnvironmentProfile{
 				Verbose:                false,
-				PullPolicy:            "if_not_present",
-				SecurityHardening:     false,
+				PullPolicy:             "if_not_present",
+				SecurityHardening:      false,
 				ResourceLimitsEnforced: true,
-				LogLevel:              "info",
-				CacheEnabled:          true,
-				ParallelBuilds:        2,
-				CustomSettings:        make(map[string]interface{}),
+				LogLevel:               "info",
+				CacheEnabled:           true,
+				ParallelBuilds:         2,
+				CustomSettings:         make(map[string]interface{}),
 			},
 			Production: EnvironmentProfile{
 				Verbose:                false,
-				PullPolicy:            "always",
-				SecurityHardening:     true,
+				PullPolicy:             "always",
+				SecurityHardening:      true,
 				ResourceLimitsEnforced: true,
-				LogLevel:              "warn",
-				CacheEnabled:          true,
-				ParallelBuilds:        4,
-				CustomSettings:        make(map[string]interface{}),
+				LogLevel:               "warn",
+				CacheEnabled:           true,
+				ParallelBuilds:         4,
+				CustomSettings:         make(map[string]interface{}),
 			},
 		},
 	}
@@ -322,7 +322,7 @@ func getDefaultEnvironmentConfig() EnvironmentConfig {
 // This allows different defaults based on the deployment environment.
 func GetEnvironmentDefaults(env container.EnvType) *Config {
 	config := GetDefaultConfig()
-	
+
 	switch env {
 	case container.LocalEnv:
 		applyLocalDefaults(config)
@@ -331,7 +331,7 @@ func GetEnvironmentDefaults(env container.EnvType) *Config {
 	case container.ProdEnv:
 		applyProductionDefaults(config)
 	}
-	
+
 	return config
 }
 
@@ -411,15 +411,15 @@ func mergeConfigs(base, override *Config) *Config {
 	if override == nil {
 		return base
 	}
-	
+
 	// Create a new config starting with base
 	result := *base
-	
+
 	// Apply overrides for each section
 	if override.Version != "" {
 		result.Version = override.Version
 	}
-	
+
 	// Merge language configs
 	result.Language = mergeLanguageConfigs(base.Language, override.Language)
 	result.Container = mergeContainerConfigs(base.Container, override.Container)
@@ -428,21 +428,214 @@ func mergeConfigs(base, override *Config) *Config {
 	result.Security = mergeSecurityConfigs(base.Security, override.Security)
 	result.Logging = mergeLoggingConfigs(base.Logging, override.Logging)
 	result.Environment = mergeEnvironmentConfigs(base.Environment, override.Environment)
-	
+
 	return &result
 }
 
 // Helper merge functions for different config sections
 func mergeLanguageConfigs(base, override LanguageConfig) LanguageConfig {
 	result := base
-	// Implement field-by-field merging as needed
-	// This is a simplified version - full implementation would merge each nested struct
+	
+	// Merge Go configuration
+	if override.Go.Version != "" {
+		result.Go.Version = override.Go.Version
+	}
+	if override.Go.LintImage != "" {
+		result.Go.LintImage = override.Go.LintImage
+	}
+	if override.Go.TestTimeout != 0 {
+		result.Go.TestTimeout = override.Go.TestTimeout
+	}
+	if override.Go.BuildTimeout != 0 {
+		result.Go.BuildTimeout = override.Go.BuildTimeout
+	}
+	if override.Go.CoverageMode != "" {
+		result.Go.CoverageMode = override.Go.CoverageMode
+	}
+	if override.Go.ProjectMount != "" {
+		result.Go.ProjectMount = override.Go.ProjectMount
+	}
+	if override.Go.OutputDir != "" {
+		result.Go.OutputDir = override.Go.OutputDir
+	}
+	if override.Go.ModCache != "" {
+		result.Go.ModCache = override.Go.ModCache
+	}
+	if len(override.Go.BuildTags) > 0 {
+		result.Go.BuildTags = override.Go.BuildTags
+	}
+	if len(override.Go.Environment) > 0 {
+		if result.Go.Environment == nil {
+			result.Go.Environment = make(map[string]string)
+		}
+		for k, v := range override.Go.Environment {
+			result.Go.Environment[k] = v
+		}
+	}
+	
+	// Merge Maven configuration
+	if override.Maven.ProdImage != "" {
+		result.Maven.ProdImage = override.Maven.ProdImage
+	}
+	if override.Maven.BaseImage != "" {
+		result.Maven.BaseImage = override.Maven.BaseImage
+	}
+	if override.Maven.JavaVersion != "" {
+		result.Maven.JavaVersion = override.Maven.JavaVersion
+	}
+	if override.Maven.MavenVersion != "" {
+		result.Maven.MavenVersion = override.Maven.MavenVersion
+	}
+	if override.Maven.CacheLocation != "" {
+		result.Maven.CacheLocation = override.Maven.CacheLocation
+	}
+	if override.Maven.TestTimeout != 0 {
+		result.Maven.TestTimeout = override.Maven.TestTimeout
+	}
+	if override.Maven.BuildTimeout != 0 {
+		result.Maven.BuildTimeout = override.Maven.BuildTimeout
+	}
+	if override.Maven.JavaOpts != "" {
+		result.Maven.JavaOpts = override.Maven.JavaOpts
+	}
+	if override.Maven.MavenOpts != "" {
+		result.Maven.MavenOpts = override.Maven.MavenOpts
+	}
+	if len(override.Maven.Environment) > 0 {
+		if result.Maven.Environment == nil {
+			result.Maven.Environment = make(map[string]string)
+		}
+		for k, v := range override.Maven.Environment {
+			result.Maven.Environment[k] = v
+		}
+	}
+	
+	// Merge Python configuration
+	if override.Python.BaseImage != "" {
+		result.Python.BaseImage = override.Python.BaseImage
+	}
+	if override.Python.Version != "" {
+		result.Python.Version = override.Python.Version
+	}
+	if override.Python.CacheLocation != "" {
+		result.Python.CacheLocation = override.Python.CacheLocation
+	}
+	if override.Python.TestTimeout != 0 {
+		result.Python.TestTimeout = override.Python.TestTimeout
+	}
+	if override.Python.BuildTimeout != 0 {
+		result.Python.BuildTimeout = override.Python.BuildTimeout
+	}
+	if override.Python.UVCacheDir != "" {
+		result.Python.UVCacheDir = override.Python.UVCacheDir
+	}
+	if len(override.Python.Requirements) > 0 {
+		result.Python.Requirements = override.Python.Requirements
+	}
+	if len(override.Python.Environment) > 0 {
+		if result.Python.Environment == nil {
+			result.Python.Environment = make(map[string]string)
+		}
+		for k, v := range override.Python.Environment {
+			result.Python.Environment[k] = v
+		}
+	}
+	
 	return result
 }
 
 func mergeContainerConfigs(base, override ContainerConfig) ContainerConfig {
 	result := base
-	// Implement field-by-field merging as needed
+	
+	if override.Registry != "" {
+		result.Registry = override.Registry
+	}
+	
+	// Merge Images config
+	if override.Images.PullPolicy != "" {
+		result.Images.PullPolicy = override.Images.PullPolicy
+	}
+	if override.Images.TagPolicy != "" {
+		result.Images.TagPolicy = override.Images.TagPolicy
+	}
+	if len(override.Images.BaseImages) > 0 {
+		result.Images.BaseImages = override.Images.BaseImages
+	}
+	
+	// Merge Timeouts config
+	if override.Timeouts.Container != 0 {
+		result.Timeouts.Container = override.Timeouts.Container
+	}
+	if override.Timeouts.ContainerStart != 0 {
+		result.Timeouts.ContainerStart = override.Timeouts.ContainerStart
+	}
+	if override.Timeouts.ContainerStop != 0 {
+		result.Timeouts.ContainerStop = override.Timeouts.ContainerStop
+	}
+	if override.Timeouts.Build != 0 {
+		result.Timeouts.Build = override.Timeouts.Build
+	}
+	if override.Timeouts.Test != 0 {
+		result.Timeouts.Test = override.Timeouts.Test
+	}
+	if override.Timeouts.Pull != 0 {
+		result.Timeouts.Pull = override.Timeouts.Pull
+	}
+	if override.Timeouts.Push != 0 {
+		result.Timeouts.Push = override.Timeouts.Push
+	}
+	if override.Timeouts.Script != 0 {
+		result.Timeouts.Script = override.Timeouts.Script
+	}
+	
+	// Merge Resources config
+	if override.Resources.MemoryLimit != "" {
+		result.Resources.MemoryLimit = override.Resources.MemoryLimit
+	}
+	if override.Resources.MemoryRequest != "" {
+		result.Resources.MemoryRequest = override.Resources.MemoryRequest
+	}
+	if override.Resources.CPULimit != "" {
+		result.Resources.CPULimit = override.Resources.CPULimit
+	}
+	if override.Resources.CPURequest != "" {
+		result.Resources.CPURequest = override.Resources.CPURequest
+	}
+	if override.Resources.DiskLimit != "" {
+		result.Resources.DiskLimit = override.Resources.DiskLimit
+	}
+	
+	// Merge Volumes config
+	if override.Volumes.SourceMount != "" {
+		result.Volumes.SourceMount = override.Volumes.SourceMount
+	}
+	if override.Volumes.OutputDir != "" {
+		result.Volumes.OutputDir = override.Volumes.OutputDir
+	}
+	if override.Volumes.CacheDir != "" {
+		result.Volumes.CacheDir = override.Volumes.CacheDir
+	}
+	if override.Volumes.TempDir != "" {
+		result.Volumes.TempDir = override.Volumes.TempDir
+	}
+	if override.Volumes.ScriptPath != "" {
+		result.Volumes.ScriptPath = override.Volumes.ScriptPath
+	}
+	if len(override.Volumes.CustomMounts) > 0 {
+		result.Volumes.CustomMounts = override.Volumes.CustomMounts
+	}
+	
+	// Merge Runtime config
+	if override.Runtime.Type != "" {
+		result.Runtime.Type = override.Runtime.Type
+	}
+	if override.Runtime.SocketPath != "" {
+		result.Runtime.SocketPath = override.Runtime.SocketPath
+	}
+	if len(override.Runtime.Options) > 0 {
+		result.Runtime.Options = override.Runtime.Options
+	}
+	
 	return result
 }
 
@@ -454,7 +647,65 @@ func mergeNetworkConfigs(base, override NetworkConfig) NetworkConfig {
 
 func mergeCacheConfigs(base, override CacheConfig) CacheConfig {
 	result := base
-	// Implement field-by-field merging as needed
+	
+	// If the override config was explicitly configured (from YAML/JSON),
+	// then we should honor all its values including boolean fields
+	if override.wasConfigured {
+		// Take the Enabled value from override since it was explicitly set
+		result.Enabled = override.Enabled
+		
+		// Merge all other fields as before
+		if override.CleanupPolicy != "" {
+			result.CleanupPolicy = override.CleanupPolicy
+		}
+		if override.MaxSize != "" {
+			result.MaxSize = override.MaxSize
+		}
+	} else {
+		// This is a programmatically created config (not from YAML/JSON)
+		// Only override non-zero values
+		if override.Enabled {
+			result.Enabled = true
+		}
+		if override.CleanupPolicy != "" {
+			result.CleanupPolicy = override.CleanupPolicy
+		}
+		if override.MaxSize != "" {
+			result.MaxSize = override.MaxSize
+		}
+	}
+	
+	// Always merge Directories if set
+	if override.Directories.Go != "" {
+		result.Directories.Go = override.Directories.Go
+	}
+	if override.Directories.Maven != "" {
+		result.Directories.Maven = override.Directories.Maven
+	}
+	if override.Directories.Python != "" {
+		result.Directories.Python = override.Directories.Python
+	}
+	if override.Directories.Trivy != "" {
+		result.Directories.Trivy = override.Directories.Trivy
+	}
+	if override.Directories.Docker != "" {
+		result.Directories.Docker = override.Directories.Docker
+	}
+	if len(override.Directories.Custom) > 0 {
+		result.Directories.Custom = override.Directories.Custom
+	}
+	
+	// Always merge Permissions if set
+	if override.Permissions.Mode != "" {
+		result.Permissions.Mode = override.Permissions.Mode
+	}
+	if override.Permissions.Owner != "" {
+		result.Permissions.Owner = override.Permissions.Owner
+	}
+	if override.Permissions.Group != "" {
+		result.Permissions.Group = override.Permissions.Group
+	}
+	
 	return result
 }
 
@@ -466,7 +717,26 @@ func mergeSecurityConfigs(base, override SecurityConfig) SecurityConfig {
 
 func mergeLoggingConfigs(base, override LoggingConfig) LoggingConfig {
 	result := base
-	// Implement field-by-field merging as needed
+	
+	if override.Level != "" {
+		result.Level = override.Level
+	}
+	if override.Format != "" {
+		result.Format = override.Format
+	}
+	if override.Output != "" {
+		result.Output = override.Output
+	}
+	if override.FilePath != "" {
+		result.FilePath = override.FilePath
+	}
+	
+	// If any field is set, assume boolean fields were also explicitly set
+	if override.Level != "" || override.Format != "" || override.Output != "" || override.FilePath != "" {
+		result.Compress = override.Compress
+		result.AddSource = override.AddSource
+	}
+	
 	return result
 }
 

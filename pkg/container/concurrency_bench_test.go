@@ -1,3 +1,4 @@
+//go:build integration_test
 // +build integration_test
 
 package container
@@ -34,7 +35,7 @@ func NewMockContainerManager(delay time.Duration, failureRate float64) *MockCont
 			delay = time.Millisecond
 		}
 	}
-	
+
 	return &MockContainerManager{
 		delay:       delay,
 		failureRate: failureRate,
@@ -193,7 +194,7 @@ func BenchmarkConcurrentImagePulling(b *testing.B) {
 	if isCI() {
 		b.Skip("Skipping intensive benchmark in CI environment")
 	}
-	
+
 	// Reset memory tracking
 	memory.ResetBufferPoolMetrics()
 	memory.ResetPoolMetrics()
@@ -277,7 +278,7 @@ func BenchmarkWorkerPool(b *testing.B) {
 	if isCI() {
 		b.Skip("Skipping intensive benchmark in CI environment")
 	}
-	
+
 	testCases := []struct {
 		name    string
 		workers int
@@ -348,7 +349,7 @@ func BenchmarkBatchImageOperations(b *testing.B) {
 	if isCI() {
 		b.Skip("Skipping intensive benchmark in CI environment")
 	}
-	
+
 	testCases := []struct {
 		name          string
 		imageCount    int

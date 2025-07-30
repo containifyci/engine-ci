@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -97,11 +98,11 @@ func testFactorySystem(t *testing.T) {
 
 	t.Run("CreateLinter", func(t *testing.T) {
 		build := createTestBuild(container.GoLang)
-		
+
 		linter, err := factory.CreateLinter(build)
 		require.NoError(t, err)
 		assert.NotNil(t, linter)
-		
+
 		assert.Equal(t, "golang-lint", linter.Name())
 		assert.Contains(t, linter.Images(), "golangci/golangci-lint:v2.1.2")
 		assert.False(t, linter.IsAsync())
@@ -109,11 +110,11 @@ func testFactorySystem(t *testing.T) {
 
 	t.Run("CreateProd", func(t *testing.T) {
 		build := createTestBuild(container.GoLang)
-		
+
 		prod, err := factory.CreateProd(build)
 		require.NoError(t, err)
 		assert.NotNil(t, prod)
-		
+
 		assert.Equal(t, "golang-prod", prod.Name())
 		assert.Contains(t, prod.Images(), "golang:1.24.2-alpine")
 		assert.False(t, prod.IsAsync())
@@ -121,7 +122,7 @@ func testFactorySystem(t *testing.T) {
 
 	t.Run("CreateBuilder_NotImplemented", func(t *testing.T) {
 		build := createTestBuild(container.GoLang)
-		
+
 		_, err := factory.CreateBuilder(build)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "builder creation not yet implemented")
@@ -129,11 +130,11 @@ func testFactorySystem(t *testing.T) {
 
 	t.Run("UnsupportedBuildType", func(t *testing.T) {
 		build := createTestBuild("unsupported")
-		
+
 		_, err := factory.CreateLinter(build)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "no defaults found for build type")
-		
+
 		_, err = factory.CreateProd(build)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "no defaults found for build type")
@@ -142,7 +143,7 @@ func testFactorySystem(t *testing.T) {
 
 func testBaseBuilderFunctionality(t *testing.T) {
 	build := createTestBuild(container.GoLang)
-	
+
 	// Create a BaseBuilder (using BaseLanguageBuilder for compatibility)
 	baseBuilder := &BaseLanguageBuilder{
 		Container: &container.Container{Build: &build},
@@ -166,22 +167,22 @@ func testBaseBuilderFunctionality(t *testing.T) {
 
 	t.Run("ApplyContainerOptions", func(t *testing.T) {
 		opts := &types.ContainerConfig{}
-		
+
 		baseBuilder.ApplyContainerOptions(opts)
-		
+
 		assert.Equal(t, "/src", opts.WorkingDir, "Should set default working directory")
-		
+
 		// Test verbose mode
 		baseBuilder.Config.Verbose = true
 		opts.Cmd = []string{"sh", "test.sh"}
 		baseBuilder.ApplyContainerOptions(opts)
-		
+
 		assert.Contains(t, opts.Cmd, "-v", "Should add verbose flag when verbose is enabled")
 	})
 
 	t.Run("ConfigurationFields", func(t *testing.T) {
 		config := baseBuilder.Config
-		
+
 		assert.Equal(t, build.Platform, config.Platform)
 		assert.Equal(t, build.Env, config.Environment)
 		assert.Equal(t, build.App, config.App)
@@ -287,7 +288,7 @@ func testBuilderRegistry(t *testing.T) {
 				}, nil
 			},
 		}
-		
+
 		err := registry.Register(registration)
 		require.NoError(t, err)
 
@@ -372,60 +373,60 @@ func createTestBuild(buildType container.BuildType) container.Build {
 
 // mockLanguageBuilder is a simple mock implementation for testing
 type mockLanguageBuilder struct {
+	runError   error
+	buildError error
 	name       string
 	images     []string
 	isAsync    bool
-	runError   error
-	buildError error
 }
 
-func (m *mockLanguageBuilder) Name() string                        { return m.name }
-func (m *mockLanguageBuilder) IsAsync() bool                       { return m.isAsync }
-func (m *mockLanguageBuilder) Images() []string                    { return m.images }
-func (m *mockLanguageBuilder) Pull() error                         { return m.runError }
-func (m *mockLanguageBuilder) Build() error                        { return m.buildError }
-func (m *mockLanguageBuilder) Run() error                          { return m.runError }
-func (m *mockLanguageBuilder) Prod() error                         { return m.runError }
-func (m *mockLanguageBuilder) BuildIntermediateImage() error       { return m.runError }
-func (m *mockLanguageBuilder) IntermediateImage() string           { return "intermediate:latest" }
-func (m *mockLanguageBuilder) BuildScript() string                 { return "#!/bin/sh\necho 'test'" }
-func (m *mockLanguageBuilder) CacheFolder() string                 { return "/tmp/cache" }
+func (m *mockLanguageBuilder) Name() string                  { return m.name }
+func (m *mockLanguageBuilder) IsAsync() bool                 { return m.isAsync }
+func (m *mockLanguageBuilder) Images() []string              { return m.images }
+func (m *mockLanguageBuilder) Pull() error                   { return m.runError }
+func (m *mockLanguageBuilder) Build() error                  { return m.buildError }
+func (m *mockLanguageBuilder) Run() error                    { return m.runError }
+func (m *mockLanguageBuilder) Prod() error                   { return m.runError }
+func (m *mockLanguageBuilder) BuildIntermediateImage() error { return m.runError }
+func (m *mockLanguageBuilder) IntermediateImage() string     { return "intermediate:latest" }
+func (m *mockLanguageBuilder) BuildScript() string           { return "#!/bin/sh\necho 'test'" }
+func (m *mockLanguageBuilder) CacheFolder() string           { return "/tmp/cache" }
 
 // TestBuilderPerformance tests performance characteristics of the builder system
 func TestBuilderPerformance(t *testing.T) {
 	t.Run("FactoryCreationPerformance", func(t *testing.T) {
 		start := time.Now()
-		
+
 		// Create factories 1000 times
 		for i := 0; i < 1000; i++ {
 			factory := NewStandardBuildFactory()
 			_ = factory
 		}
-		
+
 		duration := time.Since(start)
-		
+
 		// Should be very fast - less than 10ms for 1000 creations
 		assert.Less(t, duration, 10*time.Millisecond, "Factory creation should be fast")
 	})
 
 	t.Run("DefaultsLookupPerformance", func(t *testing.T) {
 		start := time.Now()
-		
+
 		// Look up defaults 10000 times
 		for i := 0; i < 10000; i++ {
 			_, exists := common.GetLanguageDefaults(container.GoLang)
 			assert.True(t, exists)
 		}
-		
+
 		duration := time.Since(start)
-		
+
 		// Should be very fast - less than 10ms for 10000 lookups
 		assert.Less(t, duration, 10*time.Millisecond, "Defaults lookup should be fast")
 	})
 
 	t.Run("RegistryOperationsPerformance", func(t *testing.T) {
 		registry := NewBuilderRegistry()
-		
+
 		// Register multiple builders
 		start := time.Now()
 		for i := 0; i < 100; i++ {
@@ -440,7 +441,7 @@ func TestBuilderPerformance(t *testing.T) {
 			assert.NoError(t, err)
 		}
 		duration := time.Since(start)
-		
+
 		// Should be fast - less than 10ms for 100 registrations
 		assert.Less(t, duration, 10*time.Millisecond, "Registry registration should be fast")
 	})
@@ -450,27 +451,27 @@ func TestBuilderPerformance(t *testing.T) {
 func TestBuilderConcurrency(t *testing.T) {
 	t.Run("ConcurrentFactoryAccess", func(t *testing.T) {
 		factory := NewStandardBuildFactory()
-		
+
 		// Run multiple operations concurrently
 		done := make(chan bool, 10)
-		
+
 		for i := 0; i < 10; i++ {
 			go func() {
 				defer func() { done <- true }()
-				
+
 				// Perform various operations
 				types := factory.SupportedTypes()
 				assert.NotEmpty(t, types)
-				
+
 				build := createTestBuild(container.GoLang)
 				_, err := factory.CreateLinter(build)
 				assert.NoError(t, err)
-				
+
 				_, err = factory.CreateProd(build)
 				assert.NoError(t, err)
 			}()
 		}
-		
+
 		// Wait for all goroutines to complete
 		for i := 0; i < 10; i++ {
 			<-done
@@ -479,11 +480,11 @@ func TestBuilderConcurrency(t *testing.T) {
 
 	t.Run("ConcurrentRegistryAccess", func(t *testing.T) {
 		registry := NewBuilderRegistry()
-		
+
 		// Register some initial builders
 		for i := 0; i < 5; i++ {
 			registration := &BuilderRegistration{
-				BuildType: container.BuildType("concurrent-" + string(rune(i))),
+				BuildType: container.BuildType(fmt.Sprintf("concurrent-%d", i)),
 				Name:      "concurrent-builder",
 				Constructor: func(build container.Build) (LanguageBuilder, error) {
 					return &mockLanguageBuilder{}, nil
@@ -492,31 +493,31 @@ func TestBuilderConcurrency(t *testing.T) {
 			err := registry.Register(registration)
 			require.NoError(t, err)
 		}
-		
+
 		// Run concurrent operations
 		done := make(chan bool, 20)
-		
+
 		// Concurrent reads
 		for i := 0; i < 10; i++ {
 			go func(idx int) {
 				defer func() { done <- true }()
-				
-				buildType := container.BuildType("concurrent-" + string(rune(idx%5)))
+
+				buildType := container.BuildType(fmt.Sprintf("concurrent-%d", idx%5))
 				_, exists := registry.Get(buildType)
 				assert.True(t, exists)
-				
+
 				types := registry.List()
 				assert.NotEmpty(t, types)
 			}(i)
 		}
-		
+
 		// Concurrent writes
 		for i := 5; i < 10; i++ {
 			go func(idx int) {
 				defer func() { done <- true }()
-				
+
 				registration := &BuilderRegistration{
-					BuildType: container.BuildType("concurrent-write-" + string(rune(idx))),
+					BuildType: container.BuildType(fmt.Sprintf("concurrent-write-%d", idx)),
 					Name:      "write-builder",
 					Constructor: func(build container.Build) (LanguageBuilder, error) {
 						return &mockLanguageBuilder{}, nil
@@ -526,12 +527,12 @@ func TestBuilderConcurrency(t *testing.T) {
 				assert.NoError(t, err)
 			}(i)
 		}
-		
-		// Wait for all operations to complete
-		for i := 0; i < 20; i++ {
+
+		// Wait for all operations to complete (10 reads + 5 writes = 15 total)
+		for i := 0; i < 15; i++ {
 			<-done
 		}
-		
+
 		// Verify final state
 		types := registry.List()
 		assert.GreaterOrEqual(t, len(types), 10, "Should have at least 10 registered types")

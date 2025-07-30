@@ -184,6 +184,9 @@ func NewProd(build container.Build) build.Build {
 	}
 
 	// Override the variant to alpine for backward compatibility
+	if build.Custom == nil {
+		build.Custom = make(container.Custom)
+	}
 	build.Custom["from"] = []string{"alpine"}
 
 	prodBuild, err := factory.CreateProd(build)
@@ -216,6 +219,9 @@ func NewProdDebian(build container.Build) build.Build {
 	}
 
 	// Override the variant to debian for backward compatibility
+	if build.Custom == nil {
+		build.Custom = make(container.Custom)
+	}
 	build.Custom["from"] = []string{"debian"}
 
 	prodBuild, err := factory.CreateProd(build)
@@ -279,7 +285,7 @@ func CacheFolder() string {
 		fallbackCache := filepath.Join(os.TempDir(), "go-cache")
 		return fallbackCache
 	}
-	
+
 	return strings.TrimSpace(string(output))
 }
 

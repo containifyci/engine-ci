@@ -61,10 +61,10 @@ func BenchmarkContainerOperations(b *testing.B) {
 	b.Run("Checksum Computation", func(b *testing.B) {
 		// Generate test data of various sizes (reduced for benchmark performance)
 		testData := [][]byte{
-			make([]byte, 512),    // 512B
-			make([]byte, 1024),   // 1KB
-			make([]byte, 2048),   // 2KB
-			make([]byte, 4096),   // 4KB
+			make([]byte, 512),  // 512B
+			make([]byte, 1024), // 1KB
+			make([]byte, 2048), // 2KB
+			make([]byte, 4096), // 4KB
 		}
 
 		// Fill with deterministic data
@@ -109,9 +109,9 @@ func BenchmarkTarOperations(b *testing.B) {
 		fileSize int
 		numFiles int
 	}{
-		{"Small Files", 512, 5},     // 5 files, 512B each
-		{"Medium Files", 1024, 10},  // 10 files, 1KB each
-		{"Large Files", 2048, 20},   // 20 files, 2KB each
+		{"Small Files", 512, 5},    // 5 files, 512B each
+		{"Medium Files", 1024, 10}, // 10 files, 1KB each
+		{"Large Files", 2048, 20},  // 20 files, 2KB each
 	}
 
 	for _, tc := range testCases {

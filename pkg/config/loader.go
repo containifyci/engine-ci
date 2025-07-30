@@ -12,10 +12,15 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
 
 	"github.com/containifyci/engine-ci/pkg/container"
 )
+
+// titleCase provides a replacement for the deprecated strings.Title function
+var titleCase = cases.Title(language.English)
 
 // Global configuration instance with thread-safe access
 var (
@@ -108,6 +113,14 @@ func (l *ConfigLoader) loadFromFile() (*Config, error) {
 		return nil, nil
 	}
 
+	// If a specific config file was requested (not auto-discovered), 
+	// we should fail if it doesn't exist
+	if l.options.ConfigFile != "" {
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			return nil, fmt.Errorf("config file not found: %s", configPath)
+		}
+	}
+
 	file, err := os.Open(configPath)
 	if err != nil {
 		return nil, err
@@ -120,7 +133,7 @@ func (l *ConfigLoader) loadFromFile() (*Config, error) {
 	}
 
 	config := &Config{}
-	
+
 	// Determine file format based on extension
 	ext := strings.ToLower(filepath.Ext(configPath))
 	switch ext {
@@ -332,7 +345,7 @@ func GetGlobalConfig() *Config {
 			// If loading fails, use defaults
 			config = GetDefaultConfig()
 		}
-		
+
 		configMutex.Lock()
 		globalConfig = config
 		configMutex.Unlock()
@@ -428,16 +441,16 @@ func GetConfigValue(config *Config, path string) (interface{}, error) {
 		if value.Kind() == reflect.Ptr {
 			value = value.Elem()
 		}
-		
+
 		if value.Kind() != reflect.Struct {
 			return nil, fmt.Errorf("invalid path: %s is not a struct", path)
 		}
 
-		field := value.FieldByName(strings.Title(part))
+		field := value.FieldByName(titleCase.String(part))
 		if !field.IsValid() {
 			return nil, fmt.Errorf("field %s not found", part)
 		}
-		
+
 		value = field
 	}
 
@@ -454,16 +467,16 @@ func SetConfigValue(config *Config, path string, newValue interface{}) error {
 		if value.Kind() == reflect.Ptr {
 			value = value.Elem()
 		}
-		
+
 		if value.Kind() != reflect.Struct {
 			return fmt.Errorf("invalid path: %s is not a struct", strings.Join(parts[:i+1], "."))
 		}
 
-		field := value.FieldByName(strings.Title(part))
+		field := value.FieldByName(titleCase.String(part))
 		if !field.IsValid() {
 			return fmt.Errorf("field %s not found", part)
 		}
-		
+
 		value = field
 	}
 
@@ -471,13 +484,13 @@ func SetConfigValue(config *Config, path string, newValue interface{}) error {
 	if value.Kind() == reflect.Ptr {
 		value = value.Elem()
 	}
-	
+
 	lastPart := parts[len(parts)-1]
-	field := value.FieldByName(strings.Title(lastPart))
+	field := value.FieldByName(titleCase.String(lastPart))
 	if !field.IsValid() {
 		return fmt.Errorf("field %s not found", lastPart)
 	}
-	
+
 	if !field.CanSet() {
 		return fmt.Errorf("field %s cannot be set", lastPart)
 	}
@@ -510,6 +523,6 @@ func PrintConfig(config *Config, format string) error {
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
-	
+
 	return nil
 }

@@ -20,11 +20,9 @@ import (
 // This serves as a template for migrating other language builders.
 type ExampleGoBuilder struct {
 	*BaseBuilder
-	
-	// Go-specific configuration
-	goVersion    string
-	lintImage    string
-	dockerFiles  embed.FS
+	dockerFiles embed.FS
+	goVersion   string
+	lintImage   string
 }
 
 // NewGoBuilder creates a new Go builder instance using the new architecture.
@@ -32,7 +30,7 @@ type ExampleGoBuilder struct {
 func NewGoBuilder(build container.Build, dockerFiles embed.FS) *ExampleGoBuilder {
 	defaults := common.GetGoDefaults()
 	base := NewBaseBuilder(build, defaults)
-	
+
 	return &ExampleGoBuilder{
 		BaseBuilder: base,
 		goVersion:   defaults.LanguageVersion,
@@ -62,7 +60,7 @@ func (g *ExampleGoBuilder) BuildIntermediateImage() error {
 	for i, p := range g.Config.Platforms {
 		platforms[i] = p.String()
 	}
-	
+
 	return common.BuildIntermediateImage(
 		g.Container,
 		g.dockerFiles,
@@ -99,19 +97,19 @@ func (g *ExampleGoBuilder) Lint() error {
 		Cmd:        []string{"sh", "/tmp/script.sh"},
 		WorkingDir: "/src",
 	}
-	
+
 	g.SetupContainerVolumes(&opts)
 	if err := g.SetupSSHForwarding(&opts); err != nil {
 		return err
 	}
-	
+
 	if err := g.Create(opts); err != nil {
 		return err
 	}
-	
+
 	// Copy lint script and execute
 	// ... rest of lint implementation
-	
+
 	return g.Wait()
 }
 
@@ -127,7 +125,7 @@ func (g *ExampleGoBuilder) LintImage() string {
 // This wrapper allows existing code to continue working while we migrate.
 type LegacyGoContainer struct {
 	builder LanguageBuilder
-	
+
 	// Legacy fields for compatibility
 	*container.Container
 	App       string
@@ -144,7 +142,7 @@ type LegacyGoContainer struct {
 func NewLegacyGoContainer(build container.Build) *LegacyGoContainer {
 	// Create new builder
 	builder := &ExampleGoBuilder{} // Placeholder - would use actual implementation
-	
+
 	// Create compatibility wrapper
 	return &LegacyGoContainer{
 		builder:   builder,
@@ -207,7 +205,7 @@ func NewLegacyProd(build container.Build) build.Build {
 //
 // Phase 1.2 (Next): Implement Language-Specific Builders
 // 🔄 Create golang/builder.go that implements LanguageBuilder
-// 🔄 Create maven/builder.go that implements LanguageBuilder  
+// 🔄 Create maven/builder.go that implements LanguageBuilder
 // 🔄 Create python/builder.go that implements LanguageBuilder
 // 🔄 Register builders with the factory
 // 🔄 Add configuration injection system
@@ -244,7 +242,7 @@ func RegistrationExample() {
 			OptionalFiles:      []string{"go.sum", "Dockerfile"},
 		},
 	})
-	
+
 	if err != nil {
 		panic(fmt.Sprintf("Failed to register golang builder: %v", err))
 	}

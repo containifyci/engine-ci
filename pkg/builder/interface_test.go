@@ -55,13 +55,13 @@ func TestStandardBuildFactory(t *testing.T) {
 
 	// Test factory methods (they should return errors since no builders are registered yet)
 	build := container.Build{BuildType: container.GoLang}
-	
+
 	_, err := factory.CreateBuilder(build)
 	assert.Error(t, err, "Should return error when no builder is registered")
-	
+
 	_, err = factory.CreateLinter(build)
 	assert.NoError(t, err, "Should be able to create linter build")
-	
+
 	_, err = factory.CreateProd(build)
 	assert.NoError(t, err, "Should be able to create prod build")
 }

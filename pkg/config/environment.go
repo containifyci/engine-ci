@@ -26,10 +26,10 @@ func NewEnvironmentMapper(prefix string) *EnvironmentMapper {
 func GetEnvironmentVariables() map[string]string {
 	return map[string]string{
 		// Configuration file and general settings
-		"ENGINE_CI_CONFIG":         "Path to configuration file (YAML/JSON)",
-		"ENGINE_CI_ENVIRONMENT":    "Environment type (local, build, production)",
-		"ENGINE_CI_LOG_LEVEL":      "Logging level (debug, info, warn, error)",
-		"ENGINE_CI_VERBOSE":        "Enable verbose logging (true/false)",
+		"ENGINE_CI_CONFIG":      "Path to configuration file (YAML/JSON)",
+		"ENGINE_CI_ENVIRONMENT": "Environment type (local, build, production)",
+		"ENGINE_CI_LOG_LEVEL":   "Logging level (debug, info, warn, error)",
+		"ENGINE_CI_VERBOSE":     "Enable verbose logging (true/false)",
 
 		// Go language configuration
 		"ENGINE_CI_LANGUAGE_GO_VERSION":       "Go language version (e.g., 1.24.2)",
@@ -42,8 +42,8 @@ func GetEnvironmentVariables() map[string]string {
 		"ENGINE_CI_LANGUAGE_GO_OUTPUT_DIR":    "Go output directory (e.g., /out)",
 
 		// Go variant configurations
-		"ENGINE_CI_LANGUAGE_GO_VARIANTS_ALPINE_BASE_IMAGE":    "Go Alpine variant base image",
-		"ENGINE_CI_LANGUAGE_GO_VARIANTS_DEBIAN_BASE_IMAGE":    "Go Debian variant base image",
+		"ENGINE_CI_LANGUAGE_GO_VARIANTS_ALPINE_BASE_IMAGE":     "Go Alpine variant base image",
+		"ENGINE_CI_LANGUAGE_GO_VARIANTS_DEBIAN_BASE_IMAGE":     "Go Debian variant base image",
 		"ENGINE_CI_LANGUAGE_GO_VARIANTS_DEBIAN_CGO_BASE_IMAGE": "Go Debian CGO variant base image",
 
 		// Maven/Java language configuration
@@ -75,11 +75,11 @@ func GetEnvironmentVariables() map[string]string {
 		"ENGINE_CI_LANGUAGE_PROTOBUF_SOURCE_MOUNT": "Protobuf source mount path",
 
 		// Container configuration
-		"ENGINE_CI_CONTAINER_REGISTRY":              "Default container registry",
-		"ENGINE_CI_CONTAINER_IMAGES_PULL_POLICY":    "Image pull policy (always, never, if_not_present)",
-		"ENGINE_CI_CONTAINER_IMAGES_TAG_POLICY":     "Image tag policy (latest, semver, commit)",
-		"ENGINE_CI_CONTAINER_RUNTIME_TYPE":          "Container runtime type (docker, podman)",
-		"ENGINE_CI_CONTAINER_RUNTIME_SOCKET_PATH":   "Container runtime socket path",
+		"ENGINE_CI_CONTAINER_REGISTRY":            "Default container registry",
+		"ENGINE_CI_CONTAINER_IMAGES_PULL_POLICY":  "Image pull policy (always, never, if_not_present)",
+		"ENGINE_CI_CONTAINER_IMAGES_TAG_POLICY":   "Image tag policy (latest, semver, commit)",
+		"ENGINE_CI_CONTAINER_RUNTIME_TYPE":        "Container runtime type (docker, podman)",
+		"ENGINE_CI_CONTAINER_RUNTIME_SOCKET_PATH": "Container runtime socket path",
 
 		// Container timeouts
 		"ENGINE_CI_CONTAINER_TIMEOUTS_CONTAINER":       "General container operation timeout",
@@ -106,11 +106,11 @@ func GetEnvironmentVariables() map[string]string {
 		"ENGINE_CI_CONTAINER_VOLUMES_SCRIPT_PATH":  "Script file path",
 
 		// Network configuration
-		"ENGINE_CI_NETWORK_SSH_FORWARDING":   "Enable SSH agent forwarding (true/false)",
-		"ENGINE_CI_NETWORK_PROXY_ENABLED":    "Enable proxy support (true/false)",
-		"ENGINE_CI_NETWORK_PROXY_HTTP_PROXY": "HTTP proxy URL",
+		"ENGINE_CI_NETWORK_SSH_FORWARDING":    "Enable SSH agent forwarding (true/false)",
+		"ENGINE_CI_NETWORK_PROXY_ENABLED":     "Enable proxy support (true/false)",
+		"ENGINE_CI_NETWORK_PROXY_HTTP_PROXY":  "HTTP proxy URL",
 		"ENGINE_CI_NETWORK_PROXY_HTTPS_PROXY": "HTTPS proxy URL",
-		"ENGINE_CI_NETWORK_PROXY_NO_PROXY":   "No proxy hosts (comma-separated)",
+		"ENGINE_CI_NETWORK_PROXY_NO_PROXY":    "No proxy hosts (comma-separated)",
 
 		// Cache configuration
 		"ENGINE_CI_CACHE_ENABLED":        "Enable caching (true/false)",
@@ -139,13 +139,13 @@ func GetEnvironmentVariables() map[string]string {
 		"ENGINE_CI_SECURITY_REGISTRIES_DEFAULT_REGISTRY": "Default container registry",
 
 		// Trivy security scanning
-		"ENGINE_CI_SECURITY_SCANNING_TRIVY_IMAGE":         "Trivy scanner Docker image",
-		"ENGINE_CI_SECURITY_SCANNING_TRIVY_CACHE_DIR":     "Trivy cache directory",
-		"ENGINE_CI_SECURITY_SCANNING_TRIVY_SEVERITY":      "Trivy severity levels (comma-separated)",
+		"ENGINE_CI_SECURITY_SCANNING_TRIVY_IMAGE":          "Trivy scanner Docker image",
+		"ENGINE_CI_SECURITY_SCANNING_TRIVY_CACHE_DIR":      "Trivy cache directory",
+		"ENGINE_CI_SECURITY_SCANNING_TRIVY_SEVERITY":       "Trivy severity levels (comma-separated)",
 		"ENGINE_CI_SECURITY_SCANNING_TRIVY_IGNORE_UNFIXED": "Ignore unfixed vulnerabilities (true/false)",
-		"ENGINE_CI_SECURITY_SCANNING_TRIVY_TIMEOUT":       "Trivy scan timeout",
-		"ENGINE_CI_SECURITY_SCANNING_TRIVY_FORMAT":        "Trivy output format (json, table, sarif)",
-		"ENGINE_CI_SECURITY_SCANNING_TRIVY_OUTPUT_PATH":   "Trivy output file path",
+		"ENGINE_CI_SECURITY_SCANNING_TRIVY_TIMEOUT":        "Trivy scan timeout",
+		"ENGINE_CI_SECURITY_SCANNING_TRIVY_FORMAT":         "Trivy output format (json, table, sarif)",
+		"ENGINE_CI_SECURITY_SCANNING_TRIVY_OUTPUT_PATH":    "Trivy output file path",
 
 		// Logging configuration
 		"ENGINE_CI_LOGGING_LEVEL":           "Log level (debug, info, warn, error)",
@@ -161,9 +161,9 @@ func GetEnvironmentVariables() map[string]string {
 		"ENGINE_CI_LOGGING_PROGRESS_FORMAT": "Progress logging format",
 
 		// Environment profiles
-		"ENGINE_CI_ENVIRONMENT_PROFILES_LOCAL_VERBOSE":                     "Verbose mode in local environment",
-		"ENGINE_CI_ENVIRONMENT_PROFILES_LOCAL_PULL_POLICY":                 "Pull policy in local environment",
-		"ENGINE_CI_ENVIRONMENT_PROFILES_BUILD_SECURITY_HARDENING":          "Security hardening in build environment",
+		"ENGINE_CI_ENVIRONMENT_PROFILES_LOCAL_VERBOSE":                       "Verbose mode in local environment",
+		"ENGINE_CI_ENVIRONMENT_PROFILES_LOCAL_PULL_POLICY":                   "Pull policy in local environment",
+		"ENGINE_CI_ENVIRONMENT_PROFILES_BUILD_SECURITY_HARDENING":            "Security hardening in build environment",
 		"ENGINE_CI_ENVIRONMENT_PROFILES_PRODUCTION_RESOURCE_LIMITS_ENFORCED": "Enforce resource limits in production",
 	}
 }
@@ -273,6 +273,9 @@ func (em *EnvironmentMapper) loadLanguageConfig(config *LanguageConfig) error {
 	if outputDir := os.Getenv(goPrefix + "_OUTPUT_DIR"); outputDir != "" {
 		config.Go.OutputDir = outputDir
 	}
+	if modCache := os.Getenv(goPrefix + "_MOD_CACHE"); modCache != "" {
+		config.Go.ModCache = modCache
+	}
 
 	// Load Go variant configurations
 	variantPrefix := goPrefix + "_VARIANTS"
@@ -300,8 +303,24 @@ func (em *EnvironmentMapper) loadLanguageConfig(config *LanguageConfig) error {
 	if javaVersion := os.Getenv(mavenPrefix + "_JAVA_VERSION"); javaVersion != "" {
 		config.Maven.JavaVersion = javaVersion
 	}
+	if mavenVersion := os.Getenv(mavenPrefix + "_MAVEN_VERSION"); mavenVersion != "" {
+		config.Maven.MavenVersion = mavenVersion
+	}
 	if javaOpts := os.Getenv(mavenPrefix + "_JAVA_OPTS"); javaOpts != "" {
 		config.Maven.JavaOpts = javaOpts
+	}
+	if mavenOpts := os.Getenv(mavenPrefix + "_MAVEN_OPTS"); mavenOpts != "" {
+		config.Maven.MavenOpts = mavenOpts
+	}
+	if timeout := os.Getenv(mavenPrefix + "_TEST_TIMEOUT"); timeout != "" {
+		if duration, err := time.ParseDuration(timeout); err == nil {
+			config.Maven.TestTimeout = duration
+		}
+	}
+	if timeout := os.Getenv(mavenPrefix + "_BUILD_TIMEOUT"); timeout != "" {
+		if duration, err := time.ParseDuration(timeout); err == nil {
+			config.Maven.BuildTimeout = duration
+		}
 	}
 
 	// Load Python configuration
@@ -318,6 +337,24 @@ func (em *EnvironmentMapper) loadLanguageConfig(config *LanguageConfig) error {
 	if uvEnabled := os.Getenv(pythonPrefix + "_UV_ENABLED"); uvEnabled != "" {
 		if enabled, err := strconv.ParseBool(uvEnabled); err == nil {
 			config.Python.UVEnabled = enabled
+		}
+	}
+	if uvCacheDir := os.Getenv(pythonPrefix + "_UV_CACHE_DIR"); uvCacheDir != "" {
+		config.Python.UVCacheDir = uvCacheDir
+	}
+	if pipNoCache := os.Getenv(pythonPrefix + "_PIP_NO_CACHE"); pipNoCache != "" {
+		if noCache, err := strconv.ParseBool(pipNoCache); err == nil {
+			config.Python.PipNoCache = noCache
+		}
+	}
+	if timeout := os.Getenv(pythonPrefix + "_TEST_TIMEOUT"); timeout != "" {
+		if duration, err := time.ParseDuration(timeout); err == nil {
+			config.Python.TestTimeout = duration
+		}
+	}
+	if timeout := os.Getenv(pythonPrefix + "_BUILD_TIMEOUT"); timeout != "" {
+		if duration, err := time.ParseDuration(timeout); err == nil {
+			config.Python.BuildTimeout = duration
 		}
 	}
 
@@ -495,6 +532,15 @@ func (em *EnvironmentMapper) loadSecurityConfig(config *SecurityConfig) error {
 	if username := os.Getenv(userPrefix + "_USERNAME"); username != "" {
 		config.UserManagement.Username = username
 	}
+	if group := os.Getenv(userPrefix + "_GROUP"); group != "" {
+		config.UserManagement.Group = group
+	}
+	if home := os.Getenv(userPrefix + "_HOME"); home != "" {
+		config.UserManagement.Home = home
+	}
+	if shell := os.Getenv(userPrefix + "_SHELL"); shell != "" {
+		config.UserManagement.Shell = shell
+	}
 
 	// Load registry security configuration
 	registryPrefix := securityPrefix + "_REGISTRIES"
@@ -543,6 +589,16 @@ func (em *EnvironmentMapper) loadLoggingConfig(config *LoggingConfig) error {
 	if filePath := os.Getenv(loggingPrefix + "_FILE_PATH"); filePath != "" {
 		config.FilePath = filePath
 	}
+	if compress := os.Getenv(loggingPrefix + "_COMPRESS"); compress != "" {
+		if c, err := strconv.ParseBool(compress); err == nil {
+			config.Compress = c
+		}
+	}
+	if addSource := os.Getenv(loggingPrefix + "_ADD_SOURCE"); addSource != "" {
+		if add, err := strconv.ParseBool(addSource); err == nil {
+			config.AddSource = add
+		}
+	}
 
 	return nil
 }
@@ -553,7 +609,7 @@ func (em *EnvironmentMapper) loadEnvironmentConfig(config *EnvironmentConfig) er
 
 	// Environment profiles are typically loaded from configuration files
 	// rather than environment variables to avoid excessive variable proliferation
-	
+
 	// Load basic environment type override
 	if envType := os.Getenv(envPrefix + "_TYPE"); envType != "" {
 		switch envType {
@@ -582,7 +638,7 @@ func ExportEnvironmentVariables(config *Config) []string {
 
 	// Export language configuration
 	envVars = append(envVars, mapper.exportLanguageConfig(config.Language)...)
-	
+
 	// Export container configuration
 	envVars = append(envVars, mapper.exportContainerConfig(config.Container)...)
 
@@ -663,10 +719,10 @@ func ValidateEnvironmentVariables() []string {
 // PrintEnvironmentVariables prints all available environment variables and their descriptions.
 func PrintEnvironmentVariables() {
 	envVars := GetEnvironmentVariables()
-	
+
 	fmt.Println("Engine-CI Environment Variables:")
 	fmt.Println("=================================")
-	
+
 	categories := map[string][]string{
 		"General":   {},
 		"Language":  {},
@@ -676,7 +732,7 @@ func PrintEnvironmentVariables() {
 		"Security":  {},
 		"Logging":   {},
 	}
-	
+
 	for envVar, description := range envVars {
 		category := "General"
 		switch {
@@ -693,10 +749,10 @@ func PrintEnvironmentVariables() {
 		case strings.Contains(envVar, "_LOGGING_"):
 			category = "Logging"
 		}
-		
+
 		categories[category] = append(categories[category], fmt.Sprintf("  %s\n    %s", envVar, description))
 	}
-	
+
 	for category, vars := range categories {
 		if len(vars) > 0 {
 			fmt.Printf("\n%s:\n", category)

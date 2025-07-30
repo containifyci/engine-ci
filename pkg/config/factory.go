@@ -12,10 +12,10 @@ import (
 type ConfigurableBuilder interface {
 	// SetConfig applies configuration to the builder
 	SetConfig(config *Config) error
-	
+
 	// GetConfig returns the current configuration
 	GetConfig() *Config
-	
+
 	// ValidateConfig validates the configuration for this builder
 	ValidateConfig() error
 }
@@ -32,7 +32,7 @@ func NewBuilderFactory(config *Config) *BuilderFactory {
 	if config == nil {
 		config = GetDefaultConfig()
 	}
-	
+
 	return &BuilderFactory{
 		config: config,
 	}
@@ -70,15 +70,15 @@ func (bf *BuilderFactory) SetConfig(config *Config) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
-	
+
 	if err := ValidateConfig(config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	bf.configMutex.Lock()
 	bf.config = config
 	bf.configMutex.Unlock()
-	
+
 	return nil
 }
 
@@ -98,17 +98,17 @@ func (bf *BuilderFactory) CreateBuildConfigFromContainer(build container.Build) 
 
 	// Apply configuration overrides to the container build
 	newBuild := build
-	
+
 	// Apply container configuration
 	if config.Container.Registry != "" {
 		newBuild.Registry = config.Container.Registry
 	}
-	
+
 	// Apply environment-specific overrides
 	if config.Environment.Type != "" {
 		newBuild.Env = config.Environment.Type
 	}
-	
+
 	// Apply runtime configuration
 	switch config.Container.Runtime.Type {
 	case "docker":
@@ -116,7 +116,7 @@ func (bf *BuilderFactory) CreateBuildConfigFromContainer(build container.Build) 
 	case "podman":
 		newBuild.Runtime = "podman"
 	}
-	
+
 	return newBuild
 }
 
@@ -124,17 +124,17 @@ func (bf *BuilderFactory) CreateBuildConfigFromContainer(build container.Build) 
 func (bf *BuilderFactory) createGoBuilder(build container.Build, config *Config) (ConfigurableBuilder, error) {
 	// Create Go-specific configuration from global config
 	goConfig := config.Language.Go
-	
+
 	// Apply Go configuration to build
 	newBuild := bf.CreateBuildConfigFromContainer(build)
-	
+
 	// Create a configurable Go builder wrapper
 	builder := &ConfigurableGoBuilder{
-		build:  newBuild,
-		config: config,
+		build:    newBuild,
+		config:   config,
 		goConfig: goConfig,
 	}
-	
+
 	return builder, nil
 }
 
@@ -142,13 +142,13 @@ func (bf *BuilderFactory) createGoBuilder(build container.Build, config *Config)
 func (bf *BuilderFactory) createMavenBuilder(build container.Build, config *Config) (ConfigurableBuilder, error) {
 	mavenConfig := config.Language.Maven
 	newBuild := bf.CreateBuildConfigFromContainer(build)
-	
+
 	builder := &ConfigurableMavenBuilder{
 		build:       newBuild,
 		config:      config,
 		mavenConfig: mavenConfig,
 	}
-	
+
 	return builder, nil
 }
 
@@ -156,13 +156,13 @@ func (bf *BuilderFactory) createMavenBuilder(build container.Build, config *Conf
 func (bf *BuilderFactory) createPythonBuilder(build container.Build, config *Config) (ConfigurableBuilder, error) {
 	pythonConfig := config.Language.Python
 	newBuild := bf.CreateBuildConfigFromContainer(build)
-	
+
 	builder := &ConfigurablePythonBuilder{
 		build:        newBuild,
 		config:       config,
 		pythonConfig: pythonConfig,
 	}
-	
+
 	return builder, nil
 }
 
@@ -170,20 +170,20 @@ func (bf *BuilderFactory) createPythonBuilder(build container.Build, config *Con
 func (bf *BuilderFactory) createProtobufBuilder(build container.Build, config *Config) (ConfigurableBuilder, error) {
 	protobufConfig := config.Language.Protobuf
 	newBuild := bf.CreateBuildConfigFromContainer(build)
-	
+
 	builder := &ConfigurableProtobufBuilder{
 		build:          newBuild,
 		config:         config,
 		protobufConfig: protobufConfig,
 	}
-	
+
 	return builder, nil
 }
 
 // ConfigurableGoBuilder wraps Go builders with configuration support.
 type ConfigurableGoBuilder struct {
-	build    container.Build
 	config   *Config
+	build    container.Build
 	goConfig GoConfig
 	mutex    sync.RWMutex
 }
@@ -193,12 +193,12 @@ func (gb *ConfigurableGoBuilder) SetConfig(config *Config) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
-	
+
 	gb.mutex.Lock()
 	gb.config = config
 	gb.goConfig = config.Language.Go
 	gb.mutex.Unlock()
-	
+
 	return nil
 }
 
@@ -214,7 +214,7 @@ func (gb *ConfigurableGoBuilder) ValidateConfig() error {
 	gb.mutex.RLock()
 	goConfig := gb.goConfig
 	gb.mutex.RUnlock()
-	
+
 	return ValidatePartialConfig(&goConfig)
 }
 
@@ -269,9 +269,9 @@ func (gb *ConfigurableGoBuilder) GetCoverageMode() string {
 
 // ConfigurableMavenBuilder wraps Maven builders with configuration support.
 type ConfigurableMavenBuilder struct {
-	build       container.Build
-	config      *Config
 	mavenConfig MavenConfig
+	config      *Config
+	build       container.Build
 	mutex       sync.RWMutex
 }
 
@@ -280,12 +280,12 @@ func (mb *ConfigurableMavenBuilder) SetConfig(config *Config) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
-	
+
 	mb.mutex.Lock()
 	mb.config = config
 	mb.mavenConfig = config.Language.Maven
 	mb.mutex.Unlock()
-	
+
 	return nil
 }
 
@@ -301,7 +301,7 @@ func (mb *ConfigurableMavenBuilder) ValidateConfig() error {
 	mb.mutex.RLock()
 	mavenConfig := mb.mavenConfig
 	mb.mutex.RUnlock()
-	
+
 	return ValidatePartialConfig(&mavenConfig)
 }
 
@@ -335,8 +335,8 @@ func (mb *ConfigurableMavenBuilder) GetJavaOpts() string {
 
 // ConfigurablePythonBuilder wraps Python builders with configuration support.
 type ConfigurablePythonBuilder struct {
-	build        container.Build
 	config       *Config
+	build        container.Build
 	pythonConfig PythonConfig
 	mutex        sync.RWMutex
 }
@@ -346,12 +346,12 @@ func (pb *ConfigurablePythonBuilder) SetConfig(config *Config) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
-	
+
 	pb.mutex.Lock()
 	pb.config = config
 	pb.pythonConfig = config.Language.Python
 	pb.mutex.Unlock()
-	
+
 	return nil
 }
 
@@ -367,7 +367,7 @@ func (pb *ConfigurablePythonBuilder) ValidateConfig() error {
 	pb.mutex.RLock()
 	pythonConfig := pb.pythonConfig
 	pb.mutex.RUnlock()
-	
+
 	return ValidatePartialConfig(&pythonConfig)
 }
 
@@ -401,9 +401,9 @@ func (pb *ConfigurablePythonBuilder) GetUVCacheDir() string {
 
 // ConfigurableProtobufBuilder wraps Protobuf builders with configuration support.
 type ConfigurableProtobufBuilder struct {
-	build          container.Build
-	config         *Config
 	protobufConfig ProtobufConfig
+	config         *Config
+	build          container.Build
 	mutex          sync.RWMutex
 }
 
@@ -412,12 +412,12 @@ func (pb *ConfigurableProtobufBuilder) SetConfig(config *Config) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
-	
+
 	pb.mutex.Lock()
 	pb.config = config
 	pb.protobufConfig = config.Language.Protobuf
 	pb.mutex.Unlock()
-	
+
 	return nil
 }
 
@@ -433,7 +433,7 @@ func (pb *ConfigurableProtobufBuilder) ValidateConfig() error {
 	pb.mutex.RLock()
 	protobufConfig := pb.protobufConfig
 	pb.mutex.RUnlock()
-	
+
 	return ValidatePartialConfig(&protobufConfig)
 }
 
@@ -470,7 +470,7 @@ func NewConfigAwareBaseBuilder(config *Config) *ConfigAwareBaseBuilder {
 	if config == nil {
 		config = GetDefaultConfig()
 	}
-	
+
 	return &ConfigAwareBaseBuilder{
 		config: config,
 	}
@@ -481,11 +481,11 @@ func (cb *ConfigAwareBaseBuilder) SetConfig(config *Config) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
-	
+
 	cb.mutex.Lock()
 	cb.config = config
 	cb.mutex.Unlock()
-	
+
 	return nil
 }
 
@@ -536,7 +536,7 @@ func (cb *ConfigAwareBaseBuilder) GetEnvironmentProfile() EnvironmentProfile {
 	cb.mutex.RLock()
 	config := cb.config
 	cb.mutex.RUnlock()
-	
+
 	switch config.Environment.Type {
 	case container.LocalEnv:
 		return config.Environment.Profiles.Local
@@ -554,7 +554,7 @@ func (cb *ConfigAwareBaseBuilder) ValidateConfig() error {
 	cb.mutex.RLock()
 	config := cb.config
 	cb.mutex.RUnlock()
-	
+
 	return ValidateConfig(config)
 }
 
@@ -564,7 +564,7 @@ type ConfigUpdateCallback func(oldConfig, newConfig *Config) error
 // BuilderFactoryWithCallbacks extends BuilderFactory with configuration change notifications.
 type BuilderFactoryWithCallbacks struct {
 	*BuilderFactory
-	callbacks []ConfigUpdateCallback
+	callbacks     []ConfigUpdateCallback
 	callbackMutex sync.RWMutex
 }
 
@@ -588,24 +588,24 @@ func (bf *BuilderFactoryWithCallbacks) SetConfig(newConfig *Config) error {
 	bf.configMutex.Lock()
 	oldConfig := bf.config
 	bf.configMutex.Unlock()
-	
+
 	// Validate the new configuration first
 	if err := ValidateConfig(newConfig); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	// Notify callbacks before the change
 	bf.callbackMutex.RLock()
 	callbacks := make([]ConfigUpdateCallback, len(bf.callbacks))
 	copy(callbacks, bf.callbacks)
 	bf.callbackMutex.RUnlock()
-	
+
 	for _, callback := range callbacks {
 		if err := callback(oldConfig, newConfig); err != nil {
 			return fmt.Errorf("configuration update callback failed: %w", err)
 		}
 	}
-	
+
 	// Apply the configuration change
 	return bf.BuilderFactory.SetConfig(newConfig)
 }

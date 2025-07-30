@@ -61,7 +61,7 @@ func ApplyFlagsToConfig(cmd *cobra.Command, config *Config) error {
 		return cmd.Flags().GetBool(name)
 	}
 	getDuration := func(name string) (time.Duration, error) {
-		return cmd.Flags().GetDuration(name) 
+		return cmd.Flags().GetDuration(name)
 	}
 
 	// Apply general flags

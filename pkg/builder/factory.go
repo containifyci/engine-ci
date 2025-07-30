@@ -2,6 +2,7 @@ package builder
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/builder/common"
@@ -35,7 +36,7 @@ func (f *StandardBuildFactory) CreateLinter(build container.Build) (build.Build,
 	if !exists {
 		return nil, fmt.Errorf("no defaults found for build type: %s", build.BuildType)
 	}
-	
+
 	// Create a standard linter build
 	linterBuild := common.NewLanguageBuild(
 		func() error {
@@ -46,7 +47,7 @@ func (f *StandardBuildFactory) CreateLinter(build container.Build) (build.Build,
 		[]string{defaults.LintImage},
 		false, // Linting is typically synchronous
 	)
-	
+
 	return linterBuild, nil
 }
 
@@ -57,7 +58,7 @@ func (f *StandardBuildFactory) CreateProd(build container.Build) (build.Build, e
 	if !exists {
 		return nil, fmt.Errorf("no defaults found for build type: %s", build.BuildType)
 	}
-	
+
 	// Create a standard production build
 	prodBuild := common.NewLanguageBuild(
 		func() error {
@@ -68,7 +69,7 @@ func (f *StandardBuildFactory) CreateProd(build container.Build) (build.Build, e
 		[]string{defaults.BaseImage},
 		false, // Production builds are typically synchronous
 	)
-	
+
 	return prodBuild, nil
 }
 
@@ -95,18 +96,19 @@ type BuilderConstructor func(container.Build) (LanguageBuilder, error)
 
 // BuilderFeatures describes the capabilities of a specific builder implementation.
 type BuilderFeatures struct {
-	SupportsLinting     bool
-	SupportsProduction  bool
-	SupportsAsync       bool
-	SupportsMultiStage  bool
-	RequiredFiles       []string
-	OptionalFiles       []string
+	RequiredFiles      []string
+	OptionalFiles      []string
+	SupportsLinting    bool
+	SupportsProduction bool
+	SupportsAsync      bool
+	SupportsMultiStage bool
 }
 
 // BuilderRegistry will be used in future phases to register and manage builder implementations.
 // This enables a plugin-like architecture for adding new language support.
 type BuilderRegistry struct {
 	builders map[container.BuildType]*BuilderRegistration
+	mu       sync.RWMutex
 }
 
 // NewBuilderRegistry creates a new registry for managing builder implementations.
@@ -121,23 +123,29 @@ func (r *BuilderRegistry) Register(registration *BuilderRegistration) error {
 	if registration == nil {
 		return fmt.Errorf("registration cannot be nil")
 	}
-	
+
 	if registration.Constructor == nil {
 		return fmt.Errorf("constructor cannot be nil for build type: %s", registration.BuildType)
 	}
-	
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.builders[registration.BuildType] = registration
 	return nil
 }
 
 // Get retrieves a builder registration for the specified build type.
 func (r *BuilderRegistry) Get(buildType container.BuildType) (*BuilderRegistration, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	registration, exists := r.builders[buildType]
 	return registration, exists
 }
 
 // List returns all registered build types.
 func (r *BuilderRegistry) List() []container.BuildType {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	types := make([]container.BuildType, 0, len(r.builders))
 	for buildType := range r.builders {
 		types = append(types, buildType)
@@ -147,11 +155,14 @@ func (r *BuilderRegistry) List() []container.BuildType {
 
 // CreateBuilder creates a new builder instance using the registered constructor.
 func (r *BuilderRegistry) CreateBuilder(buildType container.BuildType, build container.Build) (LanguageBuilder, error) {
+	r.mu.RLock()
 	registration, exists := r.builders[buildType]
+	r.mu.RUnlock()
+
 	if !exists {
 		return nil, fmt.Errorf("no builder registered for build type: %s", buildType)
 	}
-	
+
 	return registration.Constructor(build)
 }
 

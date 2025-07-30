@@ -109,7 +109,7 @@ func TestOversizedBuffer(t *testing.T) {
 
 	// Create an oversized buffer
 	oversized := make([]byte, MaxRetainedBufferSize+1)
-	
+
 	// Try to put it back
 	pool.Put(oversized, TarBuffer)
 

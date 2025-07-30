@@ -7,11 +7,11 @@ import (
 // BenchmarkTarBufferWithPool tests large buffer operations with pool
 func BenchmarkTarBufferWithPool(b *testing.B) {
 	// Use buffer size that fits within TarBufferSize (64KB)
-	bufferData := make([]byte, 32*1024) // 32KB of data  
+	bufferData := make([]byte, 32*1024) // 32KB of data
 	for i := range bufferData {
 		bufferData[i] = byte(i % 256)
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		WithBuffer(TarBuffer, func(buffer []byte) {
@@ -27,7 +27,7 @@ func BenchmarkTarBufferStandard(b *testing.B) {
 	for i := range bufferData {
 		bufferData[i] = byte(i % 256)
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buffer := make([]byte, 64*1024) // Allocate 64KB buffer

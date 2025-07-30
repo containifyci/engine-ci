@@ -28,10 +28,10 @@ func ComputeChecksum(data []byte) string {
 	defer func() {
 		memory.TrackOperation(time.Since(start))
 	}()
-	
+
 	hash := sha256.Sum256(data)
 	result := hex.EncodeToString(hash[:])
-	
+
 	memory.TrackAllocation(int64(len(result)))
 	return result
 }
@@ -44,7 +44,7 @@ func ImageURIFromDockerfile(fs embed.FS, dockerfilePath, baseName, registry stri
 		slog.Error("Failed to read Dockerfile", "path", dockerfilePath, "error", err)
 		os.Exit(1)
 	}
-	
+
 	tag := ComputeChecksum(dockerFile)
 	return utils.ImageURI(registry, baseName, tag)
 }
@@ -61,7 +61,7 @@ func BuildIntermediateImage(c *container.Container, fs embed.FS, dockerfilePath,
 	if len(platforms) == 0 {
 		platforms = types.GetPlatforms(c.GetBuild().Platform)
 	}
-	
+
 	slog.Info("Building intermediate image", "image", imageName, "platforms", platforms)
 	return c.BuildIntermidiateContainer(imageName, dockerFile, platforms...)
 }
@@ -75,23 +75,23 @@ func CacheFolderFromEnv(envVars []string, defaultSubDir string) string {
 			return value
 		}
 	}
-	
+
 	// Fallback to user home directory
 	usr, err := user.Current()
 	if err != nil {
 		slog.Error("Failed to get current user", "error", err)
 		os.Exit(1)
 	}
-	
+
 	cacheDir := filepath.Join(usr.HomeDir, defaultSubDir)
 	slog.Info("Cache directory not set via environment, using default", "cacheDir", cacheDir)
-	
+
 	// Ensure directory exists
 	if err := filesystem.DirectoryExists(cacheDir); err != nil {
 		slog.Error("Failed to create cache folder", "error", err)
 		os.Exit(1)
 	}
-	
+
 	return cacheDir
 }
 
@@ -105,13 +105,13 @@ func CacheFolderFromCommand(command, subcommand string, fallbackDir string) stri
 		slog.Warn("Failed to execute cache location command", "command", command, "subcommand", subcommand, "error", err)
 		return fallbackDir
 	}
-	
+
 	cacheLocation := strings.TrimSpace(string(output))
 	if cacheLocation != "" {
 		slog.Info("Cache location detected", "location", cacheLocation)
 		return cacheLocation
 	}
-	
+
 	return fallbackDir
 }
 
@@ -124,13 +124,13 @@ func SetupCommonVolumes(sourceDir, cacheDir, sourceMountPath, cacheMountPath str
 		slog.Error("Failed to resolve source directory", "dir", sourceDir, "error", err)
 		absSourceDir = sourceDir
 	}
-	
+
 	absCacheDir, err := filepath.Abs(cacheDir)
 	if err != nil {
 		slog.Error("Failed to resolve cache directory", "dir", cacheDir, "error", err)
 		absCacheDir = cacheDir
 	}
-	
+
 	return []types.Volume{
 		{
 			Type:   "bind",
@@ -149,15 +149,15 @@ func SetupCommonVolumes(sourceDir, cacheDir, sourceMountPath, cacheMountPath str
 // This function encapsulates environment setup patterns shared across language builders.
 func SetupEnvironmentVariables(languageSpecific []string, cacheVars map[string]string) []string {
 	env := make([]string, 0, len(languageSpecific)+len(cacheVars))
-	
+
 	// Add language-specific environment variables
 	env = append(env, languageSpecific...)
-	
+
 	// Add cache-related environment variables
 	for key, value := range cacheVars {
 		env = append(env, fmt.Sprintf("%s=%s", key, value))
 	}
-	
+
 	return env
 }
 
@@ -165,13 +165,13 @@ func SetupEnvironmentVariables(languageSpecific []string, cacheVars map[string]s
 // This consolidates the production container setup pattern used across language builders.
 func CreateProdContainer(c *container.Container, prodImage string) error {
 	opts := types.ContainerConfig{
-		Image:     prodImage,
-		Env:       []string{},
-		Cmd:       []string{"sleep", "300"},
-		Platform:  types.AutoPlatform,
+		Image:      prodImage,
+		Env:        []string{},
+		Cmd:        []string{"sleep", "300"},
+		Platform:   types.AutoPlatform,
 		WorkingDir: "/src",
 	}
-	
+
 	return c.Create(opts)
 }
 
@@ -182,12 +182,12 @@ func AddUserToContainer(c *container.Container, groupID, userID, groupName, user
 	if err := c.Exec("addgroup", "-g", groupID, groupName); err != nil {
 		return fmt.Errorf("failed to add group: %w", err)
 	}
-	
+
 	// Add user
 	if err := c.Exec("adduser", "-D", "-u", userID, "-G", groupName, userName); err != nil {
 		return fmt.Errorf("failed to add user: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -195,7 +195,7 @@ func AddUserToContainer(c *container.Container, groupID, userID, groupName, user
 // This consolidates the platform detection logic used across language builders.
 func GetDefaultPlatforms(buildPlatform types.Platform) []*types.PlatformSpec {
 	platforms := []*types.PlatformSpec{buildPlatform.Container}
-	
+
 	// Add cross-platform support when host and container platforms differ
 	if !buildPlatform.Same() {
 		slog.Info("Different platform detected", "host", buildPlatform.Host, "container", buildPlatform.Container)
@@ -205,7 +205,7 @@ func GetDefaultPlatforms(buildPlatform types.Platform) []*types.PlatformSpec {
 			types.ParsePlatform("linux/arm64"),
 		}
 	}
-	
+
 	return platforms
 }
 
@@ -217,10 +217,10 @@ func GetDefaultPlatformStrings(buildPlatform types.Platform) []string {
 
 // DefaultCacheLocations provides standard cache directory locations for different languages.
 var DefaultCacheLocations = map[string]string{
-	"go":     ".cache/go",
-	"maven":  ".m2",
-	"python": ".cache/pip",
-	"node":   ".cache/npm",
+	"go":      ".cache/go",
+	"maven":   ".m2",
+	"python":  ".cache/pip",
+	"node":    ".cache/npm",
 	"generic": ".cache/build",
 }
 
