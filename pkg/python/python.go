@@ -2,6 +2,7 @@ package python
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
@@ -12,24 +13,22 @@ import (
 	"text/template"
 
 	"github.com/containifyci/engine-ci/pkg/build"
+	"github.com/containifyci/engine-ci/pkg/config"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/filesystem"
+	"github.com/containifyci/engine-ci/pkg/language"
 	"github.com/containifyci/engine-ci/pkg/network"
-)
-
-const (
-	BaseImage     = "python:3.11-slim-bookworm"
-	CacheLocation = "/root/.cache/pip"
 )
 
 //go:embed Dockerfile.*
 var f embed.FS
 
+// PythonContainer implements the LanguageBuilder interface for Python builds
 type PythonContainer struct {
+	*language.BaseLanguageBuilder
 	Platform types.Platform
-	*container.Container
 	App      string
 	File     string
 	Folder   string
@@ -38,44 +37,53 @@ type PythonContainer struct {
 }
 
 func New(build container.Build) *PythonContainer {
+	// Create configuration for Python
+	cfg := &config.LanguageConfig{
+		BaseImage:     "python:3.11-slim-bookworm",
+		CacheLocation: "/root/.cache/pip",
+		WorkingDir:    "/src",
+		Environment: map[string]string{
+			"_PIP_USE_IMPORTLIB_METADATA": "0",
+			"UV_CACHE_DIR":                "/root/.cache/pip",
+		},
+	}
+
+	baseBuilder := language.NewBaseLanguageBuilder("python", cfg, container.New(build), nil)
+
 	return &PythonContainer{
-		App:       build.App,
-		Container: container.New(build),
-		Image:     build.Image,
-		Folder:    build.Folder,
-		ImageTag:  build.ImageTag,
-		Platform:  build.Platform,
+		BaseLanguageBuilder: baseBuilder,
+		App:                build.App,
+		Image:              build.Image,
+		Folder:             build.Folder,
+		ImageTag:           build.ImageTag,
+		Platform:           build.Platform,
 	}
 }
 
-func (c *PythonContainer) IsAsync() bool {
-	return false
-}
-
-func (c *PythonContainer) Name() string {
-	return "python"
-}
-
-func CacheFolder() string {
+func CacheFolder() (string, error) {
 	pipCache := os.Getenv("PIP_CACHE_DIR")
 	if pipCache == "" {
 		pipCache = os.TempDir() + ".pip"
 		slog.Info("Python_HOME not set, using default", "pipCache", pipCache)
 		err := filesystem.DirectoryExists(pipCache)
 		if err != nil {
-			slog.Error("Failed to create cache folder", "error", err)
-			os.Exit(1)
+			return "", language.NewCacheError("create_cache_folder", "python", err).WithPath(pipCache)
 		}
 	}
-	return pipCache
+	return pipCache, nil
 }
 
 func (c *PythonContainer) Pull() error {
-	return c.Container.Pull(BaseImage)
+	return c.GetContainer().Pull(c.BaseImage())
 }
 
 func (c *PythonContainer) Images() []string {
-	return []string{c.PythonImage(), BaseImage}
+	pythonImage, err := c.PythonImage()
+	if err != nil {
+		slog.Error("Failed to get Python image", "error", err)
+		return []string{c.BaseImage()}
+	}
+	return []string{pythonImage, c.BaseImage()}
 }
 
 // TODO: provide a shorter checksum
@@ -84,28 +92,24 @@ func ComputeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func (c *PythonContainer) PythonImage() string {
+func (c *PythonContainer) PythonImage() (string, error) {
 	dockerFile, err := f.ReadFile("Dockerfile.python")
 	if err != nil {
-		slog.Error("Failed to read Dockerfile.Python", "error", err)
-		os.Exit(1)
+		return "", language.NewBuildError("read_dockerfile", "python", err)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "python-3.11-slim-bookworm", tag)
-
-	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "python-3.11-slim-bookworm", tag)
+	return utils.ImageURI(c.GetContainer().GetBuild().ContainifyRegistry, "python-3.11-slim-bookworm", tag), nil
 }
 
 func (c *PythonContainer) BuildPythonImage() error {
 	dockerFile, err := f.ReadFile("Dockerfile.python")
 	if err != nil {
-		slog.Error("Failed to read Dockerfile.Python", "error", err)
-		os.Exit(1)
+		return language.NewBuildError("read_dockerfile", "python", err)
 	}
+	
 	tmpl, err := template.New("Dockerfile.python").Parse(string(dockerFile))
 	if err != nil {
-		slog.Error("Failed to parse Dockerfile.Python", "error", err)
-		os.Exit(1)
+		return language.NewBuildError("parse_dockerfile_template", "python", err)
 	}
 
 	var buf bytes.Buffer
@@ -113,7 +117,7 @@ func (c *PythonContainer) BuildPythonImage() error {
 	installUv := "RUN pip3 --no-cache install uv"
 
 	// Podman can't run uv installed with x86_64.manylinux packages
-	if c.GetBuild().Runtime == utils.Podman {
+	if c.GetContainer().GetBuild().Runtime == utils.Podman {
 		installUv = `
 RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --only-binary=:all: --target /tmp/uv uv && \
 	mv /tmp/uv/bin/uv /usr/local/bin && \
@@ -123,15 +127,18 @@ RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --o
 
 	err = tmpl.Execute(&buf, map[string]string{"INSTALL_UV": installUv})
 	if err != nil {
-		slog.Error("Failed to render Dockerfile.Python", "error", err)
-		os.Exit(1)
+		return language.NewBuildError("render_dockerfile_template", "python", err)
 	}
-	image := c.PythonImage()
+	
+	image, err := c.PythonImage()
+	if err != nil {
+		return err
+	}
 
-	platforms := types.GetPlatforms(c.GetBuild().Platform)
+	platforms := types.GetPlatforms(c.GetContainer().GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.GetContainer().BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
 func (c *PythonContainer) Address() *network.Address {
@@ -139,60 +146,68 @@ func (c *PythonContainer) Address() *network.Address {
 }
 
 func (c *PythonContainer) Build() (string, error) {
-	imageTag := c.PythonImage()
-
-	ssh, err := network.SSHForward(*c.GetBuild())
+	imageTag, err := c.PythonImage()
 	if err != nil {
-		slog.Error("Failed to forward SSH", "error", err)
-		os.Exit(1)
+		return "", err
+	}
+
+	ssh, err := network.SSHForward(*c.GetContainer().GetBuild())
+	if err != nil {
+		return "", language.NewBuildError("ssh_forward", "python", err)
 	}
 
 	opts := types.ContainerConfig{}
 	opts.Image = imageTag
-	opts.Env = append(opts.Env, []string{
-		"_PIP_USE_IMPORTLIB_METADATA=0",
-		"UV_CACHE_DIR=/root/.cache/pip",
-	}...)
+	
+	// Use configuration for environment variables
+	cfg := c.GetConfig()
+	for key, value := range cfg.Environment {
+		opts.Env = append(opts.Env, fmt.Sprintf("%s=%s", key, value))
+	}
 
 	opts.Platform = types.AutoPlatform
-	opts.WorkingDir = "/src"
+	opts.WorkingDir = cfg.WorkingDir
 
 	dir, _ := filepath.Abs(".")
+
+	cacheFolder, err := CacheFolder()
+	if err != nil {
+		return "", err
+	}
 
 	opts.Volumes = []types.Volume{
 		{
 			Type:   "bind",
 			Source: dir,
-			Target: "/src",
+			Target: cfg.WorkingDir,
 		},
 		{
 			Type:   "bind",
-			Source: CacheFolder(),
-			Target: CacheLocation,
+			Source: cacheFolder,
+			Target: cfg.CacheLocation,
 		},
 	}
 
 	opts = ssh.Apply(&opts)
 	opts.Script = c.BuildScript()
 
-	err = c.BuildingContainer(opts)
+	err = c.GetContainer().BuildingContainer(opts)
 	if err != nil {
-		slog.Error("Failed to build container", "error", err)
-		os.Exit(1)
+		return "", language.NewBuildError("building_container", "python", err)
 	}
 
-	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"python\", \"/src/run.py\"]") /*, "USER worker")*/
+	imageId, err := c.GetContainer().Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"python\", \"/src/run.py\"]")
 	if err != nil {
-		slog.Error("Failed to commit container: %s", "error", err)
-		os.Exit(1)
+		return "", language.NewBuildError("commit_container", "python", err)
 	}
 
-	return imageId, err
+	return imageId, nil
 }
 
 func (c *PythonContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return Script(NewBuildScript(c.Verbose))
+	verbose := c.GetContainer().GetBuild().Verbose
+	return Script(NewBuildScript(verbose))
 }
 
 type PythonBuild struct {
@@ -209,12 +224,18 @@ func (g PythonBuild) IsAsync() bool    { return g.async }
 
 func NewProd(build container.Build) build.Build {
 	container := New(build)
+	pythonImage, err := container.PythonImage()
+	if err != nil {
+		slog.Error("Failed to get Python image for production build", "error", err)
+		pythonImage = container.BaseImage() // fallback to base image
+	}
+	
 	return PythonBuild{
 		rf: func() error {
 			return container.Prod()
 		},
 		name:   "python-prod",
-		images: []string{container.PythonImage()},
+		images: []string{pythonImage},
 		async:  false,
 	}
 }
@@ -227,76 +248,89 @@ func (c *PythonContainer) Prod() error {
 	opts.Cmd = []string{"sleep", "300"}
 	// opts.User = "185"
 
-	err := c.Create(opts)
+	err := c.GetContainer().Create(opts)
 	if err != nil {
-		slog.Error("Failed to create container: %s", "error", err)
-		os.Exit(1)
+		return language.NewContainerError("create", err)
 	}
 
-	err = c.Start()
+	err = c.GetContainer().Start()
 	if err != nil {
-		slog.Error("Failed to start container: %s", "error", err)
-		os.Exit(1)
+		return language.NewContainerError("start", err)
 	}
 
-	err = c.CopyDirectoryTo(c.Folder, "/app")
+	err = c.GetContainer().CopyDirectoryTo(c.Folder, "/app")
 	if err != nil {
-		slog.Error("Failed to copy directory to container: %s", "error", err)
-		os.Exit(1)
+		return language.NewContainerError("copy_directory", err)
 	}
 
-	err = c.Exec([]string{"pip", "install", "--no-cache", "/app/wheels/*"}...)
+	err = c.GetContainer().Exec([]string{"pip", "install", "--no-cache", "/app/wheels/*"}...)
 	if err != nil {
-		slog.Error("Failed to install wheels: %s", "error", err)
-		os.Exit(1)
+		return language.NewContainerError("install_wheels", err)
 	}
 
-	imageId, err := c.Commit(opts.Image, "Created from container", "CMD [\"python\", \"/app/run.py\"]", "WORKDIR /app") /*, "USER 185")*/
+	imageId, err := c.GetContainer().Commit(opts.Image, "Created from container", "CMD [\"python\", \"/app/run.py\"]", "WORKDIR /app")
 	if err != nil {
-		slog.Error("Failed to commit container: %s", "error", err)
-		os.Exit(1)
+		return language.NewBuildError("commit_production_container", "python", err)
 	}
 
-	err = c.Stop()
+	err = c.GetContainer().Stop()
 	if err != nil {
-		slog.Error("Failed to stop container: %s", "error", err)
-		os.Exit(1)
+		return language.NewContainerError("stop", err)
 	}
 
-	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)
-	err = c.Push(imageId, imageUri, container.PushOption{Remove: false})
+	imageUri := utils.ImageURI(c.GetContainer().GetBuild().Registry, c.Image, c.ImageTag)
+	err = c.GetContainer().Push(imageId, imageUri, container.PushOption{Remove: false})
 	if err != nil {
-		slog.Error("Failed to push image: %s", "error", err)
-		os.Exit(1)
+		return language.NewContainerError("push_image", err)
 	}
 
-	return err
+	return nil
 }
 
 func (c *PythonContainer) Run() error {
 	err := c.Pull()
 	if err != nil {
-		slog.Error("Failed to pull base images: %s", "error", err)
+		slog.Error("Failed to pull base images", "error", err)
 		return err
 	}
 
 	err = c.BuildPythonImage()
 	if err != nil {
-		slog.Error("Failed to build go image: %s", "error", err)
+		slog.Error("Failed to build python image", "error", err)
 		return err
 	}
 
 	imageID, err := c.Build()
-	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
-		slog.Error("Failed to create container: %s", "error", err)
+		slog.Error("Failed to build container", "error", err)
 		return err
 	}
+	
+	slog.Info("Container created", "containerId", c.GetContainer().ID)
 
-	err = c.Tag(imageID, fmt.Sprintf("%s:%s", c.Image, c.ImageTag))
+	err = c.GetContainer().Tag(imageID, fmt.Sprintf("%s:%s", c.Image, c.ImageTag))
 	if err != nil {
-		slog.Error("Failed to tag image: %s", "error", err)
+		slog.Error("Failed to tag image", "error", err)
 		return err
+	}
+	return nil
+}
+
+// BuildImage implements the LanguageBuilder interface
+func (c *PythonContainer) BuildImage(ctx context.Context) (string, error) {
+	return c.Build()
+}
+
+// Execute implements the BuildStep interface
+func (c *PythonContainer) Execute(ctx context.Context) error {
+	return c.Run()
+}
+
+// Validate implements the BuildStep interface  
+func (c *PythonContainer) Validate(ctx context.Context) error {
+	// Validate that required files exist
+	if _, err := os.Stat("requirements.txt"); os.IsNotExist(err) {
+		return language.NewValidationError("requirements.txt", nil, "requirements.txt file is required for Python builds")
 	}
 	return nil
 }

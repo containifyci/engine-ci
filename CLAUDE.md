@@ -1,6 +1,6 @@
 # General Layer
 
-# Prompt Registry - Claude Instructions
+# Engine-CI - Claude Instructions
 
 ## Plan & Review
 
@@ -15,16 +15,19 @@
 - After you complete tasks in the plan, you should update and append detailed descriptions of the changes you made, so following tasks can be easily hand over to other engineers.
 
 ## Project Context
-Go CLI tool for managing, versioning, and fetching LLM instruction prompts with centralized storage, semantic versioning, and validation capabilities.
+Go CLI tool for container-based CI/CD pipeline execution with support for Docker, Podman, and other container runtime integrations. Provides build orchestration, memory optimization, and high-performance container operations.
 
-**Tech Stack**: Go 1.24, Cobra CLI, testify testing, filesystem storage, clean architecture
+**Tech Stack**: Go 1.24, Cobra CLI, Container runtimes (Docker/Podman), BuildKit integration, memory pool optimization, clean architecture
 
 ## Git & PR Workflow
 ```bash
 # Branch naming: <username>_<feature_description> (underscores)
 git checkout -b fr12k_new_feature
 git commit -m "feat(scope): description" # Conventional commits
-make fmt lint test # Always before committing
+# Quality gates - Always before committing:
+go build main.go  # Verify build works
+golangci-lint -v run --fix --timeout=5m ./...  # Lint with auto-fix  (specially for fieldalignment)
+go test ./...  # Verify all tests pass
 git push -u origin fr12k_new_feature
 
 # PR creation (use temp files due to quoting issues)
@@ -64,7 +67,30 @@ gh pr create --title "long title with spaces" --body "long body text"
 ### Error Handling Requirements  
 - **Always** check return values from `os.Chdir()` in deferred functions to satisfy linter
 - **Always** use package constants instead of hardcoded strings for maintainability
-- **Always** run `make fmt lint test` before committing
+- **Always** run quality gates before committing: `go build main.go && golangci-lint -v run --fix --timeout=5m ./... && go test ./...`
+
+### Quality Gates & Development Workflow
+**CRITICAL**: Always verify code quality before committing. Run these commands in sequence:
+
+```bash
+# 1. Basic build verification
+go build main.go
+
+# 2. Linting with auto-fix and timeout
+golangci-lint -v run --fix --timeout=5m ./...
+
+# 3. Test suite execution
+go test ./...
+
+# 4. Full container build (slower - use after bigger changes only)
+go run --tags containers_image_openpgp main.go run -t all
+```
+
+**Development Philosophy**: 
+- **Keep changes small** and iterate fast
+- **Check build/lint/test** after each logical change
+- **Container build is slower** - only run after bigger changes or before final commit
+- **Fix issues immediately** - don't accumulate technical debt
 
 ### Architecture Documentation
 - **Update architecture.d2**: When making significant structural changes, update the D2Lang architecture file
@@ -80,7 +106,7 @@ gh pr create --title "long title with spaces" --body "long body text"
 
 # General + Claude Layer
 
-# Prompt Registry - Claude Instructions
+# Engine-CI - Claude Instructions
 
 ## Plan & Review
 
@@ -95,16 +121,19 @@ gh pr create --title "long title with spaces" --body "long body text"
 - After you complete tasks in the plan, you should update and append detailed descriptions of the changes you made, so following tasks can be easily hand over to other engineers.
 
 ## Project Context
-Go CLI tool for managing, versioning, and fetching LLM instruction prompts with centralized storage, semantic versioning, and validation capabilities.
+Go CLI tool for container-based CI/CD pipeline execution with support for Docker, Podman, and other container runtime integrations. Provides build orchestration, memory optimization, and high-performance container operations.
 
-**Tech Stack**: Go 1.24, Cobra CLI, testify testing, filesystem storage, clean architecture
+**Tech Stack**: Go 1.24, Cobra CLI, Container runtimes (Docker/Podman), BuildKit integration, memory pool optimization, clean architecture
 
 ## Git & PR Workflow
 ```bash
 # Branch naming: <username>_<feature_description> (underscores)
 git checkout -b fr12k_new_feature
 git commit -m "feat(scope): description" # Conventional commits
-make fmt lint test # Always before committing
+# Quality gates - Always before committing:
+go build main.go  # Verify build works
+golangci-lint -v run --fix --timeout=5m ./...  # Lint with auto-fix  
+go test ./...  # Verify all tests pass
 git push -u origin fr12k_new_feature
 
 # PR creation (use temp files due to quoting issues)
@@ -144,7 +173,7 @@ gh pr create --title "long title with spaces" --body "long body text"
 ### Error Handling Requirements  
 - **Always** check return values from `os.Chdir()` in deferred functions to satisfy linter
 - **Always** use package constants instead of hardcoded strings for maintainability
-- **Always** run `make fmt lint test` before committing
+- **Always** run quality gates before committing: `go build main.go && golangci-lint -v run --fix --timeout=5m ./... && go test ./...`
 
 ### Architecture Documentation
 - **Update architecture.d2**: When making significant structural changes, update the D2Lang architecture file
@@ -160,7 +189,7 @@ Copilot reviews provide progressive, multi-layered feedback that evolves as code
 gh pr view <number> --json comments,reviews
 
 # Get ALL detailed findings (line-specific comments)
-gh api repos/goflink/prompt-registry/pulls/<number>/comments
+gh api repos/containifyci/engine-ci/pulls/<number>/comments
 ```
 
 #### **Review Types & Behavior**
@@ -263,7 +292,7 @@ The project has specialized sub-agents in `.claude/agents/` for parallel develop
 - **Main conversation**: Coordinate between agents and handle high-level planning
 - **Single responsibility**: Each agent focuses on their domain expertise
 - **Cross-agent collaboration**: Agents reference each other's work when needed
-- **Quality gates**: All agents must ensure `make fmt lint test` passes
+- **Quality gates**: All agents must ensure build, lint, and test quality gates pass
 
 ### Task Assignment Examples
 
@@ -298,7 +327,7 @@ The project has specialized sub-agents in `.claude/agents/` for parallel develop
 
 # Golang Development Guidelines
 
-Comprehensive guidance for Go development, best practices, and integration with the prompt-registry project.
+Comprehensive guidance for Go development, best practices, and integration with the engine-ci project.
 
 ## Core Go Philosophy
 
@@ -549,39 +578,34 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 ### Integration Testing
 ```go
-func TestPromptRegistry_Integration(t *testing.T) {
+func TestEngineCI_Integration(t *testing.T) {
     // Setup temporary directory
     tempDir := t.TempDir()
     
-    // Initialize registry with test configuration
+    // Initialize engine with test configuration
     config := &Config{
-        StoragePath: tempDir,
-        Storage:     "filesystem",
+        WorkingDir: tempDir,
+        Runtime:    "docker",
     }
     
-    registry, err := NewRegistry(config)
+    engine, err := NewEngine(config)
     require.NoError(t, err)
     
     // Test the full workflow
-    prompt := &Prompt{
-        Name:    "test-prompt",
-        Version: "1.0.0",
-        Content: "Test content",
+    buildArgs := &BuildArgs{
+        Name:       "test-build",
+        Dockerfile: "FROM alpine:latest",
+        Tags:       []string{"test:latest"},
     }
     
-    // Add prompt
-    err = registry.AddPrompt(prompt)
+    // Execute build
+    result, err := engine.Build(context.TODO(), buildArgs)
     assert.NoError(t, err)
+    assert.NotNil(t, result)
     
-    // Fetch prompt
-    fetched, err := registry.FetchPrompt("test-prompt", "latest")
-    assert.NoError(t, err)
-    assert.Equal(t, prompt.Content, fetched.Content)
-    
-    // List prompts
-    prompts, err := registry.ListPrompts()
-    assert.NoError(t, err)
-    assert.Contains(t, prompts, "test-prompt")
+    // Verify build result
+    assert.Equal(t, "test:latest", result.Tags[0])
+    assert.True(t, result.Success)
 }
 ```
 
@@ -809,28 +833,25 @@ func goodConcurrency() {
 
 ### Standard Project Layout
 ```
-prompt-registry/
+engine-ci/
 ├── main.go                          # Entry point
 ├── cmd/                            # CLI commands (Cobra)
 │   ├── root.go
-│   ├── add.go
-│   ├── fetch.go
-│   └── list.go
+│   ├── build.go
+│   ├── run.go
+│   └── cache.go
 ├── internal/                       # Private application code
-│   ├── models/                     # Domain models
-│   │   ├── prompt.go
-│   │   └── validation.go
-│   ├── storage/                    # Storage interface & implementations
-│   │   ├── interface.go
-│   │   ├── filesystem.go
-│   │   └── github.go
-│   ├── registry/                   # Business logic
-│   │   └── registry.go
-│   └── runner/                     # Tool execution
-│       └── launcher.go
-├── pkg/                           # Public library code (if any)
-├── test/                          # Integration tests
-├── examples/                      # Example prompts
+│   └── service/                    # Core service logic
+│       └── main.go
+├── pkg/                           # Public library code
+│   ├── container/                  # Container runtime integration
+│   ├── cri/                       # Container Runtime Interface
+│   ├── memory/                    # Memory pool optimization
+│   ├── logger/                    # Logging utilities
+│   └── build/                     # Build orchestration
+├── client/                        # Client library
+├── protos2/                       # Protocol buffer definitions
+├── benchmarks/                    # Performance benchmarks
 └── README.md
 ```
 
@@ -867,37 +888,37 @@ func (r *Registry) AddPrompt(prompt *models.Prompt) error {
 }
 ```
 
-## Prompt Registry Specific Guidelines
+## Engine-CI Specific Guidelines
 
 ### CLI Command Structure
 ```go
 // ✅ Clean command structure using Cobra
-var addCmd = &cobra.Command{
-    Use:   "add [prompt-name]",
-    Short: "Add a new prompt to the registry",
+var buildCmd = &cobra.Command{
+    Use:   "build [image-name]",
+    Short: "Build a container image using engine-ci",
     Args:  cobra.ExactArgs(1),
     RunE: func(cmd *cobra.Command, args []string) error {
-        return runAdd(cmd, args)
+        return runBuild(cmd, args)
     },
 }
 
-func runAdd(cmd *cobra.Command, args []string) error {
+func runBuild(cmd *cobra.Command, args []string) error {
     // Extract flags
-    version, _ := cmd.Flags().GetString("version")
-    file, _ := cmd.Flags().GetString("file")
+    tags, _ := cmd.Flags().GetStringSlice("tags")
+    dockerfile, _ := cmd.Flags().GetString("file")
     
     // Validate input
-    if version == "" {
-        return errors.New("version is required")
+    if dockerfile == "" {
+        return errors.New("dockerfile is required")
     }
     
     // Execute business logic
-    registry, err := createRegistry()
+    engine, err := createEngine()
     if err != nil {
-        return fmt.Errorf("failed to create registry: %w", err)
+        return fmt.Errorf("failed to create engine: %w", err)
     }
     
-    return registry.AddPrompt(args[0], version, file)
+    return engine.Build(context.TODO(), args[0], dockerfile, tags)
 }
 ```
 
@@ -1002,7 +1023,7 @@ test:
 
 # Build binary
 build:
-	go build -o build/prompt-registry ./main.go
+	go build -o build/engine-ci ./main.go
 
 # Run all quality checks
 quality: fmt lint test
@@ -1109,9 +1130,9 @@ func init() {
 }
 ```
 
-## Integration with Prompt Registry
+## Integration with Engine-CI
 
-When working on the prompt-registry project specifically:
+When working on the engine-ci project specifically:
 
 ### Adding New Commands
 1. Create command file in `cmd/` directory
@@ -1120,21 +1141,21 @@ When working on the prompt-registry project specifically:
 4. Update help text and documentation
 5. Ensure error messages are user-friendly
 
-### Storage Backend Development
-1. Implement the `storage.Interface`
-2. Add configuration options to `Config` struct
+### Container Runtime Integration
+1. Implement new runtime interfaces in `pkg/cri/`
+2. Add runtime-specific configurations
 3. Include connection testing and validation
-4. Add comprehensive error handling
-5. Write integration tests with real storage
+4. Add comprehensive error handling for container operations
+5. Write integration tests with real container runtimes
 
-### Model Changes
-1. Update struct definitions in `internal/models/`
-2. Add validation rules using struct tags
-3. Update serialization/deserialization logic
-4. Ensure backward compatibility for existing prompts
-5. Add migration logic if needed
+### Performance Optimization
+1. Profile using tools in `profiles/` directory
+2. Update memory pool configurations in `pkg/memory/`
+3. Add benchmarks in appropriate `*_bench_test.go` files
+4. Validate performance improvements with benchmark suite
+5. Update baseline performance metrics if needed
 
-This comprehensive guide ensures consistent, high-quality Go development practices while maintaining the specific patterns and conventions established in the prompt-registry project.
+This comprehensive guide ensures consistent, high-quality Go development practices while maintaining the specific patterns and conventions established in the engine-ci project.
 
 ---
 
