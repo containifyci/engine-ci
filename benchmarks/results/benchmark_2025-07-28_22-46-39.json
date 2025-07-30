@@ -1,0 +1,122 @@
+{
+  "timestamp": "2025-07-28_22-46-39",
+  "go_version": "go version go1.24.2 darwin/arm64",
+  "git_commit": "5799229",
+  "results": [
+    {
+      "name": "LogAggregation/LogAggregator_Creation-8",
+      "iterations": 9167095,
+      "ns_per_op": 131.3,
+      "allocs_per_op": 3,
+      "bytes_per_op": 368,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "LogEntry/Add_Message_to_LogEntry-8",
+      "iterations": 52138870,
+      "ns_per_op": 23.4,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "LogEntry/LogEntry_with_Overflow-8",
+      "iterations": 51176253,
+      "ns_per_op": 23.25,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "LogEntry/Last5Messages_Function-8",
+      "iterations": 363829348,
+      "ns_per_op": 3.306,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "ConcurrentLogging/Concurrent_LogEntry_Access-8",
+      "iterations": 10695961,
+      "ns_per_op": 110.8,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "StringOperations/String_Trimming-8",
+      "iterations": 80921834,
+      "ns_per_op": 14.99,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "StringOperations/Error_Detail_Detection-8",
+      "iterations": 14366589,
+      "ns_per_op": 86.07,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "IOOperations/Scanner_Operations-8",
+      "iterations": 55918,
+      "ns_per_op": 21246,
+      "allocs_per_op": 2,
+      "bytes_per_op": 4128,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "MemoryUsage/LogMessage_Struct_Creation-8",
+      "iterations": 1000000000,
+      "ns_per_op": 0.4149,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "MemoryUsage/LogEntry_Slice_Growth-8",
+      "iterations": 4493367,
+      "ns_per_op": 265.9,
+      "allocs_per_op": 2,
+      "bytes_per_op": 176,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "MemoryUsage/Sync_Map_Operations-8",
+      "iterations": 8288126,
+      "ns_per_op": 148.1,
+      "allocs_per_op": 3,
+      "bytes_per_op": 192,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "TimeOperations/Time.Now_Calls-8",
+      "iterations": 23219682,
+      "ns_per_op": 51.73,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "TimeOperations/Time.Since_Calculations-8",
+      "iterations": 48363774,
+      "ns_per_op": 24.79,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    },
+    {
+      "name": "TimeOperations/Time.Sub_Operations-8",
+      "iterations": 444942326,
+      "ns_per_op": 2.701,
+      "package": "./pkg/logger",
+      "timestamp": "2025-07-28_22-46-39"
+    }
+  ],
+  "summary": {
+    "total_benchmarks": 14,
+    "package_breakdown": {
+      "./pkg/logger": 14
+    },
+    "performance_flags": [],
+    "top_slowest_ops": null,
+    "highest_allocators": null
+  }
+}

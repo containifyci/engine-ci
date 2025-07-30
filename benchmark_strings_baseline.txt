@@ -1,0 +1,11 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/containifyci/engine-ci/pkg/container
+cpu: Apple M1 Pro
+BenchmarkBuildStringOperations/AsFlags_String_Building-8         	 3214009	       742.3 ns/op	    1664 B/op	       2 allocs/op
+BenchmarkBuildStringOperations/ImageURI_Construction-8           	17983971	       140.7 ns/op	     112 B/op	       2 allocs/op
+BenchmarkBuildStringOperations/CustomString_Operations-8         	 1589755	      1472 ns/op	     112 B/op	       6 allocs/op
+BenchmarkBuildStringOperations/BuildType_String_Operations-8     	717680008	         3.315 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBuildStringOperations/EnvType_String_Operations-8       	833021071	         2.880 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/containifyci/engine-ci/pkg/container	15.975s

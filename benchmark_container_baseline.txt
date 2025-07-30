@@ -1,0 +1,10 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/containifyci/engine-ci/pkg/container
+cpu: Apple M1 Pro
+BenchmarkContainerOperations/New_Container_Creation-8         	292732075	         8.014 ns/op	       0 B/op	       0 allocs/op
+BenchmarkContainerOperations/Parse_Image_Tag-8                	 9433606	       254.3 ns/op	     176 B/op	       5 allocs/op
+BenchmarkContainerOperations/Checksum_Computation-8           	    3794	    652215 ns/op	     512 B/op	       8 allocs/op
+BenchmarkContainerOperations/Multiple_Checksum_Sum-8          	 6945993	       346.8 ns/op	     160 B/op	       3 allocs/op
+PASS
+ok  	github.com/containifyci/engine-ci/pkg/container	14.324s
