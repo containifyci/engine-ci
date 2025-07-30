@@ -45,6 +45,7 @@ func main() {
 		"tags":       build.NewList("containers_image_openpgp"),
 		"goreleaser": build.NewList("true"),
 	}
+	// opts1.Verbose = true
 
 	opts1.Registries = registryAuth()
 
