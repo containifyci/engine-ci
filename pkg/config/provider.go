@@ -1,3 +1,35 @@
+// This file implements the ConfigProvider interface for centralized configuration
+// management in engine-ci.
+//
+// The Provider type enables:
+//
+//   - Type-safe configuration access with automatic type conversion
+//   - Dot notation for nested configuration values (e.g., "languages.python.base_image")
+//   - Default value handling for missing configuration keys
+//   - Environment variable override support
+//   - Configuration validation and reloading
+//
+// The provider eliminates scattered configuration access patterns throughout
+// the codebase by centralizing all configuration operations through a single,
+// well-defined interface.
+//
+// Example usage:
+//
+//	provider := NewProvider(config)
+//	
+//	// Type-safe access with error handling
+//	pythonImage, err := provider.GetString("languages.python.base_image")
+//	if err != nil {
+//	    log.Printf("Using default: %v", err)
+//	}
+//	
+//	// Access with defaults
+//	timeout := provider.GetDurationWithDefault("build.timeout", 30*time.Minute)
+//	
+//	// Validate entire configuration
+//	if err := provider.Validate(); err != nil {
+//	    log.Fatalf("Invalid configuration: %v", err)
+//	}
 package config
 
 import (

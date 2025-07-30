@@ -1,3 +1,33 @@
+// Package config provides centralized configuration management for engine-ci.
+//
+// This package eliminates scattered configuration and magic numbers throughout
+// the codebase by providing a unified configuration system with:
+//
+//   - Language-specific settings for different build environments
+//   - Container runtime configuration and registry authentication
+//   - Cache management with configurable strategies and limits  
+//   - Build execution parameters with retry and timeout settings
+//   - Feature flags for gradual rollout of new functionality
+//   - Comprehensive validation with detailed error reporting
+//
+// Configuration can be loaded from YAML files, environment variables,
+// or programmatically using the DefaultConfig() function.
+//
+// Example usage:
+//
+//	config, err := LoadConfig("./config.yaml")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	// Access language-specific settings
+//	pythonConfig := config.Languages["python"]
+//	fmt.Printf("Python base image: %s\n", pythonConfig.BaseImage)
+//
+//	// Validate entire configuration
+//	if err := ValidateConfig(config); err != nil {
+//	    log.Fatalf("Invalid configuration: %v", err)
+//	}
 package config
 
 import (
@@ -38,16 +68,28 @@ type Config struct {
 	configPath string // Path to the configuration file
 }
 
-// LanguageConfig contains language-specific configuration
+// LanguageConfig contains language-specific configuration settings.
+// This structure centralizes all language-specific parameters that were
+// previously scattered as constants throughout individual language packages.
+//
+// Fields:
+//   - Environment: Environment variables to set in the build container
+//   - BaseImage: The base container image for this language (e.g., "python:3.11-slim-bookworm")
+//   - CacheLocation: Directory inside container where dependencies are cached
+//   - WorkingDir: Working directory inside the build container (defaults to "/src")
+//   - ProdImage: Optional production-ready image override
+//   - CustomArgs: Additional command-line arguments for the language toolchain
+//   - BuildTimeout: Maximum time allowed for builds (1m-2h range)
+//   - Enabled: Whether this language builder is active
 type LanguageConfig struct {
-	Environment   map[string]string `yaml:"environment"`
-	BaseImage     string            `yaml:"base_image" validate:"required"`
-	CacheLocation string            `yaml:"cache_location" validate:"required"`
-	WorkingDir    string            `yaml:"working_dir"`
-	ProdImage     string            `yaml:"prod_image,omitempty"`
-	CustomArgs    []string          `yaml:"custom_args"`
-	BuildTimeout  time.Duration     `yaml:"build_timeout" validate:"min=1m,max=2h"`
-	Enabled       bool              `yaml:"enabled"`
+	Environment   map[string]string `yaml:"environment"`   // Container environment variables
+	BaseImage     string            `yaml:"base_image" validate:"required"`     // Base container image
+	CacheLocation string            `yaml:"cache_location" validate:"required"` // Dependency cache directory
+	WorkingDir    string            `yaml:"working_dir"`                        // Container working directory
+	ProdImage     string            `yaml:"prod_image,omitempty"`               // Production image override
+	CustomArgs    []string          `yaml:"custom_args"`                        // Additional toolchain arguments
+	BuildTimeout  time.Duration     `yaml:"build_timeout" validate:"min=1m,max=2h"` // Maximum build duration
+	Enabled       bool              `yaml:"enabled"`                            // Whether this language is enabled
 }
 
 // ContainerConfig contains container runtime configuration
@@ -172,12 +214,14 @@ func DefaultConfig() *Config {
 				CacheLocation: "/root/.m2",
 				BuildTimeout:  45 * time.Minute,
 				ProdImage:     "registry.access.redhat.com/ubi8/openjdk-17:latest",
+				Environment:   make(map[string]string),
 				Enabled:       true,
 			},
 			"protobuf": {
 				BaseImage:     "protobuf/protobuf:latest",
 				CacheLocation: "/tmp/protobuf",
 				BuildTimeout:  10 * time.Minute,
+				Environment:   make(map[string]string),
 				Enabled:       true,
 			},
 		},

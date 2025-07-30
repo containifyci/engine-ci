@@ -1,3 +1,47 @@
+// Package build defines the core interfaces and contracts for the engine-ci
+// build system.
+//
+// This package provides the foundational interfaces that eliminate code
+// duplication across language packages and enable a modular, extensible
+// build architecture:
+//
+//   - LanguageBuilder: Contract for all language-specific builders
+//   - BuildStep: Individual build pipeline steps with dependencies
+//   - ConfigProvider: Centralized configuration management
+//   - CacheManager: Language-specific cache management
+//   - BuildOrchestrator: Multi-step build coordination with parallel execution
+//   - ErrorHandler: Standardized error handling replacing os.Exit(1) patterns
+//   - Validator: Configuration and component validation
+//
+// These interfaces replace the previous scattered, duplicated code patterns
+// with a cohesive architecture that supports:
+//
+//   - Interface-driven development for better testing and modularity
+//   - Shared functionality through composition rather than inheritance
+//   - Standardized error handling with context and recovery
+//   - Configurable build pipelines with dependency resolution
+//   - Language-agnostic caching strategies
+//   - Parallel execution with proper synchronization
+//
+// Example usage:
+//
+//	// Implement a language builder
+//	type PythonBuilder struct {
+//	    *language.BaseLanguageBuilder
+//	}
+//
+//	func (p *PythonBuilder) BuildImage(ctx context.Context) (string, error) {
+//	    // Language-specific build logic
+//	}
+//
+//	// Use build orchestrator
+//	orchestrator := NewBuildOrchestrator()
+//	orchestrator.AddStep(pythonStep)
+//	orchestrator.AddStep(dockerStep)
+//	
+//	if err := orchestrator.Execute(ctx); err != nil {
+//	    // Handle build failures with proper error context
+//	}
 package build
 
 import (

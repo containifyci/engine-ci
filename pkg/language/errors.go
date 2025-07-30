@@ -1,3 +1,15 @@
+// This file provides standardized error types for language builders.
+//
+// These error types replace the antipattern of os.Exit(1) calls scattered
+// throughout the codebase. They provide:
+//
+//   - Structured error information with context
+//   - Error wrapping for better debugging  
+//   - Consistent error messages across all language packages
+//   - Support for error recovery and handling strategies
+//
+// The error types follow Go's error handling best practices and integrate
+// with the standard errors package for error unwrapping and type checking.
 package language
 
 import "fmt"

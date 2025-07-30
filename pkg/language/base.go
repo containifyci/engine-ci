@@ -1,3 +1,43 @@
+// Package language provides the base implementation and error types for
+// language-specific builders in engine-ci.
+//
+// This package eliminates code duplication across language packages by providing:
+//
+//   - BaseLanguageBuilder: Common functionality shared by all language builders
+//   - Standardized error types: ValidationError, BuildError, ContainerError, CacheError
+//   - Interface compliance: Implements LanguageBuilder and BuildStep interfaces
+//   - Configuration integration: Centralized configuration management
+//
+// The BaseLanguageBuilder replaces duplicated code patterns that were scattered
+// across individual language packages (golang, python, maven, etc.) with a
+// shared implementation that handles:
+//
+//   - Container management and lifecycle
+//   - Configuration access and validation
+//   - Logging and error handling
+//   - Cache management
+//   - Image tagging and metadata
+//
+// Language packages should embed BaseLanguageBuilder and implement language-specific
+// build logic while leveraging the shared infrastructure.
+//
+// Example usage in a language package:
+//
+//	type PythonContainer struct {
+//	    *language.BaseLanguageBuilder
+//	    // Language-specific fields
+//	}
+//
+//	func New(build container.Build) *PythonContainer {
+//	    cfg := &config.LanguageConfig{
+//	        BaseImage: "python:3.11-slim-bookworm",
+//	        CacheLocation: "/root/.cache/pip",
+//	        // ... other config
+//	    }
+//	    
+//	    baseBuilder := language.NewBaseLanguageBuilder("python", cfg, container.New(build), nil)
+//	    return &PythonContainer{BaseLanguageBuilder: baseBuilder}
+//	}
 package language
 
 import (
