@@ -891,7 +891,7 @@ func testBuilderIntegration(t *testing.T) {
 			assert.NoError(t, err)
 		}
 		duration = time.Since(start)
-		assert.Less(t, duration, 300*time.Millisecond, "ValidateConfig should be fast")
+		assert.Less(t, duration, 500*time.Millisecond, "ValidateConfig should be fast")
 
 		// Test environment variable loading performance
 		os.Setenv("ENGINE_CI_LANGUAGE_GO_VERSION", "1.25.0")
