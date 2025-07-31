@@ -119,9 +119,24 @@ func (s *goDebianCGOStrategy) GenerateBuildScript() string {
 	coverageMode := buildscript.CoverageMode(s.build.Custom.String("coverage_mode"))
 	tags := s.build.Custom["tags"]
 
+	// Adjust file path for container volume mounting
+	// When a specific folder is mounted, the file path should be relative to that folder
+	adjustedFile := s.build.File
+	if s.build.Folder != "" {
+		// Handle both /src/folder/file.go and folder/file.go patterns
+		expectedPath := "/src/" + s.build.Folder + "/"
+		if strings.HasPrefix(s.build.File, expectedPath) {
+			// Remove the /src/folder/ prefix since the folder is mounted as root
+			adjustedFile = strings.TrimPrefix(s.build.File, expectedPath)
+		} else if strings.HasPrefix(s.build.File, s.build.Folder+"/") {
+			// Handle folder/file.go pattern (without /src/ prefix)
+			adjustedFile = strings.TrimPrefix(s.build.File, s.build.Folder+"/")
+		}
+	}
+
 	return buildscript.NewBuildScript(
 		s.build.App,
-		s.build.File,
+		adjustedFile,
 		s.build.Folder,
 		tags,
 		s.build.Verbose,

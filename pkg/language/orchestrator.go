@@ -390,8 +390,16 @@ func (o *ContainerBuildOrchestrator) getCacheDirectory() (string, error) {
 // This centralizes commit logic that varies slightly between languages.
 func (o *ContainerBuildOrchestrator) commitResult() (string, error) {
 	build := o.baseBuilder.GetContainer().GetBuild()
-	commitCommand := o.strategy.GetCommitCommand()
 	
+	// Handle empty image name (skip commit, return container ID)
+	// This matches the original behavior: "Skip No image specified to push"
+	if build.Image == "" {
+		containerID := o.baseBuilder.GetContainer().ID
+		o.logger.Info("Skipping commit - no image name specified", "containerId", containerID)
+		return containerID, nil
+	}
+	
+	commitCommand := o.strategy.GetCommitCommand()
 	o.logger.Debug("Committing container result", "command", commitCommand)
 
 	// Use the commit command from strategy for language-specific configuration
