@@ -2,7 +2,6 @@ package alpine
 
 import (
 	"context"
-	"crypto/sha256"
 	"embed"
 	"fmt"
 	"log/slog"
@@ -66,8 +65,8 @@ func New(build container.Build) *GoContainer {
 		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
 	}
 
-	// Create Go Alpine strategy locally to avoid import cycles
-	strategy := newGoAlpineStrategy(build, f, platforms)
+	// Use shared Go Alpine strategy from language package
+	strategy := language.NewAlpineStrategy(build, f, platforms)
 
 	// Create orchestrator with strategy and base builder
 	orchestrator := language.NewContainerBuildOrchestrator(strategy, baseBuilder)
@@ -84,105 +83,6 @@ func New(build container.Build) *GoContainer {
 	}
 }
 
-// goAlpineStrategy implements the LanguageStrategy interface for Go Alpine builds
-type goAlpineStrategy struct {
-	embedFS   embed.FS
-	platforms []*types.PlatformSpec
-	build     container.Build
-}
-
-// newGoAlpineStrategy creates a local Go Alpine strategy to avoid import cycles
-func newGoAlpineStrategy(build container.Build, embedFS embed.FS, platforms []*types.PlatformSpec) language.LanguageStrategy {
-	return &goAlpineStrategy{
-		build:     build,
-		embedFS:   embedFS,
-		platforms: platforms,
-	}
-}
-
-// GetIntermediateImage returns the Go-specific intermediate container image and ensures it's built
-func (s *goAlpineStrategy) GetIntermediateImage(ctx context.Context) (string, error) {
-	dockerFile, err := s.embedFS.ReadFile("Dockerfilego")
-	if err != nil {
-		return "", language.NewBuildError("read_dockerfile", "golang", err)
-	}
-
-	// Compute deterministic tag from dockerfile content (same logic as BaseLanguageBuilder.ComputeImageTag)
-	hash := sha256.Sum256(dockerFile)
-	tag := fmt.Sprintf("%x", hash[:8])
-	image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
-	imageURI := utils.ImageURI(s.build.ContainifyRegistry, image, tag)
-
-	// The orchestrator will handle building the intermediate image using
-	// GetIntermediateImageDockerfile() and GetIntermediateImagePlatforms()
-	return imageURI, nil
-}
-
-// GenerateBuildScript returns the Go-specific build script
-func (s *goAlpineStrategy) GenerateBuildScript() string {
-	// Extract build configuration
-	nocoverage := s.build.Custom.Bool("nocoverage")
-	coverageMode := buildscript.CoverageMode(s.build.Custom.String("coverage_mode"))
-	tags := s.build.Custom["tags"]
-
-	// Adjust file path for container volume mounting
-	// When a specific folder is mounted, the file path should be relative to that folder
-	adjustedFile := s.build.File
-	if s.build.Folder != "" {
-		// Handle both /src/folder/file.go and folder/file.go patterns
-		expectedPath := "/src/" + s.build.Folder + "/"
-		if strings.HasPrefix(s.build.File, expectedPath) {
-			// Remove the /src/folder/ prefix since the folder is mounted as root
-			adjustedFile = strings.TrimPrefix(s.build.File, expectedPath)
-		} else if strings.HasPrefix(s.build.File, s.build.Folder+"/") {
-			// Handle folder/file.go pattern (without /src/ prefix)
-			adjustedFile = strings.TrimPrefix(s.build.File, s.build.Folder+"/")
-		}
-	}
-
-	return buildscript.NewBuildScript(
-		s.build.App,
-		adjustedFile,
-		s.build.Folder,
-		tags,
-		s.build.Verbose,
-		nocoverage,
-		coverageMode,
-		s.platforms...,
-	).String()
-}
-
-// GetAdditionalImages returns additional images needed for Go Alpine builds
-func (s *goAlpineStrategy) GetAdditionalImages() []string {
-	return []string{"alpine:latest"}
-}
-
-// ShouldCommitResult determines if the build result should be committed
-func (s *goAlpineStrategy) ShouldCommitResult() bool {
-	return true // Go builds need to commit results to create optimized final images
-}
-
-// GetCommitCommand returns the commit command for Go Alpine builds
-func (s *goAlpineStrategy) GetCommitCommand() string {
-	return fmt.Sprintf(`CMD ["/app/%s"]`, s.build.App)
-}
-
-// GetIntermediateImageDockerfile returns the dockerfile content for building the intermediate image
-func (s *goAlpineStrategy) GetIntermediateImageDockerfile(ctx context.Context) ([]byte, error) {
-	return s.embedFS.ReadFile("Dockerfilego")
-}
-
-// GetIntermediateImagePlatforms returns the platforms for the intermediate image build
-func (s *goAlpineStrategy) GetIntermediateImagePlatforms() []*types.PlatformSpec {
-	// Convert platform specs to container-compatible platforms (darwin -> linux conversion)
-	var containerPlatforms []*types.PlatformSpec
-	for _, platform := range s.platforms {
-		// Use the same conversion logic as the original code
-		containerPlatform := types.GetImagePlatform(platform)
-		containerPlatforms = append(containerPlatforms, containerPlatform)
-	}
-	return containerPlatforms
-}
 
 // IsAsync returns whether this container runs asynchronously
 func (c *GoContainer) IsAsync() bool {

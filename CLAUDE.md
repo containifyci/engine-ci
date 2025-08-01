@@ -86,6 +86,21 @@ go test ./...
 go run --tags containers_image_openpgp main.go run -t all
 ```
 
+### Performance Optimization for Long-Running Commands
+**TIP**: For long-running commands (builds, tests, analysis), store output in log files for faster analysis:
+
+```bash
+# Store command output in log file for analysis (10 minute timeout)
+timeout 600s go run --tags containers_image_openpgp main.go run -t build --verbose > build.log 2>&1
+
+# Then analyze the log file
+grep -E "(error|cache|volume)" build.log
+grep -A10 -B5 "specific pattern" build.log
+tail -20 build.log  # Check how command ended
+```
+
+This approach is significantly faster than trying to filter output in real-time and allows for multiple analysis passes on the same data.
+
 **Development Philosophy**: 
 - **Keep changes small** and iterate fast
 - **Check build/lint/test** after each logical change
