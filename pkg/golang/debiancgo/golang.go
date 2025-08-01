@@ -156,12 +156,9 @@ func (s *goDebianCGOStrategy) ShouldCommitResult() bool {
 	return true // Go builds need to commit results to create optimized final images
 }
 
-// GetCommitCommand returns the commit command (not used since ShouldCommitResult is false)
+// GetCommitCommand returns the commit command for Go Debian CGO builds
 func (s *goDebianCGOStrategy) GetCommitCommand() string {
-	return fmt.Sprintf(
-		`--change 'ENTRYPOINT ["/app/%s"]' --change 'WORKDIR /app' --change 'USER app'`,
-		s.build.App,
-	)
+	return fmt.Sprintf(`CMD ["/app/%s"]`, s.build.App)
 }
 
 // GetIntermediateImageDockerfile returns the dockerfile content for building the intermediate image

@@ -400,13 +400,17 @@ func (o *ContainerBuildOrchestrator) commitResult() (string, error) {
 	}
 	
 	commitCommand := o.strategy.GetCommitCommand()
-	o.logger.Debug("Committing container result", "command", commitCommand)
+	o.logger.Debug("Committing container result", "command", commitCommand, 
+		"imageTag", fmt.Sprintf("%s:%s", build.Image, build.ImageTag))
 
-	// Use the commit command from strategy for language-specific configuration
+	// Use the commit command from strategy plus standard container configuration
+	// The original pattern used: CMD ["/app/app"], "USER app", "WORKDIR /app"
 	imageID, err := o.baseBuilder.GetContainer().Commit(
 		fmt.Sprintf("%s:%s", build.Image, build.ImageTag),
 		"Created by ContainerBuildOrchestrator",
-		commitCommand,
+		commitCommand,    // Language-specific command (e.g., CMD ["/app/engine-ci"])
+		"USER app",       // Standard user
+		"WORKDIR /app",   // Standard working directory
 	)
 	if err != nil {
 		return "", NewBuildError("commit_container", o.baseBuilder.Name(), err)
