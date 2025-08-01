@@ -45,6 +45,8 @@ func main() {
 		"tags":       build.NewList("containers_image_openpgp"),
 		"goreleaser": build.NewList("true"),
 	}
+	client.Image = ""
+
 	// opts1.Verbose = true
 
 	opts1.Registries = registryAuth()
@@ -55,6 +57,8 @@ func main() {
 		"tags": build.NewList("containers_image_openpgp"),
 		"from": build.NewList("debian"),
 	}
+	client.Image = ""
+
 	opts2.Registries = registryAuth()
 
 	build.BuildGroups(
