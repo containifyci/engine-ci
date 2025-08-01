@@ -164,10 +164,7 @@ func (s *goAlpineStrategy) ShouldCommitResult() bool {
 
 // GetCommitCommand returns the commit command for Go Alpine builds
 func (s *goAlpineStrategy) GetCommitCommand() string {
-	return fmt.Sprintf(
-		`--change 'ENTRYPOINT ["/app/%s"]' --change 'WORKDIR /app' --change 'USER app'`,
-		s.build.App,
-	)
+	return fmt.Sprintf(`CMD ["/app/%s"]`, s.build.App)
 }
 
 // GetIntermediateImageDockerfile returns the dockerfile content for building the intermediate image
