@@ -194,6 +194,32 @@ type LanguageStrategy interface {
 	// Returns:
 	//   - []*types.PlatformSpec: List of target platforms for the intermediate image
 	GetIntermediateImagePlatforms() []*types.PlatformSpec
+
+	// GetCacheDirectory returns the language-specific cache directory path that should
+	// be mounted as a volume in the build container.
+	//
+	// This method abstracts language-specific cache resolution:
+	//   - Go: Returns result of 'go env GOMODCACHE' (e.g., "/Users/user/go/pkg/mod")
+	//   - Python: Returns result of 'pip cache dir' (e.g., "/Users/user/.cache/pip")
+	//   - Node.js: Would return npm cache directory
+	//
+	// The orchestrator uses this directory to:
+	//   - Mount the host cache directory as a volume in the build container
+	//   - Persist downloaded dependencies between builds for faster builds
+	//   - Respect language tooling's native cache mechanisms
+	//
+	// Returns:
+	//   - string: Absolute path to the cache directory on the host system
+	//   - error: If cache directory cannot be determined or accessed
+	//
+	// Example implementations:
+	//   - Go: Executes 'go env GOMODCACHE' and returns the result
+	//   - Python: Executes 'pip cache dir' and returns the result
+	//   - Java: Returns Maven local repository path (~/.m2/repository)
+	//
+	// If this method returns an error, the orchestrator will fall back to using
+	// a temporary cache directory specific to the language (e.g., .tmp/golang-alpine).
+	GetCacheDirectory() (string, error)
 }
 
 // LanguageStrategyConfig provides configuration options for language strategy implementations.

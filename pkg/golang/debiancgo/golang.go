@@ -2,7 +2,6 @@ package debiancgo
 
 import (
 	"context"
-	"crypto/sha256"
 	"embed"
 	"fmt"
 	"log/slog"
@@ -64,8 +63,8 @@ func New(build container.Build) *GoContainer {
 		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
 	}
 
-	// Create Go Debian CGO strategy locally to avoid import cycles
-	strategy := newGoDebianCGOStrategy(build, f, platforms)
+	// Use shared Go Debian CGO strategy from language package
+	strategy := language.NewDebianCGOStrategy(build, f, platforms)
 
 	// Create orchestrator with strategy and base builder
 	orchestrator := language.NewContainerBuildOrchestrator(strategy, baseBuilder)
@@ -82,101 +81,6 @@ func New(build container.Build) *GoContainer {
 	}
 }
 
-// goDebianCGOStrategy implements the LanguageStrategy interface for Go Debian CGO builds
-type goDebianCGOStrategy struct {
-	embedFS   embed.FS
-	platforms []*types.PlatformSpec
-	build     container.Build
-}
-
-// newGoDebianCGOStrategy creates a local Go Debian CGO strategy to avoid import cycles
-func newGoDebianCGOStrategy(build container.Build, embedFS embed.FS, platforms []*types.PlatformSpec) language.LanguageStrategy {
-	return &goDebianCGOStrategy{
-		build:     build,
-		embedFS:   embedFS,
-		platforms: platforms,
-	}
-}
-
-// GetIntermediateImage returns the Go-specific intermediate container image (equivalent to GoImage())
-func (s *goDebianCGOStrategy) GetIntermediateImage(ctx context.Context) (string, error) {
-	dockerFile, err := s.embedFS.ReadFile("Dockerfilego")
-	if err != nil {
-		return "", language.NewBuildError("read_dockerfile", "golang", err)
-	}
-
-	// Compute deterministic tag from dockerfile content (same logic as BaseLanguageBuilder.ComputeImageTag)
-	hash := sha256.Sum256(dockerFile)
-	tag := fmt.Sprintf("%x", hash[:8])
-	image := fmt.Sprintf("golang-%s-cgo", DEFAULT_GO)
-	return utils.ImageURI(s.build.ContainifyRegistry, image, tag), nil
-}
-
-// GenerateBuildScript returns the Go-specific build script
-func (s *goDebianCGOStrategy) GenerateBuildScript() string {
-	// Extract build configuration
-	nocoverage := s.build.Custom.Bool("nocoverage")
-	coverageMode := buildscript.CoverageMode(s.build.Custom.String("coverage_mode"))
-	tags := s.build.Custom["tags"]
-
-	// Adjust file path for container volume mounting
-	// When a specific folder is mounted, the file path should be relative to that folder
-	adjustedFile := s.build.File
-	if s.build.Folder != "" {
-		// Handle both /src/folder/file.go and folder/file.go patterns
-		expectedPath := "/src/" + s.build.Folder + "/"
-		if strings.HasPrefix(s.build.File, expectedPath) {
-			// Remove the /src/folder/ prefix since the folder is mounted as root
-			adjustedFile = strings.TrimPrefix(s.build.File, expectedPath)
-		} else if strings.HasPrefix(s.build.File, s.build.Folder+"/") {
-			// Handle folder/file.go pattern (without /src/ prefix)
-			adjustedFile = strings.TrimPrefix(s.build.File, s.build.Folder+"/")
-		}
-	}
-
-	return buildscript.NewBuildScript(
-		s.build.App,
-		adjustedFile,
-		s.build.Folder,
-		tags,
-		s.build.Verbose,
-		nocoverage,
-		coverageMode,
-		s.platforms...,
-	).String()
-}
-
-// GetAdditionalImages returns additional images needed for Go Debian CGO builds
-func (s *goDebianCGOStrategy) GetAdditionalImages() []string {
-	return []string{"alpine:latest"}
-}
-
-// ShouldCommitResult determines if the build result should be committed
-func (s *goDebianCGOStrategy) ShouldCommitResult() bool {
-	return true // Go builds need to commit results to create optimized final images
-}
-
-// GetCommitCommand returns the commit command for Go Debian CGO builds
-func (s *goDebianCGOStrategy) GetCommitCommand() string {
-	return fmt.Sprintf(`CMD ["/app/%s"]`, s.build.App)
-}
-
-// GetIntermediateImageDockerfile returns the dockerfile content for building the intermediate image
-func (s *goDebianCGOStrategy) GetIntermediateImageDockerfile(ctx context.Context) ([]byte, error) {
-	return s.embedFS.ReadFile("Dockerfilego")
-}
-
-// GetIntermediateImagePlatforms returns the platforms for the intermediate image build
-func (s *goDebianCGOStrategy) GetIntermediateImagePlatforms() []*types.PlatformSpec {
-	// Convert platform specs to container-compatible platforms (darwin -> linux conversion)
-	var containerPlatforms []*types.PlatformSpec
-	for _, platform := range s.platforms {
-		// Use the same conversion logic as the original code
-		containerPlatform := types.GetImagePlatform(platform)
-		containerPlatforms = append(containerPlatforms, containerPlatform)
-	}
-	return containerPlatforms
-}
 
 // IsAsync returns whether this container runs asynchronously
 func (c *GoContainer) IsAsync() bool {

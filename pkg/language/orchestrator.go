@@ -54,6 +54,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/network"
@@ -373,11 +374,24 @@ func (o *ContainerBuildOrchestrator) getCacheDirectory() (string, error) {
 		if err == nil {
 			return cacheDir, nil
 		}
-		o.logger.Warn("Cache manager failed, falling back to temp cache", "error", err)
+		o.logger.Warn("Cache manager failed, falling back to language-specific cache", "error", err)
+	}
+
+	// Try to use language-specific cache directory (e.g., go env GOMODCACHE)
+	if cacheDir, err := o.strategy.GetCacheDirectory(); err == nil {
+		o.logger.Debug("Using language-specific cache directory", "path", cacheDir)
+		return cacheDir, nil
+	} else {
+		o.logger.Warn("Language cache resolution failed, falling back to temp cache", "error", err)
 	}
 
 	// Fallback to temporary cache directory (consistent across all languages)
-	tempCache := filepath.Join(".tmp", o.baseBuilder.Name())
+	// Use simpler naming that matches existing pattern: .tmp/go (not .tmp/golang-alpine)
+	languageName := strings.Split(o.baseBuilder.Name(), "-")[0] // "golang-alpine" -> "golang" 
+	if languageName == "golang" {
+		languageName = "go" // Match existing .tmp/go pattern
+	}
+	tempCache := filepath.Join(".tmp", languageName)
 	if err := os.MkdirAll(tempCache, os.ModePerm); err != nil {
 		return "", NewCacheError("create_temp_cache", o.baseBuilder.Name(), err).WithPath(tempCache)
 	}
