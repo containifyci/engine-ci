@@ -1,9 +1,9 @@
 github.com/bufbuild/protocompile v0.4.0 h1:LbFKd2XowZvQ/kajzguUp2DC9UEIQhIq77fZZlaQsNA=
 github.com/bufbuild/protocompile v0.4.0/go.mod h1:3v93+mbWn/v3xzN+31nwkJfrEpAUwp+BagBSZWx+TP8=
-github.com/containifyci/engine-ci/client v0.16.0 h1:f6AZE15LGKPkBr7JqJjo43E3gA8LqPs+/io9xGpRBmA=
-github.com/containifyci/engine-ci/client v0.16.0/go.mod h1:WtFhhqJQO1lNJGChbyxUtOCwrWGSTaM2dPNDPkbIwf8=
-github.com/containifyci/engine-ci/protos2 v0.14.0 h1:TAMaEjumWw+TEhZoiPC42fnHb8Jw06A1lzvxUsZCxh0=
-github.com/containifyci/engine-ci/protos2 v0.14.0/go.mod h1:i1IflZoRjr5nNvXa6OraxplfvT/LBhIo+oiWq0Es3uY=
+github.com/containifyci/engine-ci/client v0.17.0 h1:mP1YllsOylduWOkqtfJT5nqaZvVbhCPdL27Nzs45A7o=
+github.com/containifyci/engine-ci/client v0.17.0/go.mod h1:sscqwUXBROGDq7xMdjK1UK+oK+wUtzWdQZJ5hTG4gG8=
+github.com/containifyci/engine-ci/protos2 v0.15.0 h1:7QoDZmZis7RAjtzQ6Ty1XUtiJ+Uleo00ocapLMEFBAY=
+github.com/containifyci/engine-ci/protos2 v0.15.0/go.mod h1:mh0KuT1GVsPPRQ/mj/mtJyj59Of+1ENmPLSYNrpnrKY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
@@ -76,8 +76,8 @@ google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a h1:
 google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a/go.mod h1:qQ0YXyHHx3XkvlzUtpXDkS29lDSafHMZBAZDc03LQ3A=
 google.golang.org/grpc v1.74.2 h1:WoosgB65DlWVC9FqI82dGsZhWFNBSLjQ84bjROOpMu4=
 google.golang.org/grpc v1.74.2/go.mod h1:CtQ+BGjaAIXHs/5YS3i473GqwBBa1zGQNevxdeBEXrM=
-google.golang.org/protobuf v1.36.6 h1:z1NpPI8ku2WgiWnf+t9wTPsn6eP1L7ksHUlkfLvd9xY=
-google.golang.org/protobuf v1.36.6/go.mod h1:jduwjTPXsFjZGTmRluh+L6NjiWu7pchiJ2/5YcXBHnY=
+google.golang.org/protobuf v1.36.7 h1:IgrO7UwFQGJdRNXH/sQux4R1Dj1WAKcLElzeeRaXV2A=
+google.golang.org/protobuf v1.36.7/go.mod h1:jduwjTPXsFjZGTmRluh+L6NjiWu7pchiJ2/5YcXBHnY=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
