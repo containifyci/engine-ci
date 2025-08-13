@@ -3,7 +3,7 @@ module github.com/containifyci/engine-ci/protos2
 go 1.24.2
 
 require (
-	github.com/hashicorp/go-plugin v1.6.3
+	github.com/hashicorp/go-plugin v1.7.0
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.7
