@@ -110,16 +110,27 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 	if opts.Platform != nil {
 		platform = opts.Platform.Container.ToOrg()
 
-		//This ensure that the requested platform is pulled before creating the container.
-		//Otherwise the container creation fail with does not match the specified platform error.
-		r, err := d.PullImage(ctx, opts.Image, authBase64, opts.Platform.Container.String())
+		info, err := d.InspectImage(ctx, opts.Image)
 		if err != nil {
-			return "", err
+			slog.Error("Failed to inspect image", "error", err, "image", opts.Image)
+			return "", fmt.Errorf("error inspecting image: %w", err)
 		}
-		defer r.Close()
-		_, err = logger.GetLogAggregator().Copy(r)
-		if err != nil {
-			return "", err
+		if info.Platform != nil && info.Platform.OS != opts.Platform.Container.OS {
+			slog.Info("Pull image for platform", "image", opts.Image, "requestedPlatform", opts.Platform.Container.String(), "imagePlatform", info.Platform.OS)
+
+			//This ensure that the requested platform is pulled before creating the container.
+			//Otherwise the container creation fail with does not match the specified platform error.
+			r, err := d.PullImage(ctx, opts.Image, authBase64, opts.Platform.Container.String())
+
+			if err != nil {
+				slog.Error("Failed to pull image", "error", err, "image", opts.Image, "platform", opts.Platform.Container.String())
+				return "", err
+			}
+			defer r.Close()
+			_, err = logger.GetLogAggregator().Copy(r)
+			if err != nil {
+				return "", err
+			}
 		}
 	}
 
