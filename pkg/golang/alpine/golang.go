@@ -1,27 +1,25 @@
 package alpine
 
 import (
-	"context"
 	"embed"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/containifyci/engine-ci/pkg/build"
-	"github.com/containifyci/engine-ci/pkg/config"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
-	"github.com/containifyci/engine-ci/pkg/language"
 	"github.com/containifyci/engine-ci/pkg/network"
 )
 
 const (
-	DEFAULT_GO = "1.24.2"
+	DEFAULT_GO = "1.24.6"
 	PROJ_MOUNT = "/src"
 	LINT_IMAGE = "golangci/golangci-lint:v2.1.2"
 	OUT_DIR    = "/out/"
@@ -30,128 +28,67 @@ const (
 //go:embed Dockerfile*
 var f embed.FS
 
-// GoContainer implements the LanguageBuilder interface for Go builds using Alpine base image
 type GoContainer struct {
-	orchestrator *language.ContainerBuildOrchestrator
-	App          string
-	File         string
-	Folder       string
-	Image        string
-	ImageTag     string
-	Platforms    []*types.PlatformSpec
-	Tags         []string
+	//TODO add option to fail on linter or not
+	*container.Container
+	App       string
+	File      string
+	Folder    string
+	Image     string
+	ImageTag  string
+	Platforms []*types.PlatformSpec
+	Tags      []string
 }
 
 func New(build container.Build) *GoContainer {
-	// Create configuration for Golang Alpine
-	cfg := &config.LanguageConfig{
-		BaseImage:     fmt.Sprintf("golang:%s-alpine", DEFAULT_GO),
-		CacheLocation: "/go/pkg",
-		WorkingDir:    "/src",
-		BuildTimeout:  30 * time.Minute,
-		Environment: map[string]string{
-			"GOMODCACHE":  "/go/pkg/",
-			"GOCACHE":     "/go/pkg/build-cache",
-			"CGO_ENABLED": "0",
-		},
-		Enabled: true,
-	}
-
-	baseBuilder := language.NewBaseLanguageBuilder("golang-alpine", cfg, container.New(build), nil)
-
 	platforms := []*types.PlatformSpec{build.Platform.Container}
 	if !build.Platform.Same() {
 		slog.Info("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
 		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
 	}
-
-	// Use shared Go Alpine strategy from language package
-	strategy := language.NewAlpineStrategy(build, f, platforms)
-
-	// Create orchestrator with strategy and base builder
-	orchestrator := language.NewContainerBuildOrchestrator(strategy, baseBuilder)
-
 	return &GoContainer{
-		orchestrator: orchestrator,
-		App:          build.App,
-		Image:        build.Image,
-		ImageTag:     build.ImageTag,
-		Platforms:    platforms,
-		File:         build.File,
-		Folder:       build.Folder,
-		Tags:         build.Custom["tags"],
+		App:       build.App,
+		Container: container.New(build),
+		Image:     build.Image,
+		ImageTag:  build.ImageTag,
+		// TODO: only build multiple platforms when buildenv and localenv are running on different platforms
+		// FIX: linux-arm64 go build is needed when building contains on MacOS M1/M2
+		Platforms: platforms,
+		// Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")},
+		File:   build.File,
+		Folder: build.Folder,
+		Tags:   build.Custom["tags"],
 	}
 }
 
-
-// IsAsync returns whether this container runs asynchronously
 func (c *GoContainer) IsAsync() bool {
-	return c.orchestrator.GetBaseBuilder().IsAsync()
+	return false
 }
 
-// Name returns the name of this language builder
 func (c *GoContainer) Name() string {
-	return c.orchestrator.GetBaseBuilder().Name()
+	return "golang"
 }
 
-// GetBaseBuilder returns the base language builder for compatibility
-func (c *GoContainer) GetBaseBuilder() *language.BaseLanguageBuilder {
-	return c.orchestrator.GetBaseBuilder()
-}
-
-// GetContainer returns the container for compatibility with existing methods
-func (c *GoContainer) GetContainer() *container.Container {
-	return c.orchestrator.GetBaseBuilder().GetContainer()
-}
-
-// GetLogger returns the logger for compatibility
-func (c *GoContainer) GetLogger() *slog.Logger {
-	return c.orchestrator.GetBaseBuilder().GetLogger()
-}
-
-// GetConfig returns the configuration for compatibility
-func (c *GoContainer) GetConfig() *config.LanguageConfig {
-	return c.orchestrator.GetBaseBuilder().GetConfig()
-}
-
-// BaseImage returns the base image for compatibility
-func (c *GoContainer) BaseImage() string {
-	return c.orchestrator.GetBaseBuilder().BaseImage()
-}
-
-// ComputeImageTag computes image tag for compatibility
-func (c *GoContainer) ComputeImageTag(content []byte) string {
-	return c.orchestrator.GetBaseBuilder().ComputeImageTag(content)
-}
-
-// PreBuild executes pre-build operations
-func (c *GoContainer) PreBuild() error {
-	return c.orchestrator.GetBaseBuilder().PreBuild()
-}
-
-// PostBuild executes post-build operations
-func (c *GoContainer) PostBuild() error {
-	return c.orchestrator.GetBaseBuilder().PostBuild()
-}
-
-func CacheFolder() (string, error) {
+func CacheFolder() string {
 	// Command to get the GOMODCACHE location
 	cmd := exec.Command("go", "env", "GOMODCACHE")
 
 	// Run the command and capture its output
 	output, err := cmd.Output()
 	if err != nil {
-		return "", language.NewCacheError("get_gomodcache", "golang", err)
+		slog.Error("Failed to execute command: %s", "error", err)
+		os.Exit(1)
 	}
 
 	// Print the GOMODCACHE location
 	gomodcache := strings.Trim(string(output), "\n")
-	slog.Debug("GOMODCACHE location", "path", gomodcache)
-	return gomodcache, nil
+	fmt.Printf("GOMODCACHE location: %s\n", gomodcache)
+	return gomodcache
 }
 
 func (c *GoContainer) Pull() error {
-	return c.orchestrator.Pull()
+	imageTag := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
+	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
 type GoBuild struct {
@@ -170,9 +107,10 @@ func NewLinter(build container.Build) build.Build {
 	return GoBuild{
 		rf: func() error {
 			container := New(build)
-			err := container.GetContainer().Pull(LINT_IMAGE)
+			err := container.Container.Pull(LINT_IMAGE)
 			if err != nil {
-				return language.NewContainerError("pull_linter_image", err).WithImage(LINT_IMAGE)
+				slog.Error("Failed to pull image: %s", "error", err, "image", LINT_IMAGE)
+				os.Exit(1)
 			}
 
 			return container.Lint()
@@ -188,131 +126,174 @@ func LintImage() string {
 }
 
 func (c *GoContainer) Lint() error {
-	image, err := c.GoImage()
-	if err != nil {
-		return err
-	}
+	image := c.GoImage()
 
-	ssh, err := network.SSHForward(*c.GetContainer().GetBuild())
+	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
-		return language.NewBuildError("ssh_forward", "golang", err)
+		slog.Error("Failed to forward SSH", "error", err)
+		os.Exit(1)
 	}
 
 	opts := types.ContainerConfig{}
 	opts.Image = image
-
-	// Use configuration for environment variables plus linter-specific ones
-	cfg := c.GetConfig()
-	for key, value := range cfg.Environment {
-		opts.Env = append(opts.Env, fmt.Sprintf("%s=%s", key, value))
-	}
-	opts.Env = append(opts.Env, "GOLANGCI_LINT_CACHE=/go/pkg/lint-cache")
-
+	opts.Env = append(opts.Env, []string{
+		"GOMODCACHE=/go/pkg/",
+		"GOCACHE=/go/pkg/build-cache",
+		"GOLANGCI_LINT_CACHE=/go/pkg/lint-cache",
+	}...)
 	opts.Cmd = []string{"sh", "/tmp/script.sh"}
-	if c.GetContainer().Verbose {
+	// opts.User = "golangci-lint"
+	if c.Verbose {
 		opts.Cmd = append(opts.Cmd, "-v")
 	}
-	opts.WorkingDir = cfg.WorkingDir
+	// opts.Platform = "auto"
+	opts.WorkingDir = "/src"
 
-	// Setup directories
 	dir, _ := filepath.Abs(".")
 	if c.Folder != "" {
 		dir, _ = filepath.Abs(c.Folder)
 	}
-
-	cache, err := CacheFolder()
-	if err != nil {
+	cache := CacheFolder()
+	if cache == "" {
 		cache, _ = filepath.Abs(".tmp/go")
+	}
+	opts.Volumes = []types.Volume{
+		{
+			Type:   "bind",
+			Source: dir,
+			Target: "/src",
+		},
+		{
+			Type:   "bind",
+			Source: cache,
+			Target: "/go/pkg",
+		},
+	}
+
+	opts = ssh.Apply(&opts)
+
+	err = c.Create(opts)
+	slog.Info("Container created", "containerId", c.ID)
+	if err != nil {
+		slog.Error("Failed to create container: %s", "error", err)
+		os.Exit(1)
+	}
+
+	script := NewGolangCiLint().LintScript(c.Tags)
+	err = c.CopyContentTo(script, "/tmp/script.sh")
+	if err != nil {
+		slog.Error("Failed to start container", "error", err)
+		os.Exit(1)
+	}
+
+	err = c.Start()
+	if err != nil {
+		slog.Error("Failed to start container: %s", "error", err)
+		os.Exit(1)
+	}
+
+	err = c.Wait()
+	if err != nil {
+		slog.Error("Failed to wait for container: %s", "error", err)
+		// GIVE time to receive all logs
+		time.Sleep(5 * time.Second)
+		os.Exit(1)
+	}
+
+	return err
+}
+
+func (c *GoContainer) GoImage() string {
+	dockerFile, err := f.ReadFile("Dockerfilego")
+	if err != nil {
+		slog.Error("Failed to read Dockerfile.go", "error", err)
+		os.Exit(1)
+	}
+	tag := container.ComputeChecksum(dockerFile)
+	image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	return utils.ImageURI(c.GetBuild().ContainifyRegistry, image, tag)
+}
+
+func (c *GoContainer) Images() []string {
+	image := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
+
+	return []string{image, "alpine:latest", c.GoImage()}
+}
+
+func (c *GoContainer) BuildGoImage() error {
+	image := c.GoImage()
+
+	dockerFile, err := f.ReadFile("Dockerfilego")
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
+		os.Exit(1)
+	}
+
+	platforms := types.GetPlatforms(c.GetBuild().Platform)
+	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
+	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
+}
+
+func (c *GoContainer) Build() error {
+	imageTag := c.GoImage()
+
+	ssh, err := network.SSHForward(*c.GetBuild())
+	if err != nil {
+		slog.Error("Failed to forward SSH", "error", err)
+		os.Exit(1)
+	}
+
+	opts := types.ContainerConfig{}
+	opts.Image = imageTag
+	opts.Env = append(opts.Env, []string{
+		"GOMODCACHE=/go/pkg/",
+		"GOCACHE=/go/pkg/build-cache",
+	}...)
+	opts.WorkingDir = "/src"
+
+	// dir, _ := filepath.Abs(c.Folder)
+	dir, _ := filepath.Abs(".")
+
+	cache := CacheFolder()
+	if cache == "" {
+		cache, _ = filepath.Abs(".tmp/go")
+		err := os.MkdirAll(".tmp/go", os.ModePerm)
+		if err != nil {
+			slog.Error("Failed to create cache folder: %s", "error", err)
+			os.Exit(1)
+		}
 	}
 
 	opts.Volumes = []types.Volume{
 		{
 			Type:   "bind",
 			Source: dir,
-			Target: cfg.WorkingDir,
+			Target: "/src",
 		},
 		{
 			Type:   "bind",
 			Source: cache,
-			Target: cfg.CacheLocation,
+			Target: "/go/pkg",
 		},
 	}
 
 	opts = ssh.Apply(&opts)
+	opts.Script = c.BuildScript()
 
-	err = c.GetContainer().Create(opts)
+	err = c.BuildingContainer(opts)
 	if err != nil {
-		return language.NewContainerError("create_linter_container", err)
+		slog.Error("Failed to build container", "error", err)
+		os.Exit(1)
 	}
 
-	c.GetLogger().Info("Container created", "containerId", c.GetContainer().ID)
-
-	script := NewGolangCiLint().LintScript(c.Tags)
-	err = c.GetContainer().CopyContentTo(script, "/tmp/script.sh")
-	if err != nil {
-		return language.NewContainerError("copy_lint_script", err)
-	}
-
-	err = c.GetContainer().Start()
-	if err != nil {
-		return language.NewContainerError("start_linter", err)
-	}
-
-	err = c.GetContainer().Wait()
-	if err != nil {
-		c.GetLogger().Error("Linter failed", "error", err)
-		// Give time to receive all logs
-		time.Sleep(5 * time.Second)
-		return language.NewBuildError("linter_execution", "golang", err)
-	}
-
-	return nil
-}
-
-func (c *GoContainer) GoImage() (string, error) {
-	dockerFile, err := f.ReadFile("Dockerfilego")
-	if err != nil {
-		return "", language.NewBuildError("read_dockerfile", "golang", err)
-	}
-	tag := c.ComputeImageTag(dockerFile)
-	image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
-	return utils.ImageURI(c.GetContainer().GetBuild().ContainifyRegistry, image, tag), nil
-}
-
-func (c *GoContainer) Images() []string {
-	return c.orchestrator.Images()
-}
-
-func (c *GoContainer) BuildGoImage() error {
-	image, err := c.GoImage()
-	if err != nil {
-		return err
-	}
-
-	dockerFile, err := f.ReadFile("Dockerfilego")
-	if err != nil {
-		return language.NewBuildError("read_dockerfile", "golang", err)
-	}
-
-	platforms := types.GetPlatforms(c.GetContainer().GetBuild().Platform)
-	c.GetLogger().Info("Building intermediate image", "image", image, "platforms", platforms)
-	return c.GetContainer().BuildIntermidiateContainer(image, dockerFile, platforms...)
-}
-
-func (c *GoContainer) Build() (string, error) {
-	return c.orchestrator.Build(context.Background())
+	return err
 }
 
 func (c *GoContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	nocoverage := c.GetContainer().GetBuild().Custom.Bool("nocoverage")
-	coverageMode := buildscript.CoverageMode(c.GetContainer().GetBuild().Custom.String("coverage_mode"))
-	return buildscript.NewBuildScript(c.App, c.File, c.Folder, c.Tags, c.GetContainer().Verbose, nocoverage, coverageMode, c.Platforms...).String()
-}
-
-// BuildImage implements the LanguageBuilder interface
-func (c *GoContainer) BuildImage() (string, error) {
-	return c.Build()
+	nocoverage := c.GetBuild().Custom.Bool("nocoverage")
+	coverageMode := buildscript.CoverageMode(c.GetBuild().Custom.String("coverage_mode"))
+	return buildscript.NewBuildScript(c.App, c.File, c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, c.Platforms...).String()
 }
 
 func NewProd(build container.Build) build.Build {
@@ -328,14 +309,12 @@ func NewProd(build container.Build) build.Build {
 }
 
 func (c *GoContainer) Prod() error {
-	build := c.GetContainer().GetBuild()
-
-	if build.Env == container.LocalEnv {
-		c.GetLogger().Info("Skip building prod image in local environment")
+	if c.GetBuild().Env == container.LocalEnv {
+		slog.Info("Skip building prod image in local environment")
 		return nil
 	}
 	if c.Image == "" {
-		c.GetLogger().Info("Skip No image specified to push")
+		slog.Info("Skip No image specified to push")
 		return nil
 	}
 	imageTag := "alpine"
@@ -347,88 +326,84 @@ func (c *GoContainer) Prod() error {
 	opts.Platform = types.AutoPlatform
 	opts.WorkingDir = "/src"
 
-	err := c.GetContainer().Create(opts)
+	err := c.Create(opts)
 	if err != nil {
-		return language.NewContainerError("create_prod_container", err)
+		slog.Error("Failed to create container: %s", "error", err)
+		os.Exit(1)
 	}
 
-	err = c.GetContainer().Start()
+	err = c.Start()
 	if err != nil {
-		return language.NewContainerError("start_prod_container", err)
+		slog.Error("Failed to start container: %s", "error", err)
+		os.Exit(1)
 	}
 
-	err = c.GetContainer().Exec("addgroup", "-g", "11211", "app")
+	err = c.Exec("addgroup", "-g", "11211", "app")
 	if err != nil {
-		return language.NewContainerError("create_app_group", err)
+		slog.Error("Failed to execute command: %s", "error", err)
+		os.Exit(1)
 	}
 
-	err = c.GetContainer().Exec("adduser", "-D", "-u", "1121", "-G", "app", "app")
+	err = c.Exec("adduser", "-D", "-u", "1121", "-G", "app", "app")
 	if err != nil {
-		return language.NewContainerError("create_app_user", err)
+		slog.Error("Failed to execute command", "error", err)
+		os.Exit(1)
 	}
 
-	containerInfo, err := c.GetContainer().Inspect()
+	containerInfo, err := c.Inspect()
 	if err != nil {
-		return language.NewContainerError("inspect_prod_container", err)
+		slog.Error("Failed to inspect container", "error", err)
+		os.Exit(1)
 	}
 
-	c.GetLogger().Info("Container info", "name", containerInfo.Name, "image", containerInfo.Image, "arch", containerInfo.Platform.Container.Architecture, "os", containerInfo.Platform.Container.OS, "variant", containerInfo.Platform.Container.Variant)
+	slog.Info("Container info", "name", containerInfo.Name, "image", containerInfo.Image, "arch", containerInfo.Platform.Container.Architecture, "os", containerInfo.Platform.Container.OS, "varian", containerInfo.Platform.Container.Variant)
 
-	err = c.GetContainer().CopyFileTo(fmt.Sprintf("%s/%s-%s-%s", c.Folder, c.App, containerInfo.Platform.Container.OS, containerInfo.Platform.Container.Architecture), fmt.Sprintf("/app/%s", c.App))
+	err = c.CopyFileTo(fmt.Sprintf("%s/%s-%s-%s", c.Folder, c.App, containerInfo.Platform.Container.OS, containerInfo.Platform.Container.Architecture), fmt.Sprintf("/app/%s", c.App))
 	if err != nil {
-		return language.NewContainerError("copy_binary", err)
+		slog.Error("Failed to copy file to container", "error", err)
+		os.Exit(1)
 	}
 
-	imageId, err := c.GetContainer().Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", fmt.Sprintf("CMD [\"/app/%s\"]", c.App), "USER app", "WORKDIR /app")
+	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", fmt.Sprintf("CMD [\"/app/%s\"]", c.App), "USER app", "WORKDIR /app")
 	if err != nil {
-		return language.NewBuildError("commit_prod_image", "golang", err)
+		slog.Error("Failed to commit container", "error", err)
+		os.Exit(1)
 	}
 
-	err = c.GetContainer().Stop()
+	err = c.Stop()
 	if err != nil {
-		return language.NewContainerError("stop_prod_container", err)
+		slog.Error("Failed to stop container: %s", "error", err)
+		os.Exit(1)
 	}
 
-	imageUri := utils.ImageURI(build.Registry, c.Image, c.ImageTag)
-	err = c.GetContainer().Push(imageId, imageUri, container.PushOption{Remove: false})
+	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)
+	err = c.Push(imageId, imageUri, container.PushOption{Remove: false})
 	if err != nil {
-		return language.NewContainerError("push_prod_image", err)
+		slog.Error("Failed to push image: %s", "error", err)
+		os.Exit(1)
 	}
 
-	return nil
+	return err
 }
 
 func (c *GoContainer) Run() error {
-	// Execute pre-build operations
-	if err := c.PreBuild(); err != nil {
-		return err
-	}
-
-	// Pull base images
-	if err := c.Pull(); err != nil {
-		c.GetLogger().Error("Failed to pull base images", "error", err)
-		return err
-	}
-
-	// Build Go-specific intermediate image
-	if err := c.BuildGoImage(); err != nil {
-		c.GetLogger().Error("Failed to build go image", "error", err)
-		return err
-	}
-
-	// Execute main build
-	_, err := c.Build()
+	err := c.Pull()
 	if err != nil {
-		c.GetLogger().Error("Failed to build container", "error", err)
+		slog.Error("Failed to pull base images: %s", "error", err)
 		return err
 	}
 
-	c.GetLogger().Info("Container created", "containerId", c.GetContainer().ID)
-
-	// Execute post-build operations
-	if err := c.PostBuild(); err != nil {
+	err = c.BuildGoImage()
+	if err != nil {
+		slog.Error("Failed to build go image: %s", "error", err)
 		return err
 	}
 
+	err = c.Build()
+	slog.Info("Container created", "containerId", c.ID)
+	if err != nil {
+		slog.Error("Failed to create container: %s", "error", err)
+		return err
+	}
 	return nil
 }

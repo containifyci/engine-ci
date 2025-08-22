@@ -37,19 +37,14 @@ func main() {
 	client.Folder = "client"
 	client.Image = ""
 
-	// build.Serve(pr2, client)
-
 	opts1 := build.NewGoServiceBuild("engine-ci")
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
 		"tags":       build.NewList("containers_image_openpgp"),
 		"goreleaser": build.NewList("true"),
 	}
-	client.Image = ""
-
+	opts1.Image = ""
 	// opts1.Verbose = true
-
-	opts1.Registries = registryAuth()
 
 	opts2 := build.NewGoServiceBuild("engine-ci-debian")
 	opts2.File = "main.go"
@@ -57,9 +52,7 @@ func main() {
 		"tags": build.NewList("containers_image_openpgp"),
 		"from": build.NewList("debian"),
 	}
-	client.Image = ""
-
-	opts2.Registries = registryAuth()
+	opts2.Image = ""
 
 	build.BuildGroups(
 		&protos2.BuildArgsGroup{
@@ -69,5 +62,4 @@ func main() {
 			Args: []*protos2.BuildArgs{opts1, opts2},
 		},
 	)
-	// build.Build(opts1)
 }
