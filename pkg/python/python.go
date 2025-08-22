@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	BaseImage     = "python:3.11-slim-bookworm"
+	BaseImage     = "python:3.13-slim-bookworm"
 	CacheLocation = "/root/.cache/pip"
 )
 
@@ -91,7 +91,7 @@ func (c *PythonContainer) PythonImage() string {
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "python-3.11-slim-bookworm", tag)
+	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "python-3.13-slim-bookworm", tag)
 
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "python-3.11-slim-bookworm", tag)
 }
@@ -131,7 +131,7 @@ RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --o
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.BuildIntermidiateContainer(image, buf.Bytes(), platforms...)
 }
 
 func (c *PythonContainer) Address() *network.Address {
