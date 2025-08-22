@@ -62,8 +62,9 @@ set -xe
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
+cd %s
 %s
-`, goBuildCmd)
+`, bs.Folder, goBuildCmd)
 
 	return script
 }

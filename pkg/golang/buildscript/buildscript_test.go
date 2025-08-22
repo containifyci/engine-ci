@@ -15,6 +15,7 @@ set -xe
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
+cd .
 env GOOS=linux GOARCH=amd64 go build -tags build_tag -x -o /src/test-linux-amd64 /src/main.go
 env GOOS=darwin GOARCH=arm64 go build -tags build_tag -x -o /src/test-darwin-arm64 /src/main.go
 go test -v -timeout 120s -tags build_tag ./...
@@ -31,6 +32,7 @@ set -xe
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
+cd /src
 env GOOS=darwin GOARCH=arm64 go build -o /src/test-darwin-arm64 /src/main.go
 env GOOS=linux GOARCH=amd64 go build -o /src/test-linux-amd64 /src/main.go
 go test -timeout 120s -cover -coverprofile coverage.txt ./...
@@ -47,6 +49,7 @@ set -xe
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
+cd /src
 env GOOS=darwin GOARCH=arm64 go build -o /src/test-darwin-arm64 /src/main.go
 env GOOS=linux GOARCH=amd64 go build -o /src/test-linux-amd64 /src/main.go
 mkdir -p ${PWD}/.coverdata/unit
