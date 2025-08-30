@@ -18,9 +18,8 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.24.6"
+	DEFAULT_GO = "1.25.0"
 	PROJ_MOUNT = "/src"
-	LINT_IMAGE = "golangci/golangci-lint:v2.1.2"
 	OUT_DIR    = "/out/"
 )
 
