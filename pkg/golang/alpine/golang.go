@@ -19,9 +19,8 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.24.6"
+	DEFAULT_GO = "1.25.0"
 	PROJ_MOUNT = "/src"
-	LINT_IMAGE = "golangci/golangci-lint:v2.1.2"
 	OUT_DIR    = "/out/"
 )
 
@@ -107,24 +106,13 @@ func NewLinter(build container.Build) build.Build {
 	return GoBuild{
 		rf: func() error {
 			container := New(build)
-			err := container.Container.Pull(LINT_IMAGE)
-			if err != nil {
-				slog.Error("Failed to pull image: %s", "error", err, "image", LINT_IMAGE)
-				os.Exit(1)
-			}
-
 			return container.Lint()
 		},
 		name:   "golangci-lint",
-		images: []string{LINT_IMAGE},
+		images: []string{},
 		async:  false,
 	}
 }
-
-func LintImage() string {
-	return LINT_IMAGE
-}
-
 func (c *GoContainer) Lint() error {
 	image := c.GoImage()
 
