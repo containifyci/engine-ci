@@ -3,6 +3,7 @@ package utils
 import (
 	"testing"
 
+	"github.com/containifyci/engine-ci/pkg/kv"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -139,4 +140,15 @@ func TestGetenvs(t *testing.T) {
 
 	v = GetEnvs([]string{"key2", "key1"}, "build")
 	assert.Equal(t, "", v)
+}
+
+func TestGetMemValue(t *testing.T) {
+	store := kv.NewKeyValueStore()
+	store.SetVal("key", "value")
+
+	val := GetValue("mem:key", "local")
+	assert.Equal(t, "value", val)
+
+	val = GetValue("mem:key2", "local")
+	assert.Equal(t, "", val)
 }

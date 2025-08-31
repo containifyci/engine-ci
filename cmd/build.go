@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// var buildSteps = build.NewBuildSteps()
+var buildSteps = build.NewBuildSteps()
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
@@ -117,7 +117,8 @@ func (c *Command) Pre() (*container.Build, *build.BuildSteps) {
 func Pre(arg *container.Build) (*container.Build, *build.BuildSteps) {
 	slog.Info("Pre build", "args", arg)
 	a := Init(arg)
-	bs := build.NewBuildSteps()
+	// bs := build.NewBuildSteps()
+	bs := buildSteps
 
 	var from string
 	if v, ok := a.Custom["from"]; ok {
@@ -342,7 +343,7 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 // or to customize the build steps for a specific project.
 func InitBuildSteps(_buildSteps *build.BuildSteps) *build.BuildSteps {
 	//TODO make it possible to register new build steps without the need of a gloabl variable
-	// buildSteps = _buildSteps
+	buildSteps = _buildSteps
 	// return buildSteps
 	return _buildSteps
 }
