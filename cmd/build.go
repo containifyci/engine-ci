@@ -29,8 +29,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var buildSteps = build.NewBuildSteps()
-
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
 	Use:   "build",
@@ -110,15 +108,24 @@ func Init(arg *container.Build) *container.Build {
 }
 
 func (c *Command) Pre() (*container.Build, *build.BuildSteps) {
-	a, bs := Pre(c.buildArgs)
+	a, bs := Pre(c.buildArgs, c.buildSteps)
 	return a, bs
 }
 
-func Pre(arg *container.Build) (*container.Build, *build.BuildSteps) {
+func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.BuildSteps) {
 	slog.Info("Pre build", "args", arg)
 	a := Init(arg)
+
+	if bs == nil {
+		bs = build.NewBuildSteps()
+	}
+	// buildSteps := build.NewBuildSteps()
+	// slog.Info("Build steps", "buildSteps", buildSteps)
+	// slog.Info("Build steps", "buildSteps Check", buildSteps == nil)
+	// if buildSteps == nil {
+	// 	buildSteps = build.NewBuildSteps()
+	// }
 	// bs := build.NewBuildSteps()
-	bs := buildSteps
 
 	var from string
 	if v, ok := a.Custom["from"]; ok {
@@ -185,16 +192,17 @@ func (c *Command) RunBuild() {
 }
 
 type Command struct {
-	targets   map[string]func() error
-	buildArgs *container.Build
+	targets    map[string]func() error
+	buildArgs  *container.Build
+	buildSteps *build.BuildSteps
 }
 
-func NewCommand(_buildArgs container.Build) *Command {
-	// buildArgs = &_buildArgs
+func NewCommand(_buildArgs container.Build, _buildSteps *build.BuildSteps) *Command {
 	_buildArgs.Defaults()
 	return &Command{
-		targets:   map[string]func() error{},
-		buildArgs: &_buildArgs,
+		targets:    map[string]func() error{},
+		buildArgs:  &_buildArgs,
+		buildSteps: _buildSteps,
 	}
 }
 
@@ -235,7 +243,7 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 		arg.Custom = make(map[string][]string)
 	}
 	arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), addr.Port)}
-	_, bs := Pre(arg)
+	_, bs := Pre(arg, c.buildSteps)
 	switch arg.BuildType {
 	case container.GoLang:
 		c.AddTarget("lint", func() error {
@@ -336,14 +344,3 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 // 	}
 // 	c.Run(os.Args[1], buildArgs)
 // }
-
-// InitBuildSteps can be used to set the build steps for the build command
-// This is useful for registering a new build step as part of a extension
-// of the engine-ci with to support new build types for different languages
-// or to customize the build steps for a specific project.
-func InitBuildSteps(_buildSteps *build.BuildSteps) *build.BuildSteps {
-	//TODO make it possible to register new build steps without the need of a gloabl variable
-	buildSteps = _buildSteps
-	// return buildSteps
-	return _buildSteps
-}

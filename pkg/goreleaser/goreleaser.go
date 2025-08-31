@@ -135,12 +135,12 @@ func (c *GoReleaserContainer) Pull() error {
 
 func (c *GoReleaserContainer) Run() error {
 	slog.Info("Run gorelease")
-	if svc.GitInfo().Tag == "" {
+	if svc.GitInfo().IsUnknown() {
 		slog.Info("Skipping goreleaser for non-main branch")
 		return nil
 	}
 	if !c.GetBuild().Custom.Bool("goreleaser") {
-		slog.Info("Skip goreleaser because its not explicit enabled")
+		slog.Info("Skip goreleaser because its not explicit enabled", "build", c.GetBuild())
 		return nil
 	}
 	env := c.GetBuild().Env

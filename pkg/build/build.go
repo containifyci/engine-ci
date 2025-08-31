@@ -67,6 +67,9 @@ func (bs *BuildSteps) AddAsync(step Build) {
 }
 
 func (bs *BuildSteps) String() string {
+	if bs == nil || len(bs.Steps) == 0 {
+		return ""
+	}
 	names := make([]string, len(bs.Steps))
 	for i, bctx := range bs.Steps {
 		if bctx.async {
