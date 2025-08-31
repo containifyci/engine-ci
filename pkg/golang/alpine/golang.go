@@ -16,6 +16,8 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
 	"github.com/containifyci/engine-ci/pkg/network"
+
+	u "github.com/containifyci/engine-ci/pkg/utils"
 )
 
 const (
@@ -31,7 +33,7 @@ type GoContainer struct {
 	//TODO add option to fail on linter or not
 	*container.Container
 	App       string
-	File      string
+	File      u.SrcFile
 	Folder    string
 	Image     string
 	ImageTag  string
@@ -54,7 +56,7 @@ func New(build container.Build) *GoContainer {
 		// FIX: linux-arm64 go build is needed when building contains on MacOS M1/M2
 		Platforms: platforms,
 		// Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")},
-		File:   build.File,
+		File:   u.SrcFile(build.File),
 		Folder: build.Folder,
 		Tags:   build.Custom["tags"],
 	}
@@ -281,7 +283,7 @@ func (c *GoContainer) BuildScript() string {
 	// Create a temporary script in-memory
 	nocoverage := c.GetBuild().Custom.Bool("nocoverage")
 	coverageMode := buildscript.CoverageMode(c.GetBuild().Custom.String("coverage_mode"))
-	return buildscript.NewBuildScript(c.App, c.File, c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, c.Platforms...).String()
+	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, c.Platforms...).String()
 }
 
 func NewProd(build container.Build) build.Build {

@@ -242,10 +242,6 @@ func (b *Build) Defaults() *Build {
 		b.Env = BuildEnv
 	}
 
-	if b.File != "/src/main.go" && b.File != "" {
-		b.File = "/src/" + b.File
-	}
-
 	if b.Folder == "" {
 		b.Folder = "."
 	}
