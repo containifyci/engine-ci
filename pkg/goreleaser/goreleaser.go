@@ -139,7 +139,7 @@ func (c *GoReleaserContainer) Run() error {
 		slog.Info("Skipping goreleaser for non tag branch")
 		return nil
 	}
-	if !c.GetBuild().Custom.Bool("goreleaser") {
+	if !c.GetBuild().Custom.Bool("goreleaser", false) {
 		slog.Info("Skip goreleaser because its not explicit enabled", "build", c.GetBuild())
 		return nil
 	}

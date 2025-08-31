@@ -299,7 +299,7 @@ func (c *GoContainer) Build() error {
 
 func (c *GoContainer) BuildScript() *buildscript.BuildScript {
 	// Create a temporary script in-memory
-	nocoverage := c.GetBuild().Custom.Bool("nocoverage")
+	nocoverage := c.GetBuild().Custom.Bool("nocoverage", false)
 	coverageMode := buildscript.CoverageMode(c.GetBuild().Custom.String("coverage_mode"))
 	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Verbose, nocoverage, coverageMode, c.Platforms...)
 }

@@ -67,11 +67,11 @@ func (c Custom) Strings(key string) []string {
 	return nil
 }
 
-func (c Custom) Bool(key string) bool {
+func (c Custom) Bool(key string, value bool) bool {
 	if v, ok := c[key]; ok {
 		return v[0] == "true"
 	}
-	return false
+	return value
 }
 
 func (c Custom) UInt(key string) uint {
