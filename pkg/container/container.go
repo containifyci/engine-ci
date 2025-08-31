@@ -110,14 +110,6 @@ func New(build Build) *Container {
 	ctx := context.Background()
 	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Verbose: build.Verbose}
 
-	// Initialize concurrency components
-	// client := _client()
-	// if client != nil {
-	// 	container.concurrentManager = NewConcurrentContainerManager(client, DefaultWorkerPoolSize)
-	// 	// Start concurrent components
-	// 	container.concurrentManager.Start()
-	// }
-
 	return container
 }
 
@@ -377,17 +369,6 @@ func (c *Container) ensureImagesExists(ctx context.Context, cli cri.ContainerMan
 		return nil
 	}
 
-	// // Use concurrent operations for better performance
-	// if c.concurrentManager != nil && len(imageNames) > 1 {
-	// 	return c.ensureImagesExistsConcurrent(ctx, cli, imageNames, platform)
-	// }
-
-	// Fallback to sequential processing for single images or when concurrent manager is not available
-	return c.ensureImagesExistsSequential(ctx, cli, imageNames, platform)
-}
-
-// ensureImagesExistsSequential handles images sequentially (fallback)
-func (c *Container) ensureImagesExistsSequential(ctx context.Context, cli cri.ContainerManager, imageNames []string, platform string) error {
 	for _, imageName := range imageNames {
 		images, err := cli.ListImage(ctx, imageName)
 		if err != nil {
