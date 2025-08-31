@@ -21,9 +21,11 @@ type Git struct {
 	PrNum  string
 }
 
-func (g *Git) IsUnknown() bool {
-	return g == nil || g.Owner == "unknown"
-}
+func (g *Git) IsUnknown() bool { return g == nil || g.Owner == "unknown" }
+func (g *Git) IsPR() bool      { return g.PrNum != "" }
+func (g *Git) IsNotPR() bool   { return !g.IsPR() }
+func (g *Git) IsTag() bool     { return g.Tag != "" }
+func (g *Git) IsNotTag() bool  { return !g.IsTag() }
 
 func (g *Git) FullRepo() string {
 	return fmt.Sprintf("%s/%s", g.Owner, g.Repo)
@@ -144,7 +146,7 @@ func SetUnknowGitInfo() *Git {
 		Owner:  "unknown",
 		Repo:   "unknown",
 		Branch: "unknown",
-		Tag:    "unknown",
+		Tag:    "",
 	}
 	return git
 }

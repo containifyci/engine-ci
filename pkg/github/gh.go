@@ -149,7 +149,7 @@ func (c *GithubContainer) Pull() error {
 }
 
 func (c *GithubContainer) Run() error {
-	if c.git.IsUnknown() {
+	if c.git.IsNotPR() {
 		slog.Info("Skip github PR comment because PR number is not set")
 		return nil
 	}
