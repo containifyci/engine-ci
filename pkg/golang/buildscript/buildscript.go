@@ -16,22 +16,26 @@ type CoverageMode string
 type Image string
 
 type BuildScript struct {
-	Tags         []string
 	AppName      string
 	MainFile     string
 	Folder       string
 	Output       string
 	CoverageMode CoverageMode
+	FileName     string
+	Tags         []string
 	Platforms    []*types.PlatformSpec
+	Artifacts    []string
 	Verbose      bool
 	NoCoverage   bool
 }
 
 func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, coverageMode CoverageMode, platforms ...*types.PlatformSpec) *BuildScript {
-	output := "-o /src/{{.app}}-{{.os}}-{{.arch}}"
+	filename := "{{.app}}-{{.os}}-{{.arch}}"
+	output := "-o /src/" + filename
 	if mainfile == "" {
 		mainfile = "./..."
 		output = ""
+		filename = ""
 	}
 	if folder == "" {
 		folder = "."
@@ -46,6 +50,8 @@ func NewBuildScript(appName, mainfile string, folder string, tags []string, verb
 		Platforms:    platforms,
 		Tags:         tags,
 		Verbose:      verbose,
+		FileName:     filename,
+		Artifacts:    []string{},
 	}
 	return script
 }
@@ -110,6 +116,20 @@ env GOOS={{.os}} GOARCH={{ .arch }} go build {{- .tags }} {{- .verbose }} %s {{.
 		slog.Error("Failed render go build cmd", "error", err)
 		os.Exit(1)
 	}
+
+	if bs.FileName == "" {
+		return buf.String()
+	}
+	t2 := template.Must(template.New("").
+		Parse(bs.FileName))
+	buf2 := new(bytes.Buffer)
+	err2 := t2.Execute(buf2, m)
+	if err2 != nil {
+		slog.Error("Failed render go build cmd", "error", err)
+		os.Exit(1)
+	}
+
+	bs.Artifacts = append(bs.Artifacts, buf2.String())
 	return buf.String()
 }
 
