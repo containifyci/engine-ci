@@ -49,6 +49,11 @@ on:
         required: false
         default: true
         type: boolean
+      upload_artifacts:
+        description: "Upload artifacts after the build"
+        required: false
+        default: false
+        type: boolean
     secrets:
       CONTAINIFYCI_DOCKER_TOKEN:
         required: false
@@ -168,6 +173,27 @@ jobs:
       - name: Run engine
         run: |
           ${{ env.ENGINE_COMMAND }} engine
+
+      - name: Prepare artifact paths
+        if: ${{ inputs.upload_artifacts }}
+        id: prep
+        run: |
+          cat artifacts.txt
+          # keep only real lines (no blanks/comments)
+          awk 'NF && $0 !~ /^#/' artifacts.txt > _paths.txt
+          {
+            echo 'ARTIFACT_PATHS<<EOF'
+            cat _paths.txt
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
+      - name: Upload artifacts
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            ${{ env.ARTIFACT_PATHS }}
 
       - name: SSH Access
         uses: containifyci/.github/github-actions/remote-access-ssh@v1

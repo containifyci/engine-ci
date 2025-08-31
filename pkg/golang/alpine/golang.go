@@ -268,7 +268,25 @@ func (c *GoContainer) Build() error {
 	}
 
 	opts = ssh.Apply(&opts)
-	opts.Script = c.BuildScript()
+	buildScript := c.BuildScript()
+	opts.Script = buildScript.String()
+
+	if len(buildScript.Artifacts) > 0 {
+		f, err := os.OpenFile("artifacts.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			slog.Error("Failed to create artifacts file", "error", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		// Write each artifact on a new line
+		_, err = f.WriteString(strings.Join(buildScript.Artifacts, "\n") + "\n")
+
+		// err = os.WriteFile("artifacts.txt", []byte(strings.Join(buildScript.Artifacts, "\n")), 0644)
+		if err != nil {
+			slog.Error("Failed to write content to artifacts file", "error", err)
+			os.Exit(1)
+		}
+	}
 
 	err = c.BuildingContainer(opts)
 	if err != nil {
@@ -279,11 +297,11 @@ func (c *GoContainer) Build() error {
 	return err
 }
 
-func (c *GoContainer) BuildScript() string {
+func (c *GoContainer) BuildScript() *buildscript.BuildScript {
 	// Create a temporary script in-memory
 	nocoverage := c.GetBuild().Custom.Bool("nocoverage")
 	coverageMode := buildscript.CoverageMode(c.GetBuild().Custom.String("coverage_mode"))
-	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, c.Platforms...).String()
+	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Verbose, nocoverage, coverageMode, c.Platforms...)
 }
 
 func NewProd(build container.Build) build.Build {

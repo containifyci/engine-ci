@@ -22,6 +22,7 @@ go test -v -timeout 120s -tags build_tag ./...
 `
 	script := bs.String()
 	assert.Equal(t, expected, script)
+	assert.Equal(t, []string{"test-linux-amd64", "test-darwin-arm64"}, bs.Artifacts)
 }
 
 func TestSimpleScript(t *testing.T) {
@@ -39,6 +40,7 @@ go test -timeout 120s -cover -coverprofile coverage.txt ./...
 `
 	script := bs.String()
 	assert.Equal(t, expected, script)
+	assert.Equal(t, []string{"test-darwin-arm64", "test-linux-amd64"}, bs.Artifacts)
 }
 
 func TestSimpleScriptCoverageBinary(t *testing.T) {
@@ -57,4 +59,5 @@ go test -timeout 120s -cover ./... -args -test.gocoverdir=${PWD}/.coverdata/unit
 `
 	script := bs.String()
 	assert.Equal(t, expected, script)
+	assert.Equal(t, []string{"test-darwin-arm64", "test-linux-amd64"}, bs.Artifacts)
 }
