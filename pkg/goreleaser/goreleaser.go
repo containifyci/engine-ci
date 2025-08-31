@@ -135,8 +135,8 @@ func (c *GoReleaserContainer) Pull() error {
 
 func (c *GoReleaserContainer) Run() error {
 	slog.Info("Run gorelease")
-	if svc.GitInfo().IsUnknown() {
-		slog.Info("Skipping goreleaser for non-main branch")
+	if svc.GitInfo().IsUnknown() || svc.GitInfo().Tag == "" {
+		slog.Info("Skipping goreleaser for non tag branch")
 		return nil
 	}
 	if !c.GetBuild().Custom.Bool("goreleaser") {
