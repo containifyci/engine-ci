@@ -11,7 +11,13 @@ import (
 )
 
 // TODO: Find a better way then a package global var
-var git *Git
+var git = &Git{
+	Owner:  "unknown",
+	Repo:   "unknown",
+	Branch: "unknown",
+	Tag:    "unknown",
+	PrNum:  "unknown",
+}
 
 type Git struct {
 	Owner  string
@@ -19,6 +25,10 @@ type Git struct {
 	Branch string
 	Tag    string
 	PrNum  string
+}
+
+func (g *Git) IsUnknown() bool {
+	return g.Owner == "unknown"
 }
 
 func (g *Git) FullRepo() string {
