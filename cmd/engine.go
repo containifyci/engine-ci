@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/protos2"
@@ -18,6 +19,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 )
+
+var buildSteps *build.BuildSteps
 
 // buildCmd represents the build command
 var engineCmd = &cobra.Command{
@@ -70,7 +73,13 @@ func Engine(cmd *cobra.Command, _ []string) error {
 				time.Sleep(1 * time.Second)
 				defer wg.Done()
 				b.Leader = &leader
-				c := NewCommand(*b)
+				_buildSteps := buildSteps
+				slog.Info("Starting build", "build", b, "steps", _buildSteps.String())
+				if _buildSteps == nil {
+					_buildSteps = build.NewBuildSteps()
+				}
+				slog.Info("Starting build2", "build", b, "steps", _buildSteps.String())
+				c := NewCommand(*b, _buildSteps)
 				c.Run(addr, RootArgs.Target, b)
 			}()
 		}
@@ -224,4 +233,15 @@ func CallPlugin(logger hclog.Logger, plugin interface{}) []*protos2.BuildArgsGro
 		}
 		return groups
 	}
+}
+
+// InitBuildSteps can be used to set the build steps for the build command
+// This is useful for registering a new build step as part of a extension
+// of the engine-ci with to support new build types for different languages
+// or to customize the build steps for a specific project.
+func InitBuildSteps(_buildSteps *build.BuildSteps) *build.BuildSteps {
+	//TODO make it possible to register new build steps without the need of a gloabl variable
+	buildSteps = _buildSteps
+	// return buildSteps
+	return _buildSteps
 }

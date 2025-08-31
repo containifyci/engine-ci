@@ -65,7 +65,7 @@ func createContainer(w http.ResponseWriter, r *http.Request) {
 		buildArgs = container.NewPythonServiceBuild(buildArgs.App)
 	}
 
-	c := cmd.NewCommand(buildArgs)
+	c := cmd.NewCommand(buildArgs, nil)
 	c.AddTarget("all", func() error {
 		fmt.Println("Running build")
 		// cmd.RunBuild(nil, nil)
