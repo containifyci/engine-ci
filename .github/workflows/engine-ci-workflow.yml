@@ -175,19 +175,25 @@ jobs:
           ${{ env.ENGINE_COMMAND }} engine
 
       - name: Prepare artifact paths
-        if: inputs.upload_artifacts == 'true'
+        if: ${{ inputs.upload_artifacts }}
         id: prep
         run: |
-          # Read artifacts.txt and join into space-separated list
-          files=$(tr '\n' ' ' < artifacts.txt)
-          echo "files=$files" >> $GITHUB_OUTPUT
+          cat artifacts.txt
+          # keep only real lines (no blanks/comments)
+          awk 'NF && $0 !~ /^#/' artifacts.txt > _paths.txt
+          {
+            echo 'ARTIFACT_PATHS<<EOF'
+            cat _paths.txt
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
 
       - name: Upload artifacts
+        if: ${{ inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4
-        if: inputs.upload_artifacts == 'true'
         with:
           name: binaries
-          path: ${{ steps.prep.outputs.files }}
+          path: |
+            ${{ env.ARTIFACT_PATHS }}
 
       - name: SSH Access
         uses: containifyci/.github/github-actions/remote-access-ssh@v1
