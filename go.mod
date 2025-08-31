@@ -7,8 +7,8 @@ require (
 	github.com/containers/buildah v1.40.1
 	github.com/containers/common v0.63.1
 	github.com/containers/podman/v5 v5.4.2
-	github.com/containifyci/engine-ci/protos2 v0.15.2
-	github.com/containifyci/go-self-update v0.2.2
+	github.com/containifyci/engine-ci/protos2 v0.17.0
+	github.com/containifyci/go-self-update v0.2.3
 	github.com/docker/docker v28.1.1+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/dusted-go/logging v1.3.0
@@ -19,7 +19,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.248.0
 	gopkg.in/yaml.v3 v3.0.1
