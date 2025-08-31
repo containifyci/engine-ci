@@ -70,18 +70,16 @@ func (e *EnvType) Type() string {
 
 type Container struct {
 	t
-	Source            fs.ReadDirFS
-	Build             *Build
-	imagePuller       *ConcurrentImagePuller
-	workerPool        *WorkerPool
-	concurrentManager *ConcurrentContainerManager
-	Env               EnvType
-	Prefix            string
-	Image             string
-	Name              string
-	ID                string
-	Opts              types.ContainerConfig
-	Verbose           bool
+	Source fs.ReadDirFS
+	Build  *Build
+	// concurrentManager *ConcurrentContainerManager
+	Env     EnvType
+	Prefix  string
+	Image   string
+	Name    string
+	ID      string
+	Opts    types.ContainerConfig
+	Verbose bool
 }
 
 type PushOption struct {
@@ -113,17 +111,12 @@ func New(build Build) *Container {
 	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Verbose: build.Verbose}
 
 	// Initialize concurrency components
-	client := _client()
-	if client != nil {
-		container.concurrentManager = NewConcurrentContainerManager(client, DefaultWorkerPoolSize)
-		container.workerPool = NewWorkerPool(DefaultWorkerPoolSize)
-		container.imagePuller = NewConcurrentImagePuller(MaxConcurrentPulls, 3)
-
-		// Start concurrent components
-		container.concurrentManager.Start()
-		container.workerPool.Start()
-		container.imagePuller.Start()
-	}
+	// client := _client()
+	// if client != nil {
+	// 	container.concurrentManager = NewConcurrentContainerManager(client, DefaultWorkerPoolSize)
+	// 	// Start concurrent components
+	// 	container.concurrentManager.Start()
+	// }
 
 	return container
 }
@@ -384,94 +377,13 @@ func (c *Container) ensureImagesExists(ctx context.Context, cli cri.ContainerMan
 		return nil
 	}
 
-	// Use concurrent operations for better performance
-	if c.concurrentManager != nil && len(imageNames) > 1 {
-		return c.ensureImagesExistsConcurrent(ctx, cli, imageNames, platform)
-	}
+	// // Use concurrent operations for better performance
+	// if c.concurrentManager != nil && len(imageNames) > 1 {
+	// 	return c.ensureImagesExistsConcurrent(ctx, cli, imageNames, platform)
+	// }
 
 	// Fallback to sequential processing for single images or when concurrent manager is not available
 	return c.ensureImagesExistsSequential(ctx, cli, imageNames, platform)
-}
-
-// ensureImagesExistsConcurrent handles multiple images concurrently
-func (c *Container) ensureImagesExistsConcurrent(ctx context.Context, cli cri.ContainerManager, imageNames []string, platform string) error {
-	// First, check which images exist locally in parallel
-	batchOps := NewBatchImageOperations(cli, DefaultWorkerPoolSize)
-	existsResults := batchOps.CheckImagesExistParallel(ctx, imageNames)
-
-	var imagesToPull []ImagePullRequest
-	var imagesToInspect []string
-
-	// Collect results and determine what needs to be pulled
-	for result := range existsResults {
-		if result.Error != nil {
-			return result.Error
-		}
-
-		if !result.Exists {
-			slog.Info("Image not found locally. Will pull from registry...", "image", result.Image)
-			imagesToPull = append(imagesToPull, ImagePullRequest{
-				Image:      result.Image,
-				AuthBase64: c.registryAuthBase64(result.Image),
-				Platform:   platform,
-				Priority:   PriorityNormal,
-			})
-		} else {
-			imagesToInspect = append(imagesToInspect, result.Image)
-		}
-	}
-
-	// Inspect existing images in parallel to check platform compatibility
-	if len(imagesToInspect) > 0 {
-		inspectResults := batchOps.InspectImagesParallel(ctx, imagesToInspect)
-
-		for result := range inspectResults {
-			if result.Error != nil {
-				slog.Error("Failed to inspect image", "error", result.Error)
-				return result.Error
-			}
-
-			if result.Info.Platform.String() != platform {
-				slog.Warn("Image found locally but with different platform",
-					"image", result.Image, "local_platform", result.Info.Platform.String(), "required_platform", platform)
-				slog.Info("Will pull correct platform from registry...", "image", result.Image)
-
-				imagesToPull = append(imagesToPull, ImagePullRequest{
-					Image:      result.Image,
-					AuthBase64: c.registryAuthBase64(result.Image),
-					Platform:   platform,
-					Priority:   PriorityHigh, // Higher priority for platform corrections
-				})
-			} else {
-				slog.Info("Image found locally with correct platform", "image", result.Image, "platform", result.Info.Platform.String())
-			}
-		}
-	}
-
-	// Pull all required images concurrently
-	if len(imagesToPull) > 0 {
-		pullResults := c.concurrentManager.PullImagesParallel(ctx, imagesToPull)
-
-		for result := range pullResults {
-			if result.Error != nil {
-				slog.Error("Failed to pull image", "image", result.Image, "error", result.Error)
-				return result.Error
-			}
-
-			if result.Reader != nil {
-				defer result.Reader.Close()
-				_, err := logger.GetLogAggregator().Copy(result.Reader)
-				if err != nil {
-					slog.Error("Failed to copy pull output", "image", result.Image, "error", err)
-					return err
-				}
-			}
-
-			slog.Info("Successfully pulled image", "image", result.Image)
-		}
-	}
-
-	return nil
 }
 
 // ensureImagesExistsSequential handles images sequentially (fallback)
@@ -1294,18 +1206,5 @@ func (c *Container) Apply(opts *types.ContainerConfig) {
 			v := u.GetEnv(env, "build")
 			opts.Env = append(opts.Env, fmt.Sprintf("%s=%s", env, v))
 		}
-	}
-}
-
-// Cleanup properly shuts down concurrency components
-func (c *Container) Cleanup() {
-	if c.concurrentManager != nil {
-		c.concurrentManager.Stop()
-	}
-	if c.workerPool != nil {
-		c.workerPool.Stop()
-	}
-	if c.imagePuller != nil {
-		c.imagePuller.Stop()
 	}
 }
