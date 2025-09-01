@@ -1,7 +1,7 @@
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
 github.com/bufbuild/protocompile v0.14.1/go.mod h1:ppVdAIhbr2H8asPk6k4pY7t9zB1OU5DoEw9xY/FUi1c=
-github.com/containifyci/engine-ci/client v0.18.0 h1:cmM3VI0bG3X3LrQQ06OsWqskaRidFM7heYN6Znpw8OY=
-github.com/containifyci/engine-ci/client v0.18.0/go.mod h1:yTlzdvv2k0pKcydnZFLQXxo2WD/W7q6s72N7QswC2Xw=
+github.com/containifyci/engine-ci/client v0.19.0 h1:waPHk3GQ92ene54p8nEb06v6IoJWUT1HViMl2Drh/P8=
+github.com/containifyci/engine-ci/client v0.19.0/go.mod h1:p/vnlwSQM7LzHtPm4i53WwNQJcXpdy5yNuMBZVDev9s=
 github.com/containifyci/engine-ci/protos2 v0.17.0 h1:nD0bFLc3lCK1WE+AQi+KUfns/N2vaFYCp4VAknD4ccA=
 github.com/containifyci/engine-ci/protos2 v0.17.0/go.mod h1:8Cpr8gRWJw2j6FvYkUUJq4eX1jnBQnk+ZHWcY2AmOjA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
