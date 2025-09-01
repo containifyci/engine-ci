@@ -10,9 +10,56 @@ import (
 )
 
 var (
-	checkOnly bool
+	checkOnly   bool
 	forceUpdate bool
 )
+
+// UpdateConfig holds the configuration for the update command
+type UpdateConfig struct {
+	UpdateHook func() error
+	BinaryName string
+	GitHubOrg  string
+	GitHubRepo string
+}
+
+// defaultUpdateConfig provides default values for engine-ci
+var defaultUpdateConfig = &UpdateConfig{
+	BinaryName: "engine-ci",
+	GitHubOrg:  "containifyci",
+	GitHubRepo: "engine-ci",
+	UpdateHook: func() error {
+		slog.Info("Update completed successfully!")
+		fmt.Println("Update completed successfully! Please restart engine-ci to use the new version.")
+		return nil
+	},
+}
+
+// updateConfig holds the current configuration (can be overridden)
+var updateConfig = defaultUpdateConfig
+
+// ConfigureUpdate allows extending projects to configure the update command
+func ConfigureUpdate(binaryName, githubOrg, githubRepo string) {
+	updateConfig = &UpdateConfig{
+		BinaryName: binaryName,
+		GitHubOrg:  githubOrg,
+		GitHubRepo: githubRepo,
+		UpdateHook: func() error {
+			slog.Info("Update completed successfully!")
+			fmt.Printf("Update completed successfully! Please restart %s to use the new version.\n", binaryName)
+			return nil
+		},
+	}
+}
+
+// SetUpdateConfig allows full configuration control
+func SetUpdateConfig(config *UpdateConfig) {
+	updateConfig = config
+}
+
+// GetUpdateConfig returns the current update configuration
+func GetUpdateConfig() *UpdateConfig {
+	return updateConfig
+}
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
@@ -29,7 +76,7 @@ This command will:
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
-	
+
 	updateCmd.Flags().BoolVar(&checkOnly, "check", false, "Only check for updates without installing")
 	updateCmd.Flags().BoolVar(&forceUpdate, "force", false, "Force update even if current version appears newer")
 }
@@ -40,46 +87,42 @@ func runUpdate(cmd *cobra.Command, args []string) {
 	if currentVersion == "" {
 		currentVersion = "dev"
 	}
-	
+
 	slog.Info("Checking for updates", "current_version", currentVersion)
-	
-	// Initialize the updater
+
+	// Initialize the updater with configuration
 	u := updater.NewUpdater(
-		"engine-ci",           // Binary name
-		"containifyci",        // GitHub organization
-		"engine-ci",           // GitHub repository
-		currentVersion,        // Current version
-		updater.WithUpdateHook(func() error {
-			slog.Info("Update completed successfully!")
-			fmt.Println("Update completed successfully! Please restart engine-ci to use the new version.")
-			return nil
-		}),
+		updateConfig.BinaryName,
+		updateConfig.GitHubOrg,
+		updateConfig.GitHubRepo,
+		currentVersion,
+		updater.WithUpdateHook(updateConfig.UpdateHook),
 	)
-	
+
 	if checkOnly {
 		// For check-only mode, we'll use SelfUpdate with a dry-run approach
 		// by checking the version and not actually updating
 		fmt.Printf("Current version: %s\n", currentVersion)
 		fmt.Println("Checking for updates...")
-		
+
 		// Unfortunately, the library doesn't expose a check-only method,
 		// so we'll inform the user to use the regular update command
-		fmt.Println("To check for and install updates, run: engine-ci update")
+		fmt.Printf("To check for and install updates, run: %s update\n", updateConfig.BinaryName)
 		fmt.Println("Note: The update command will inform you if you're already on the latest version.")
 		return
 	}
-	
+
 	// Perform the update
 	fmt.Println("Checking for updates...")
 	fmt.Printf("Current version: %s\n", currentVersion)
-	
+
 	updated, err := u.SelfUpdate()
 	if err != nil {
 		slog.Error("Failed to update", "error", err)
-		fmt.Printf("Error: Failed to update engine-ci: %v\n", err)
+		fmt.Printf("Error: Failed to update %s: %v\n", updateConfig.BinaryName, err)
 		os.Exit(1)
 	}
-	
+
 	if !updated {
 		fmt.Println("You are already running the latest version!")
 		slog.Info("No update needed", "version", currentVersion)
