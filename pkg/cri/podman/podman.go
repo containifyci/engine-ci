@@ -502,7 +502,7 @@ func tarFile(srcPath, destPath string) (*bytes.Buffer, error) {
 // ExecContainer executes a container
 func (p *PodmanManager) ExecContainer(ctx context.Context, id string, cmd []string, attachStdOut bool) (io.Reader, error) {
 	id, err := containers.ExecCreate(p.conn, id, &handlers.ExecCreateConfig{
-		ExecConfig: container.ExecOptions{
+		ExecOptions: container.ExecOptions{
 			Cmd:          cmd,
 			AttachStdout: attachStdOut,
 		},
