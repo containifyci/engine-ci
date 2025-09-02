@@ -16,6 +16,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/logger"
+	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
@@ -24,8 +25,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-
-	dockertypes "github.com/docker/docker/api/types"
 )
 
 type DockerManager struct {
@@ -366,7 +365,7 @@ func (d *DockerManager) InspectContainer(ctx context.Context, id string) (*types
 		return nil, err
 	}
 
-	imageInfo, _, err := d.client.ImageInspectWithRaw(ctx, container.Image)
+	imageInfo, err := d.client.ImageInspect(ctx, container.Image)
 	if err != nil {
 		slog.Error("Failed to inspect image", "error", err, "imageId", container.Image)
 		return nil, fmt.Errorf("error inspecting image: %w", err)
@@ -643,7 +642,7 @@ func (d *DockerManager) BuildImage(ctx context.Context, dockerfile []byte, image
 
 	platformSpec := types.ParsePlatform(platform)
 
-	resp, err := d.client.ImageBuild(ctx, tarReader, dockertypes.ImageBuildOptions{
+	resp, err := d.client.ImageBuild(ctx, tarReader, build.ImageBuildOptions{
 		Tags:       []string{imageName},
 		Platform:   platform,
 		Dockerfile: "Dockerfile",
@@ -671,7 +670,7 @@ func (d *DockerManager) ContainerLogs(ctx context.Context, id string, ShowStdout
 }
 
 func (d *DockerManager) InspectImage(ctx context.Context, image string) (*types.ImageInfo, error) {
-	imageInfo, _, err := d.client.ImageInspectWithRaw(ctx, image)
+	imageInfo, err := d.client.ImageInspect(ctx, image)
 	if err != nil {
 		slog.Error("Failed to inspect image", "error", err, "imageId", image)
 		return nil, fmt.Errorf("error inspecting image: %w", err)
