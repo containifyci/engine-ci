@@ -1,0 +1,21 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.github/**'
+
+permissions:
+  contents: write # for checkout
+  pull-requests: write # for updating pr
+
+jobs:
+  build-and-release:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: containifyci/.github/.github/workflows/release.yml@v1
+    secrets: inherit
