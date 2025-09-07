@@ -37,7 +37,7 @@ jobs:
         run: git config --global url.ssh://git@github.com/.insteadOf https://github.com/
 
       - name: Install go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
