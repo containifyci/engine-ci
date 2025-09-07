@@ -4,12 +4,12 @@ go 1.25.0
 
 require (
 	cloud.google.com/go/iam v1.5.2
-	github.com/containers/buildah v1.41.3
-	github.com/containers/common v0.64.1
-	github.com/containers/podman/v5 v5.6.0
+	github.com/containers/buildah v1.41.4
+	github.com/containers/common v0.64.2
+	github.com/containers/podman/v5 v5.6.1
 	github.com/containifyci/engine-ci/protos2 v0.17.0
 	github.com/containifyci/go-self-update v0.2.3
-	github.com/docker/docker v28.3.3+incompatible
+	github.com/docker/docker v28.4.0+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
@@ -45,7 +45,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.17.0 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
-	github.com/containers/image/v5 v5.36.1 // indirect
+	github.com/containers/image/v5 v5.36.2 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.2.1 // indirect
 	github.com/containers/psgo v1.9.0 // indirect
