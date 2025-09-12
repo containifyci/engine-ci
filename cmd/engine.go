@@ -157,6 +157,7 @@ func GetBuild() container.BuildGroups {
 			arg := container.Build{
 				App:            opt.Application,
 				BuildType:      container.BuildType(opt.BuildType.String()),
+				ContainerFiles: opt.ContainerFiles,
 				Env:            container.EnvType(opt.Environment.String()),
 				Image:          opt.Image,
 				ImageTag:       opt.ImageTag,
