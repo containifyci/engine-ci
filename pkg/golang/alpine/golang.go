@@ -16,6 +16,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
 	"github.com/containifyci/engine-ci/pkg/network"
+	"github.com/containifyci/engine-ci/protos2"
 
 	u "github.com/containifyci/engine-ci/pkg/utils"
 )
@@ -30,15 +31,15 @@ const (
 var f embed.FS
 
 type GoContainer struct {
-	//TODO add option to fail on linter or not
 	*container.Container
-	App       string
-	File      u.SrcFile
-	Folder    string
-	Image     string
-	ImageTag  string
-	Platforms []*types.PlatformSpec
-	Tags      []string
+	ContainerFiles map[string]*protos2.ContainerFile
+	App            string
+	File           u.SrcFile
+	Folder         string
+	Image          string
+	ImageTag       string
+	Platforms      []*types.PlatformSpec
+	Tags           []string
 }
 
 func New(build container.Build) *GoContainer {
@@ -48,10 +49,11 @@ func New(build container.Build) *GoContainer {
 		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
 	}
 	return &GoContainer{
-		App:       build.App,
-		Container: container.New(build),
-		Image:     build.Image,
-		ImageTag:  build.ImageTag,
+		App:            build.App,
+		Container:      container.New(build),
+		ContainerFiles: build.ContainerFiles,
+		Image:          build.Image,
+		ImageTag:       build.ImageTag,
 		// TODO: only build multiple platforms when buildenv and localenv are running on different platforms
 		// FIX: linux-arm64 go build is needed when building contains on MacOS M1/M2
 		Platforms: platforms,
@@ -99,8 +101,9 @@ type GoBuild struct {
 	async  bool
 }
 
-func (g GoBuild) Run() error       { return g.rf() }
-func (g GoBuild) Name() string     { return g.name }
+func (g GoBuild) Run() error   { return g.rf() }
+func (g GoBuild) Name() string { return g.name }
+
 func (g GoBuild) Images() []string { return g.images }
 func (g GoBuild) IsAsync() bool    { return g.async }
 
@@ -193,14 +196,38 @@ func (c *GoContainer) Lint() error {
 	return err
 }
 
-func (c *GoContainer) GoImage() string {
-	dockerFile, err := f.ReadFile("Dockerfilego")
+func (c *GoContainer) dockerFile() (*protos2.ContainerFile, error) {
+	if v, ok := c.ContainerFiles["build"]; ok {
+		return v, nil
+	}
+
+	dockerFileName := "Dockerfile_go"
+	typ := c.GetBuild().CustomString("go_type")
+	name := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	if typ != "" {
+		dockerFileName = fmt.Sprintf("Dockerfile_%s_go", typ)
+		name = fmt.Sprintf("golang-%s-alpine-%s", DEFAULT_GO, typ)
+	}
+	dockerFile, err := f.ReadFile(dockerFileName)
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
 		os.Exit(1)
 	}
-	tag := container.ComputeChecksum(dockerFile)
-	image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	return &protos2.ContainerFile{
+		Name:    name,
+		Content: string(dockerFile),
+	}, nil
+}
+
+func (c *GoContainer) GoImage() string {
+	dockerFile, err := c.dockerFile()
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
+		os.Exit(1)
+	}
+	tag := container.ComputeChecksum([]byte(dockerFile.Content))
+	// image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	image := dockerFile.Name
 	return utils.ImageURI(c.GetBuild().ContainifyRegistry, image, tag)
 }
 
@@ -213,7 +240,7 @@ func (c *GoContainer) Images() []string {
 func (c *GoContainer) BuildGoImage() error {
 	image := c.GoImage()
 
-	dockerFile, err := f.ReadFile("Dockerfilego")
+	dockerFile, err := c.dockerFile()
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
@@ -221,7 +248,7 @@ func (c *GoContainer) BuildGoImage() error {
 
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
-	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.BuildIntermidiateContainer(image, []byte(dockerFile.Content), platforms...)
 }
 
 func (c *GoContainer) Build() error {

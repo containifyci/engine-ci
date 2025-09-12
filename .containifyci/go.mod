@@ -2,9 +2,11 @@ module .containifyci
 
 go 1.25.0
 
+// replace github.com/containifyci/engine-ci/protos2 => ../protos2
+
 require (
 	github.com/containifyci/engine-ci/client v0.19.0
-	github.com/containifyci/engine-ci/protos2 v0.17.0
+	github.com/containifyci/engine-ci/protos2 v0.18.1
 )
 
 require (

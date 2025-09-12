@@ -20,11 +20,19 @@ enum BuildType {
 enum RuntimeType {
     Docker = 0;
     Podman = 1;
+    Host = 2;
+    Test = 3;
+    Unknown = 4;
 }
 
 message ContainerRegistry {
     string Username = 1;
     string Password = 2;
+}
+
+message ContainerFile {
+    string Name = 1;
+    string Content = 2;
 }
 
 message BuildArgs {
@@ -46,6 +54,7 @@ message BuildArgs {
 	bool Verbose = 16;
     string ContainifyRegistry = 17;
     map<string, ContainerRegistry> Registries = 18;
+    map<string, ContainerFile> ContainerFiles = 19;
 }
 
 message Empty {

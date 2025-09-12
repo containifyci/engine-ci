@@ -46,10 +46,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install libbtrfs-dev
 
-      - name: Install go ${{ env.go_version }}
+      - name: Install go
         uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.go_version }}
+          go-version-file: go.mod
           cache: false
 
       - name: Cache Go Mod
