@@ -30,6 +30,11 @@ message ContainerRegistry {
     string Password = 2;
 }
 
+message ContainerFile {
+    string Name = 1;
+    string Content = 2;
+}
+
 message BuildArgs {
     string Application = 1;
     EnvType Environment = 2;
@@ -49,7 +54,7 @@ message BuildArgs {
 	bool Verbose = 16;
     string ContainifyRegistry = 17;
     map<string, ContainerRegistry> Registries = 18;
-    map<string, string> ContainerFiles = 19;
+    map<string, ContainerFile> ContainerFiles = 19;
 }
 
 message Empty {
