@@ -193,10 +193,25 @@ func (c *GoContainer) Lint() error {
 	return err
 }
 
-func (c *GoContainer) GoImage() string {
-	dockerFile, err := f.ReadFile("Dockerfilego")
+func (c *GoContainer) dockerFile() ([]byte, error) {
+	dockerFileName := "Dockerfile_go"
+	typ := c.GetBuild().CustomString("go_type")
+	if typ != "" {
+		dockerFileName = fmt.Sprintf("Dockerfile_%s_go", typ)
+	}
+	dockerFile, err := f.ReadFile(dockerFileName)
 	if err != nil {
+
 		slog.Error("Failed to read Dockerfile.go", "error", err)
+		os.Exit(1)
+	}
+	return dockerFile, err
+}
+
+func (c *GoContainer) GoImage() string {
+	dockerFile, err := c.dockerFile()
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
 	}
 	tag := container.ComputeChecksum(dockerFile)
@@ -213,7 +228,7 @@ func (c *GoContainer) Images() []string {
 func (c *GoContainer) BuildGoImage() error {
 	image := c.GoImage()
 
-	dockerFile, err := f.ReadFile("Dockerfilego")
+	dockerFile, err := c.dockerFile()
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
