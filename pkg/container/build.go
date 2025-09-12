@@ -97,20 +97,21 @@ type Build struct {
 	Platform           types.Platform
 	Custom             Custom
 	Registries         map[string]*protos2.ContainerRegistry
-	BuildType          BuildType `json:"build_type"`
-	ContainifyRegistry string
-	Folder             string
+	ContainerFiles     map[string]*protos2.ContainerFile
+	Registry           string
+	File               string
 	App                string `json:"app"`
 	Image              string `json:"image"`
 	ImageTag           string `json:"image_tag"`
-	Registry           string
+	ContainifyRegistry string
 	Env                EnvType
-	File               string
+	Folder             string
 	Repository         string
 	Organization       string
 	Runtime            utils.RuntimeType
-	SourcePackages     []string
+	BuildType          BuildType `json:"build_type"`
 	SourceFiles        []string
+	SourcePackages     []string
 	Verbose            bool
 	defaults           bool
 }
