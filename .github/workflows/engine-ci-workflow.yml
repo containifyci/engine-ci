@@ -123,13 +123,14 @@ jobs:
 
       - name: Install go
         uses: actions/setup-go@v6
+        if: ${{ !inputs.install_binary }}
         with:
           go-version-file: go.mod
           cache: false
 
       - name: Cache Go Mod
         uses: actions/cache@v4
-        if: always()
+        if: ${{ !inputs.install_binary }}
         with:
           path: /home/runner/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
