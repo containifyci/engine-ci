@@ -19,8 +19,6 @@ concurrency:
 
 permissions:
   contents: write # for checkout
-  id-token: write # for authenticating to Google Cloud Platform
-  pull-requests: write # for updating pr
 
 jobs:
   sub-module-release:

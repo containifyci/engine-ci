@@ -24,6 +24,9 @@ env:
   CONTAINIFYCI_GITHUB_REF: refs/tags/${{ inputs.tag_name }}
   GORELEASER_CURRENT_TAG: ${{ inputs.tag_name }}
 
+permissions:
+  contents: write # for checkout
+
 jobs:
   publish:
     name: Publish Artifact

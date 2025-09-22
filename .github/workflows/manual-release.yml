@@ -13,6 +13,9 @@ concurrency:
   group: engine_ci_service_${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write # for checkout
+
 jobs:
   release-engine-ci:
     runs-on: ubuntu-latest
