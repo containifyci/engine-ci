@@ -17,6 +17,8 @@ on:
       CONTAINIFYCI_RELEASE_TOKEN:
         description: "GitHub token for release"
         required: true
+permissions:
+  contents: write # for checkout
 
 jobs:
   sub-module-release:
