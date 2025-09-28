@@ -55,7 +55,7 @@ func init() {
 }
 
 func SaveCache() error {
-	args := GetBuild()
+	args := GetBuild(false) // Use plugin system for cache operations
 	_, bs := Pre(args[0].Builds[0], nil)
 	images := bs.Images()
 	if len(images) == 0 {
@@ -95,7 +95,7 @@ docker save -o ~/image-cache/%s.tar %s
 }
 
 func LoadCache() error {
-	args := GetBuild()
+	args := GetBuild(false) // Use plugin system for cache operations
 	arg, bs := Pre(args[0].Builds[0], nil)
 
 	images := bs.Images()

@@ -13,6 +13,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/memory"
+
 	"github.com/containifyci/engine-ci/protos2"
 
 	"github.com/containifyci/engine-ci/pkg/filesystem"
@@ -110,6 +111,7 @@ type Build struct {
 	Organization       string
 	Runtime            utils.RuntimeType
 	BuildType          BuildType `json:"build_type"`
+	BuilderFunction    string    // Name of the client build function to use (e.g., "NewGoServiceBuild")
 	SourceFiles        []string
 	SourcePackages     []string
 	Verbose            bool
@@ -121,6 +123,12 @@ type BuildGroup struct {
 }
 
 type BuildGroups []*BuildGroup
+
+func (b *Build) VarName() string {
+	return strings.ToLower(
+		strings.ReplaceAll(strings.ReplaceAll(b.App, ".", ""), "-", ""),
+	)
+}
 
 func (b *Build) CustomString(key string) string {
 	if v, ok := b.Custom[key]; ok {
@@ -136,11 +144,6 @@ func (b *Build) CustomString(key string) string {
 
 // ImageURI constructs the full image URI with optimized performance
 func (b *Build) ImageURI() string {
-	start := time.Now()
-	defer func() {
-		memory.TrackOperation(time.Since(start))
-	}()
-
 	// Use standard string builder for optimal performance (29% faster than pool)
 	var builder strings.Builder
 	builder.WriteString(b.Image)
@@ -148,8 +151,6 @@ func (b *Build) ImageURI() string {
 	builder.WriteString(b.ImageTag)
 
 	result := builder.String()
-	memory.TrackAllocation(int64(len(result)))
-	memory.TrackStringReuse()
 
 	return result
 }
@@ -164,14 +165,9 @@ func getEnv() EnvType {
 }
 
 func NewServiceBuild(appName string, buildType BuildType) Build {
-	start := time.Now()
-	defer func() {
-		memory.TrackOperation(time.Since(start))
-	}()
-
 	// Cache filesystem operations to avoid repeated disk access
-	fileCache := filesystem.NewFileCache("file_cache.yaml")
-	files, err := fileCache.FindFilesBySuffix(".", ".proto")
+	files, err := filesystem.NewFileCache("file_cache.yaml").
+		FindFilesBySuffix(".", ".proto")
 	if err != nil {
 		slog.Error("Error finding proto files", "error", err)
 		os.Exit(1)
@@ -193,9 +189,6 @@ func NewServiceBuild(appName string, buildType BuildType) Build {
 	if commitSha == "" {
 		commitSha = "local"
 	}
-
-	// Track allocations for the created build
-	memory.TrackAllocation(int64(len(appName) + len(commitSha) + len(packages)*8 + len(files)*8))
 
 	return Build{
 		App:            appName,
