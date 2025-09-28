@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containifyci/engine-ci/pkg/autodiscovery"
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
@@ -64,7 +65,7 @@ func Engine(cmd *cobra.Command, _ []string) error {
 	leader := LeaderElection{}
 	fnc, addr := Start()
 	defer fnc()
-	arg := GetBuild()
+	arg := GetBuild(RootArgs.Auto)
 	wg := sync.WaitGroup{}
 	for _, a := range arg {
 		for _, b := range a.Builds {
@@ -91,7 +92,19 @@ func Engine(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func GetBuild() container.BuildGroups {
+func GetBuild(auto bool) container.BuildGroups {
+
+	if auto {
+		// Use auto-discovery to detect Go projects
+		groups, err := autodiscovery.DiscoverAndGenerateBuildGroups(".")
+		if err != nil {
+			slog.Error("Auto-discovery failed", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("Auto-discovered Go projects", "count", len(groups))
+		return groups
+	}
+
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:           hclog.Error,
 		Output:          os.Stderr,

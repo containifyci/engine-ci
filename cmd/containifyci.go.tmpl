@@ -1,4 +1,4 @@
-//go:generate bash -c "if [ ! -f go.mod ]; then echo 'Initializing go.mod...'; go mod init .containifyci; else echo 'go.mod already exists. Skipping initialization.'; fi"
+//go:generate sh -c "if [ ! -f go.mod ]; then echo 'Initializing go.mod...'; go mod init .containifyci; else echo 'go.mod already exists. Skipping initialization.'; fi"
 //go:generate go get github.com/containifyci/engine-ci/protos2
 //go:generate go get github.com/containifyci/engine-ci/client
 //go:generate go mod tidy
@@ -9,14 +9,42 @@ import (
 	"os"
 
 	"github.com/containifyci/engine-ci/client/pkg/build"
+	"github.com/containifyci/engine-ci/protos2"
 )
 
 func main() {
 	os.Chdir("../")
+{{- if .Groups }}
+{{- range $groupIndex, $group := .Groups }}
+
+	// Build Group {{ $groupIndex }}
+	{{- range $buildIndex, $build := $group.Builds }}
+	{{ $build.VarName }} := build.{{ $build.BuilderFunction }}("{{ $build.App }}")
+	{{- if $build.Folder }}
+	{{ $build.VarName }}.Folder = "{{ $build.Folder }}"
+	{{- end }}
+	{{- end }}
+{{- end }}
+
+	//TODO: adjust the registries to your own container registry
+	build.BuildGroups(
+		{{- range $groupIndex, $group := .Groups }}
+		&protos2.BuildArgsGroup{
+			Args: []*protos2.BuildArgs{
+				{{- range $buildIndex, $build := $group.Builds }}
+				{{ $build.VarName }},
+				{{- end }}
+			},
+		},
+		{{- end }}
+	)
+{{- else }}
+	// Static fallback configuration
 	opts := build.NewGoServiceBuild("containifyci-example")
 	opts.Verbose = false
 	opts.File = "main.go"
 	//TODO: adjust the registry to your own container registry
 	opts.Registry = "containifyci"
-	build.Serve(opts)
+	build.Build(opts)
+{{- end }}
 }
