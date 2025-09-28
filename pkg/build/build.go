@@ -140,13 +140,32 @@ func (bs *BuildSteps) runAllMatchingBuilds(step []string) error {
 	return nil
 }
 
-func (bs *BuildSteps) Images(step ...string) []string {
+func (bs *BuildSteps) Images(groups container.BuildGroups) []string {
 	images := []string{}
-	for _, bctx := range bs.Steps {
-		if len(step) > 0 && bctx.build.Name() != step[0] {
-			continue
+	for _, group := range groups {
+		for _, build := range group.Builds {
+			for _, bctx := range bs.Steps {
+				if !bctx.build.Matches(*build) {
+					continue
+				}
+				images = append(images, bctx.build.Images()...)
+			}
 		}
-		images = append(images, bctx.build.Images()...)
 	}
+	//deduplicate images
+	images = uniqueStrings(images)
 	return images
+}
+
+// uniqueStrings returns a slice containing only unique strings from the input.
+func uniqueStrings(input []string) []string {
+	seen := make(map[string]struct{})
+	result := []string{}
+	for _, str := range input {
+		if _, ok := seen[str]; !ok {
+			seen[str] = struct{}{}
+			result = append(result, str)
+		}
+	}
+	return result
 }

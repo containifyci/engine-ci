@@ -25,7 +25,7 @@ var f embed.FS
 var d embed.FS
 
 const (
-	CI_IMAGE = "golang:1.22.5-alpine"
+	CI_IMAGE = "golang:1.25.0-alpine"
 )
 
 type GCloudContainer struct {
