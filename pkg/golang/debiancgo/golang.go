@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.24.6"
+	DEFAULT_GO = "1.25.0"
 	PROJ_MOUNT = "/src"
 	OUT_DIR    = "/out/"
 )
@@ -43,7 +43,7 @@ type GoContainer struct {
 func New(build container.Build) *GoContainer {
 	platforms := []*types.PlatformSpec{build.Platform.Container}
 	if !build.Platform.Same() {
-		slog.Info("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
+		slog.Debug("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
 		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
 	}
 	return &GoContainer{
@@ -67,6 +67,17 @@ func (c *GoContainer) IsAsync() bool {
 
 func (c *GoContainer) Name() string {
 	return "golang"
+}
+
+// Matches implements the Build interface - CGO variant runs when from=debiancgo
+func (c *GoContainer) Matches(build container.Build) bool {
+	if build.BuildType != container.GoLang {
+		return false
+	}
+	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
+		return from[0] == "debiancgo"
+	}
+	return false
 }
 
 func CacheFolder() string {
@@ -102,6 +113,17 @@ func (g GoBuild) Run() error       { return g.rf() }
 func (g GoBuild) Name() string     { return g.name }
 func (g GoBuild) Images() []string { return g.images }
 func (g GoBuild) IsAsync() bool    { return g.async }
+
+// Matches implements the Build interface - CGO variant runs when from=debiancgo
+func (g GoBuild) Matches(build container.Build) bool {
+	if build.BuildType != container.GoLang {
+		return false
+	}
+	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
+		return from[0] == "debiancgo"
+	}
+	return false
+}
 
 func (c *GoContainer) GoImage() string {
 	dockerFile, err := f.ReadFile("Dockerfilego")

@@ -57,6 +57,11 @@ func (c *MavenContainer) Name() string {
 	return "maven"
 }
 
+// Matches implements the Build interface - Maven only runs for maven builds
+func (c *MavenContainer) Matches(build container.Build) bool {
+	return build.BuildType == container.Maven
+}
+
 func CacheFolder() string {
 	mvnHome := u.GetEnvs([]string{"MAVEN_HOME", "CONTAINIFYCI_CACHE"}, "build")
 	if mvnHome == "" {
@@ -212,6 +217,11 @@ func (g MavenBuild) Run() error       { return g.rf() }
 func (g MavenBuild) Name() string     { return g.name }
 func (g MavenBuild) Images() []string { return g.images }
 func (g MavenBuild) IsAsync() bool    { return g.async }
+
+// Matches implements the Build interface - Maven builds only run for maven projects
+func (g MavenBuild) Matches(build container.Build) bool {
+	return build.BuildType == container.Maven
+}
 
 func NewProd(build container.Build) build.Build {
 	container := New(build)

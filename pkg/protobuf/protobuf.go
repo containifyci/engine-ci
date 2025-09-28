@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -69,6 +70,12 @@ func (c *ProtogufContainer) Image() string {
 
 func (c *ProtogufContainer) Name() string {
 	return "protobuf"
+}
+
+// Matches implements the Build interface - Protobuf only runs for golang builds
+func (c *ProtogufContainer) Matches(build container.Build) bool {
+	fmt.Printf("Checking if build type %s matches Golang\n", build.BuildType)
+	return build.BuildType == container.GoLang
 }
 
 func (c *ProtogufContainer) Pull() error {

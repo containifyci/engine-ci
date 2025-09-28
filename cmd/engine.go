@@ -77,7 +77,7 @@ func Engine(cmd *cobra.Command, _ []string) error {
 				_buildSteps := buildSteps
 				slog.Info("Starting build", "build", b, "steps", _buildSteps.String())
 				if _buildSteps == nil {
-					_buildSteps = build.NewBuildSteps()
+					_buildSteps = build.NewBuildStepsWithArg(*b)
 				}
 				slog.Info("Starting build2", "build", b, "steps", _buildSteps.String())
 				c := NewCommand(*b, _buildSteps)
@@ -96,13 +96,13 @@ func GetBuild(auto bool) container.BuildGroups {
 
 	if auto {
 		// Use auto-discovery to detect Go projects
-		groups, err := autodiscovery.DiscoverAndGenerateBuildGroups(".")
+		projects, err := autodiscovery.DiscoverProjects(".")
 		if err != nil {
 			slog.Error("Auto-discovery failed", "error", err)
 			os.Exit(1)
 		}
-		slog.Info("Auto-discovered Go projects", "count", len(groups))
-		return groups
+		slog.Info("Auto-discovered projects", "count", len(projects.AllProjects()))
+		return autodiscovery.GenerateBuildGroups(projects.AllProjects())
 	}
 
 	logger := hclog.New(&hclog.LoggerOptions{

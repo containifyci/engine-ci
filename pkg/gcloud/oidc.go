@@ -44,6 +44,11 @@ func (c *GCloudContainer) Name() string     { return "gcloud_oidc" }
 func (c *GCloudContainer) Pull() error      { return c.Container.Pull(CI_IMAGE) }
 func (c *GCloudContainer) Images() []string { return []string{CI_IMAGE} }
 
+// Matches implements the Build interface - GCloud runs for all builds
+func (c *GCloudContainer) Matches(build container.Build) bool {
+	return true // GCloud setup runs for all builds
+}
+
 // calculateDirChecksum computes a combined SHA-256 checksum for all files in the specified directory within the embed.FS.
 func calculateDirChecksum(_fs embed.FS) ([]byte, error) {
 	// Initialize a SHA-256 hasher.

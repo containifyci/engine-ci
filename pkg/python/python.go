@@ -56,6 +56,11 @@ func (c *PythonContainer) Name() string {
 	return "python"
 }
 
+// Matches implements the Build interface - Python only runs for python builds
+func (c *PythonContainer) Matches(build container.Build) bool {
+	return build.BuildType == container.Python
+}
+
 func CacheFolder() string {
 	pipCache := os.Getenv("PIP_CACHE_DIR")
 	if pipCache == "" {
@@ -206,6 +211,11 @@ func (g PythonBuild) Run() error       { return g.rf() }
 func (g PythonBuild) Name() string     { return g.name }
 func (g PythonBuild) Images() []string { return g.images }
 func (g PythonBuild) IsAsync() bool    { return g.async }
+
+// Matches implements the Build interface - Python builds only run for python projects
+func (g PythonBuild) Matches(build container.Build) bool {
+	return build.BuildType == container.Python
+}
 
 func NewProd(build container.Build) build.Build {
 	container := New(build)

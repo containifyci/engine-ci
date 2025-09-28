@@ -41,6 +41,11 @@ func (c *GithubContainer) Name() string {
 	return "github"
 }
 
+// Matches implements the Build interface - GitHub runs for all builds
+func (c *GithubContainer) Matches(build container.Build) bool {
+	return true // GitHub integration runs for all builds
+}
+
 func (c *GithubContainer) Images() []string {
 	return []string{c.Image()}
 }
