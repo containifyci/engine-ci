@@ -216,11 +216,11 @@ func TestGoProjectToBuild(t *testing.T) {
 	tests := []struct {
 		expected func(container.Build)
 		name     string
-		project  GoProject
+		project  Project
 	}{
 		{
 			name: "service project",
-			project: GoProject{
+			project: Project{
 				ModulePath: "./testapp",
 				ModuleName: "github.com/user/testapp",
 				AppName:    "testapp",
@@ -238,7 +238,7 @@ func TestGoProjectToBuild(t *testing.T) {
 		},
 		{
 			name: "library project",
-			project: GoProject{
+			project: Project{
 				ModulePath: "./testlib",
 				ModuleName: "github.com/user/testlib",
 				AppName:    "testlib",
@@ -265,7 +265,7 @@ func TestGoProjectToBuild(t *testing.T) {
 }
 
 func TestGenerateBuildGroups(t *testing.T) {
-	projects := []GoProject{
+	projects := []Project{
 		{
 			ModulePath:  "./testapp",
 			ModuleName:  "github.com/user/testapp",
@@ -370,7 +370,7 @@ func TestDiscoverGoProjectsIntegration(t *testing.T) {
 	}
 
 	// Verify service project
-	var serviceProject, libProject *GoProject
+	var serviceProject, libProject *Project
 	for i := range projects {
 		switch projects[i].AppName {
 		case "service":

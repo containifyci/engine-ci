@@ -12,19 +12,19 @@ import (
 func TestCreateContainifyCIFileWithProjects(t *testing.T) {
 	tests := []struct {
 		name     string
-		projects []autodiscovery.GoProject
+		projects []autodiscovery.Project
 		wantFile bool
 		wantErr  bool
 	}{
 		{
 			name:     "empty projects falls back to static template",
-			projects: []autodiscovery.GoProject{},
+			projects: []autodiscovery.Project{},
 			wantFile: true,
 			wantErr:  false,
 		},
 		{
 			name: "single service project",
-			projects: []autodiscovery.GoProject{
+			projects: []autodiscovery.Project{
 				{
 					ModulePath: "./myapp",
 					ModuleName: "github.com/user/myapp",
@@ -38,7 +38,7 @@ func TestCreateContainifyCIFileWithProjects(t *testing.T) {
 		},
 		{
 			name: "multiple projects",
-			projects: []autodiscovery.GoProject{
+			projects: []autodiscovery.Project{
 				{
 					ModulePath: "./service1",
 					ModuleName: "github.com/user/service1",
@@ -58,7 +58,7 @@ func TestCreateContainifyCIFileWithProjects(t *testing.T) {
 		},
 		{
 			name: "projects with empty app names are filtered",
-			projects: []autodiscovery.GoProject{
+			projects: []autodiscovery.Project{
 				{
 					ModulePath: "./invalid",
 					ModuleName: "github.com/user/invalid",
@@ -130,7 +130,6 @@ func TestCreateContainifyCIFileWithProjects(t *testing.T) {
 		})
 	}
 }
-
 
 func TestRunInitWithAutoFlag(t *testing.T) {
 	// Create temporary directory structure
@@ -214,4 +213,3 @@ func TestRunInitWithoutAutoFlag(t *testing.T) {
 	assert.Contains(t, contentStr, "build.NewGoServiceBuild(\"containifyci-example\")")
 	assert.Contains(t, contentStr, "build.Build(opts)")
 }
-

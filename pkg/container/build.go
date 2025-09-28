@@ -207,7 +207,6 @@ func NewGoServiceBuild(appName string) Build {
 
 func NewMavenServiceBuild(appName string) Build {
 	build := NewServiceBuild(appName, Maven)
-	build.Folder = "target/quarkus-app"
 	return build
 }
 

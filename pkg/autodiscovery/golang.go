@@ -9,10 +9,11 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/filesystem"
+	"github.com/containifyci/engine-ci/protos2"
 )
 
 // GoProject represents a discovered Go project/module
-type GoProject struct {
+type Project struct {
 	MainFile    string
 	ModulePath  string
 	ModuleName  string
@@ -20,18 +21,59 @@ type GoProject struct {
 	SourceFiles []string
 	ProtoFiles  []string
 	IsService   bool
+	BuildType   protos2.BuildType
 }
 
-func (p *GoProject) BuilderFunction() string {
-	if p.IsService {
-		return "NewGoServiceBuild"
+// // Implement Project interface methods
+// func (p GoProject) GetAppName() string {
+// 	return p.AppName
+// }
+
+// func (p GoProject) GetModulePath() string {
+// 	return p.ModulePath
+// }
+
+// func (p GoProject) IsServiceProject() bool {
+// 	return p.IsService
+// }
+
+// func (p GoProject) GetProjectType() ProjectType {
+// 	return ProjectTypeGo
+// }
+
+// func (p GoProject) GetSourceFiles() []string {
+// 	return p.SourceFiles
+// }
+
+func (p Project) BuilderFunction() string {
+	switch p.BuildType {
+	case protos2.BuildType_GoLang:
+		if p.IsService {
+			return "NewGoServiceBuild"
+		}
+		return "NewGoLibraryBuild"
+	case protos2.BuildType_Python:
+		if p.IsService {
+			return "NewPythonServiceBuild"
+		}
+		return "NewPythonLibraryBuild"
+	case protos2.BuildType_Maven:
+		if p.IsService {
+			return "NewMavenServiceBuild"
+		}
+		return "NewMavenLibraryBuild"
+	default:
+		panic("unknown build type")
 	}
-	return "NewGoLibraryBuild"
 }
+
+// func (p GoProject) ToBuild() container.Build {
+// 	return GoProjectToBuild(p)
+// }
 
 // DiscoverGoProjects scans the given root directory recursively for Go projects
-func DiscoverGoProjects(rootDir string) ([]GoProject, error) {
-	var projects []GoProject
+func DiscoverGoProjects(rootDir string) ([]Project, error) {
+	var projects []Project
 
 	// Use filesystem package to find all go.mod files
 	fileCache := filesystem.NewFileCache("go_mod_cache.yaml")
@@ -60,9 +102,10 @@ func DiscoverGoProjects(rootDir string) ([]GoProject, error) {
 }
 
 // analyzeGoProject analyzes a single Go project based on its go.mod file
-func analyzeGoProject(goModPath string) (GoProject, error) {
-	project := GoProject{
+func analyzeGoProject(goModPath string) (Project, error) {
+	project := Project{
 		ModulePath: filepath.Dir(goModPath),
+		BuildType:  protos2.BuildType_GoLang,
 	}
 
 	// Parse go.mod to get module name
@@ -195,7 +238,7 @@ func isMainPackageFile(goFile string) (bool, error) {
 }
 
 // GoProjectToBuild converts a discovered Go project to a container.Build configuration
-func GoProjectToBuild(project GoProject) container.Build {
+func GoProjectToBuild(project Project) container.Build {
 
 	build := container.NewGoServiceBuild(project.AppName)
 	build.BuilderFunction = project.BuilderFunction()
@@ -237,7 +280,7 @@ func extractPackagesFromFiles(files []string) []string {
 }
 
 // GenerateBuildGroups creates container.BuildGroups from discovered Go projects
-func GenerateBuildGroups(projects []GoProject) container.BuildGroups {
+func GenerateBuildGroups(projects []Project) container.BuildGroups {
 	var groups container.BuildGroups
 
 	//TODO support concurrent builds based on project dependencies

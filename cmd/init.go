@@ -26,17 +26,71 @@ var mage []byte
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Command to generate containifyci.go file for containifyci usage",
-	Long:  `Command to generate containifyci.go file for containifyci usage. Use --auto to generate based on auto-discovered Go projects.`,
+	Long:  `Command to generate containifyci.go file for containifyci usage. Use --auto to generate based on auto-discovered projects in Go, Python, and Java.`,
 	RunE:  RunInit,
 }
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-	initCmd.Flags().BoolP("auto", "a", false, "Auto-discover Go projects and generate configuration")
+	initCmd.Flags().BoolP("auto", "a", false, "Auto-discover projects and generate configuration")
+	initCmd.Flags().StringSliceP("languages", "l", []string{"go", "python", "java"}, "Languages to discover (go, python, java)")
+	initCmd.Flags().BoolP("verbose", "v", false, "Enable verbose logging during discovery")
 }
 
-// createContainifyCIFileWithProjects creates containifyci.go file using template with build groups
-func createContainifyCIFileWithProjects(projects []autodiscovery.GoProject) error {
+// createContainifyCIFileWithProjectCollection creates containifyci.go file using template with build groups from project collection
+func createContainifyCIFileWithProjectCollection(collection *autodiscovery.ProjectCollection) error {
+	// Generate build groups from discovered projects
+	buildGroups := autodiscovery.GenerateBuildGroupsFromCollection(collection)
+
+	if len(buildGroups) == 0 {
+		slog.Warn("No valid build groups generated. Falling back to static template.")
+		return createContainifyCIFile()
+	}
+
+	fileName := ".containifyci/containifyci.go"
+
+	// Check if the file exists
+	if _, err := os.Stat(fileName); err == nil {
+		slog.Debug("File already exists", "file", fileName)
+		return nil
+	} else if !os.IsNotExist(err) {
+		slog.Error("Error checking file", "error", err, "file", fileName)
+		return err
+	}
+
+	var buf bytes.Buffer
+	templateData := TemplateData{Groups: buildGroups}
+
+	err := template.Must(template.New("containifyci-go").Parse(string(mage))).
+		Execute(&buf, templateData)
+	if err != nil {
+		slog.Error("Failed to render containifyci go file with build groups", "error", err)
+		return err
+	}
+
+	// Write content to the file
+	err = os.WriteFile(fileName, buf.Bytes(), 0644)
+	if err != nil {
+		slog.Error("Failed to write containifyci go file", "error", err)
+		return err
+	}
+
+	// Run go generate on the file
+	cmd := exec.Command("go", "generate", "-tags", "mage", fileName)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		slog.Error("Failed to run go generate", "error", err)
+		return err
+	}
+
+	slog.Info("Created .containifyci/containifyci.go file with auto-discovered projects", "file", fileName, "groupCount", len(buildGroups))
+	return nil
+}
+
+// createContainifyCIFileWithProjects creates containifyci.go file using template with build groups (legacy Go-only function)
+func createContainifyCIFileWithProjects(projects []autodiscovery.Project) error {
 	// Generate build groups from discovered projects
 	buildGroups := autodiscovery.GenerateBuildGroups(projects)
 
@@ -104,26 +158,62 @@ func RunInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if auto {
-		// Use autodiscovery to generate containifyci.go
-		slog.Info("Auto-discovering Go projects...")
-		projects, err := autodiscovery.DiscoverGoProjects(".")
+		// Get language filter and verbose flags
+		languages, err := cmd.Flags().GetStringSlice("languages")
 		if err != nil {
-			slog.Error("Failed to discover Go projects", "error", err)
+			slog.Error("Failed to get languages flag", "error", err)
+			return err
+		}
+
+		verbose, err := cmd.Flags().GetBool("verbose")
+		if err != nil {
+			slog.Error("Failed to get verbose flag", "error", err)
+			return err
+		}
+
+		// Create language filter from command line arguments
+		filter := autodiscovery.LanguageFilter{}
+		for _, lang := range languages {
+			switch lang {
+			case "go":
+				filter.Go = true
+			case "python":
+				filter.Python = true
+			case "java":
+				filter.Java = true
+			default:
+				slog.Warn("Unknown language", "language", lang)
+			}
+		}
+
+		// Use multi-language autodiscovery
+		slog.Info("Auto-discovering projects...", "languages", languages)
+		options := autodiscovery.DiscoveryOptions{
+			RootDir:   ".",
+			Languages: filter,
+			Verbose:   verbose,
+		}
+
+		collection, err := autodiscovery.DiscoverAllProjects(options)
+		if err != nil {
+			slog.Error("Failed to discover projects", "error", err)
 			return fmt.Errorf("autodiscovery failed: %w", err)
 		}
 
-		if len(projects) == 0 {
-			slog.Warn("No Go projects discovered. Falling back to static template.")
+		if collection.IsEmpty() {
+			slog.Warn("No projects discovered. Falling back to static template.")
 			return createContainifyCIFile()
 		}
 
-		slog.Info("Discovered Go projects", "count", len(projects))
-		for _, project := range projects {
-			slog.Info("Found project", "name", project.AppName, "path", project.ModulePath, "isService", project.IsService)
-		}
+		counts := collection.CountByType()
+		slog.Info("Discovery completed",
+			"totalProjects", len(collection.AllProjects()),
+			"go", counts[autodiscovery.ProjectTypeGo],
+			"python", counts[autodiscovery.ProjectTypePython],
+			"java", counts[autodiscovery.ProjectTypeJava])
 
 		// Create file with discovered projects using template
-		return createContainifyCIFileWithProjects(projects)
+		return createContainifyCIFileWithProjectCollection(collection)
 	} else {
 		// Use static template (existing behavior)
 		return createContainifyCIFile()
