@@ -44,17 +44,11 @@ type ProjectCollection struct {
 func (pc *ProjectCollection) AllProjects() []Project {
 	var all []Project
 
-	for _, p := range pc.GoProjects {
-		all = append(all, p)
-	}
+	all = append(all, pc.GoProjects...)
 
-	for _, p := range pc.PythonProjects {
-		all = append(all, p)
-	}
+	all = append(all, pc.PythonProjects...)
 
-	for _, p := range pc.JavaProjects {
-		all = append(all, p)
-	}
+	all = append(all, pc.JavaProjects...)
 
 	return all
 }

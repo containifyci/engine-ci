@@ -136,8 +136,8 @@ func TestDetermineServiceType(t *testing.T) {
 func TestPythonProjectToBuild(t *testing.T) {
 	tests := []struct {
 		expected func(container.Build)
-		project  Project
 		name     string
+		project  Project
 	}{
 		{
 			name: "service project",

@@ -216,8 +216,8 @@ public class Utils {
 func TestJavaProjectToBuild(t *testing.T) {
 	tests := []struct {
 		expected func(container.Build)
-		project  Project
 		name     string
+		project  Project
 	}{
 		{
 			name: "maven service project",
