@@ -80,33 +80,6 @@ func (p *BufferPool) Put(buffer []byte, size BufferSize) {
 	p.tar.Put(wrapper)
 }
 
-// GetMetrics returns pool efficiency metrics
-func (p *BufferPool) GetMetrics() BufferPoolMetrics {
-	return BufferPoolMetrics{
-		TarHits:   atomic.LoadInt64(&p.tarHits),
-		TarMisses: atomic.LoadInt64(&p.tarMisses),
-	}
-}
-
-// BufferPoolMetrics contains statistics about buffer pool usage
-type BufferPoolMetrics struct {
-	TarHits   int64
-	TarMisses int64
-}
-
-// HitRate calculates the hit rate for the TAR buffer pool
-func (m BufferPoolMetrics) HitRate() float64 {
-	total := m.TarHits + m.TarMisses
-
-	if total == 0 {
-		return 0.0
-	}
-
-	return float64(m.TarHits) / float64(total)
-}
-
-// Convenience functions for the default pool
-
 // GetBuffer gets a TAR buffer from the default pool
 func GetBuffer(size BufferSize) []byte {
 	return defaultBufferPool.Get(size)
@@ -115,19 +88,6 @@ func GetBuffer(size BufferSize) []byte {
 // PutBuffer returns a buffer to the default pool
 func PutBuffer(buffer []byte, size BufferSize) {
 	defaultBufferPool.Put(buffer, size)
-}
-
-// GetBufferPoolMetrics returns metrics for the default pool
-func GetBufferPoolMetrics() BufferPoolMetrics {
-	return defaultBufferPool.GetMetrics()
-}
-
-// WithBuffer executes a function with a pooled TAR buffer
-// This ensures proper cleanup even if the function panics
-func WithBuffer(size BufferSize, fn func([]byte)) {
-	buffer := GetBuffer(size)
-	defer PutBuffer(buffer, size)
-	fn(buffer)
 }
 
 // WithBufferReturn executes a function with a pooled TAR buffer and returns a value

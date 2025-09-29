@@ -7,8 +7,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/containifyci/engine-ci/pkg/memory"
 )
 
 const (
@@ -112,12 +110,6 @@ func (le *LogEntry) addMessage(msg string) {
 	}
 
 	le.messages = append(le.messages, msg)
-
-	// Track memory allocation for the message more accurately
-	// Account for both the string content and slice overhead
-	stringMemory := int64(len(msg))
-	sliceOverhead := int64(8) // Approximate pointer size in slice
-	memory.TrackAllocation(stringMemory + sliceOverhead)
 }
 
 // NewLogAggregator returns the singleton instance of LogAggregator with memory optimization and concurrency
@@ -180,7 +172,6 @@ func last5Messages(messages []string) []string {
 	}
 	return messages[len(messages)-5:]
 }
-
 
 func (la *LogAggregator) LogMessage(routineID string, msg string) {
 	la.logMessage(routineID, msg, false, false)
@@ -352,7 +343,6 @@ func (la *LogAggregator) processBatch(batch []LogMessage, workerID int) {
 				logEntry = actualEntry.(*LogEntry)
 			} else {
 				logEntry = pooledEntry
-				memory.TrackBufferReuse()
 			}
 		}
 

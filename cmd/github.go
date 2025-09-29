@@ -184,12 +184,12 @@ func generateWorkflow(workflowName string) error {
 	// Check if file exists and handle accordingly
 	if _, err := os.Stat(outputPath); err == nil && !githubArgs.Force {
 		// File exists and not forcing overwrite
-		fmt.Printf("File %s already exists. Overwrite? (y/N): ", outputPath)
+		slog.Info("File already exists. Overwrite? (y/N): ", "path", outputPath)
 		var response string
 		_, err := fmt.Scanln(&response)
 		if err != nil {
 			// If there's an error reading input, default to not overwriting
-			slog.Info("Skipped workflow file due to input error", "type", workflowName, "file", outputPath, "error", err)
+			slog.Error("Skipped workflow file due to input error", "type", workflowName, "file", outputPath, "error", err)
 			return nil
 		}
 		if strings.ToLower(strings.TrimSpace(response)) != "y" {

@@ -3,6 +3,7 @@ package autodiscovery
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,7 +98,7 @@ func DiscoverPythonProjects(rootDir string) ([]Project, error) {
 	for projectDir, configs := range projectDirs {
 		project, err := analyzePythonProject(projectDir, configs)
 		if err != nil {
-			fmt.Printf("Warning: Failed to analyze Python project at %s: %v\n", projectDir, err)
+			slog.Warn("Failed to analyze Python project", "path", projectDir, "error", err)
 			continue
 		}
 
@@ -106,8 +107,7 @@ func DiscoverPythonProjects(rootDir string) ([]Project, error) {
 			continue
 		}
 
-		fmt.Printf("Discovered Python project: %s (path: %s)\n",
-			project.AppName, project.ModulePath)
+		slog.Info("Discovered Python project", "name", project.AppName, "path", project.ModulePath)
 		projects = append(projects, project)
 	}
 

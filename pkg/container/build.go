@@ -7,12 +7,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
-	"github.com/containifyci/engine-ci/pkg/memory"
 
 	"github.com/containifyci/engine-ci/protos2"
 
@@ -273,11 +271,6 @@ func (b *Build) Defaults() *Build {
 
 // AsFlags converts build configuration to command-line flags with memory optimization
 func (b *Build) AsFlags() []string {
-	start := time.Now()
-	defer func() {
-		memory.TrackOperation(time.Since(start))
-	}()
-
 	// Estimate capacity more accurately to reduce slice reallocations
 	// Base flags: 16 (8 key-value pairs) + 1 potential verbose + 2*(packages+files)
 	baseFlags := 16
@@ -318,15 +311,6 @@ func (b *Build) AsFlags() []string {
 			flags = append(flags, "--protobuf-files", file)
 		}
 	}
-
-	// Track the memory allocation for the final slice more accurately
-	// Calculate actual memory usage: slice header + string pointers + estimated string content
-	sliceMemory := int64(cap(flags) * 8) // slice of string pointers
-	contentMemory := int64(0)
-	for _, flag := range flags {
-		contentMemory += int64(len(flag))
-	}
-	memory.TrackAllocation(sliceMemory + contentMemory)
 
 	return flags
 }

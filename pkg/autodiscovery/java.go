@@ -3,6 +3,7 @@ package autodiscovery
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,12 +98,11 @@ func DiscoverJavaProjects(rootDir string) ([]Project, error) {
 
 		project, err := analyzeJavaProject(projectDir, configFile)
 		if err != nil {
-			fmt.Printf("Warning: Failed to analyze Java project at %s: %v\n", projectDir, err)
+			slog.Warn("Failed to analyze Java project", "path", projectDir, "error", err)
 			continue
 		}
 
-		fmt.Printf("Discovered Java project: %s (path: %s) (type: %s)\n",
-			project.AppName, project.ModulePath, project.BuildType)
+		slog.Info("Discovered Java project", "name", project.AppName, "path", project.ModulePath, "type", project.BuildType)
 		projects = append(projects, project)
 	}
 

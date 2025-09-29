@@ -59,7 +59,7 @@ type FileResult struct {
 
 func NewFileCache(fileName string) *FileCache {
 	dir := os.TempDir()
-	slog.Info("Creating file cache", "file", dir+fileName)
+	// slog.Info("Creating file cache", "file", dir+fileName)
 	fc := &FileCache{
 		cache:       false,
 		fileName:    dir + fileName,

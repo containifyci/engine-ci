@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"time"
 
 	"github.com/containifyci/engine-ci/pkg/logger"
 
@@ -15,14 +17,16 @@ import (
 )
 
 type rootCmdArgs struct {
-	CPUProfile string
-	MemProfile string
-	Progress   string
-	Target     string
-	PProfPort  int
-	Auto       bool
-	PProfHTTP  bool
-	Verbose    bool
+	cpuProfileFile *os.File
+	httpSrv        *http.Server
+	CPUProfile     string
+	MemProfile     string
+	Progress       string
+	Target         string
+	PProfPort      int
+	Auto           bool
+	PProfHTTP      bool
+	Verbose        bool
 }
 
 var RootArgs = &rootCmdArgs{}
@@ -37,7 +41,9 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		logOpts := slog.HandlerOptions{
 			Level:       slog.LevelInfo,
 			AddSource:   false,
@@ -56,29 +62,30 @@ to quickly create a Cobra application.`,
 		if RootArgs.CPUProfile != "" {
 			f, err := os.Create(RootArgs.CPUProfile)
 			if err != nil {
-				slog.Error("Could not create CPU profile", "error", err)
-				os.Exit(1)
+				return fmt.Errorf("could not create CPU profile: %w", err)
 			}
 			if err := pprof.StartCPUProfile(f); err != nil {
-				slog.Error("Could not start CPU profile", "error", err)
-				f.Close()
-				os.Exit(1)
+				_ = f.Close()
+				return fmt.Errorf("could not start CPU profile: %w", err)
 			}
+			RootArgs.cpuProfileFile = f
 			slog.Info("CPU profiling started", "file", RootArgs.CPUProfile)
 		}
 
 		// Enable HTTP pprof endpoint if requested
 		if RootArgs.PProfHTTP {
+			addr := fmt.Sprintf("localhost:%d", RootArgs.PProfPort)
+			RootArgs.httpSrv = &http.Server{Addr: addr}
 			go func() {
-				addr := fmt.Sprintf("localhost:%d", RootArgs.PProfPort)
 				slog.Info("Starting pprof HTTP server", "addr", addr)
-				if err := http.ListenAndServe(addr, nil); err != nil {
+				if err := RootArgs.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					slog.Error("pprof server failed", "error", err)
 				}
 			}()
 		}
+		return nil
 	},
-	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 		slog.Info("Flushing logs")
 		logger.GetLogAggregator().Flush()
 
@@ -86,24 +93,38 @@ to quickly create a Cobra application.`,
 		if RootArgs.CPUProfile != "" {
 			pprof.StopCPUProfile()
 			slog.Info("CPU profiling stopped", "file", RootArgs.CPUProfile)
+			if RootArgs.cpuProfileFile != nil {
+				if err := RootArgs.cpuProfileFile.Close(); err != nil {
+					slog.Warn("Failed to close CPU profile file", "error", err)
+				}
+			}
 		}
 
 		// Write memory profile if requested
 		if RootArgs.MemProfile != "" {
 			f, err := os.Create(RootArgs.MemProfile)
 			if err != nil {
-				slog.Error("Could not create memory profile", "error", err)
-				return
+				return fmt.Errorf("could not create memory profile: %w", err)
 			}
 			defer f.Close()
 
 			runtime.GC() // get up-to-date statistics
 			if err := pprof.WriteHeapProfile(f); err != nil {
-				slog.Error("Could not write memory profile", "error", err)
-			} else {
-				slog.Info("Memory profile written", "file", RootArgs.MemProfile)
+				return fmt.Errorf("could not write memory profile: %w", err)
+			}
+			slog.Info("Memory profile written", "file", RootArgs.MemProfile)
+		}
+
+		// Gracefully shutdown pprof HTTP server if enabled
+		if RootArgs.httpSrv != nil {
+			ctx := cmd.Context()
+			shutdownCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			if err := RootArgs.httpSrv.Shutdown(shutdownCtx); err != nil {
+				slog.Warn("Failed to shutdown pprof server", "error", err)
 			}
 		}
+		return nil
 	},
 }
 
