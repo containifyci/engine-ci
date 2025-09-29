@@ -21,7 +21,9 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
-var buildSteps *build.BuildSteps = build.NewBuildSteps()
+// TODO (tight coupling buildsteps and build paramater) we have to uncouple the BuildSteps initialization from the build parameters.
+// Otherwise we have to initialize the BuildSteps for every build new which is not optimal.
+var buildSteps *build.BuildSteps
 
 // buildCmd represents the build command
 var engineCmd = &cobra.Command{
@@ -63,26 +65,29 @@ func (l *LeaderElection) Leader(id string, fnc func() error) {
 
 func Engine(cmd *cobra.Command, _ []string) error {
 	leader := LeaderElection{}
-	fnc, addr := Start()
+	fnc, addr, err := Start()
+	if err != nil {
+		return err
+	}
 	defer fnc()
-	arg := GetBuild(RootArgs.Auto)
+	arg := GetBuild(false)
 	wg := sync.WaitGroup{}
 	for _, a := range arg {
 		for _, b := range a.Builds {
 			wg.Add(1)
-			go func() {
+			go func(b *container.Build) {
 				time.Sleep(1 * time.Second)
 				defer wg.Done()
 				b.Leader = &leader
 				_buildSteps := buildSteps
 				slog.Info("Starting build", "build", b, "steps", _buildSteps.String())
-				// if _buildSteps == nil {
-				// 	_buildSteps = build.NewBuildSteps()
-				// }
-				slog.Info("Starting build2", "build", b, "steps", _buildSteps.String())
+				if _buildSteps == nil {
+					_buildSteps = build.NewBuildSteps()
+				}
+				// slog.Info("Starting build2", "build", b, "steps", _buildSteps.String())
 				c := NewCommand(*b, _buildSteps)
 				c.Run(addr, RootArgs.Target, b)
-			}()
+			}(b)
 		}
 		slog.Info("Waiting for all builds to complete")
 		wg.Wait()
@@ -252,19 +257,11 @@ func CallPlugin(logger hclog.Logger, plugin interface{}) []*protos2.BuildArgsGro
 // GetDefaultBuildSteps returns the current BuildSteps instance with all default build steps.
 // This allows engines to extend the default pipeline instead of replacing it completely.
 func GetDefaultBuildSteps(arg *container.Build) *build.BuildSteps {
+	if buildSteps == nil {
+		buildSteps = build.NewBuildSteps()
+	}
 	if buildSteps.IsNotInit() {
-		arg, buildSteps = Pre(arg, buildSteps)
+		_, buildSteps = Pre(arg, buildSteps)
 	}
 	return buildSteps
-}
-
-// InitBuildSteps can be used to set the build steps for the build command
-// This is useful for registering a new build step as part of a extension
-// of the engine-ci with to support new build types for different languages
-// or to customize the build steps for a specific project.
-func InitBuildSteps(_buildSteps *build.BuildSteps) *build.BuildSteps {
-	//TODO make it possible to register new build steps without the need of a gloabl variable
-	buildSteps = _buildSteps
-	// return buildSteps
-	return _buildSteps
 }

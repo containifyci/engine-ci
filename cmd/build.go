@@ -7,8 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/gcloud"
@@ -226,28 +224,21 @@ func (c *Command) AddTarget(name string, fnc func() error) {
 	}
 }
 
-func Start() (func(), network.Address) {
+func Start() (func(), network.Address, error) {
 	srv, fnc, err := kv.StartHttpServer(kv.NewKeyValueStore())
 	if err != nil {
-		slog.Error("Failed to start http server", "error", err)
-		os.Exit(1)
+		return nil, network.Address{}, fmt.Errorf("failed to start http server: %w", err)
 	}
 	go fnc()
 	slog.Info("Started http server", "address", srv.Listener.Addr().String())
 	addr := network.Address{Host: "localhost", Port: srv.Port}
-	// if arg.Custom == nil {
-	// 	arg.Custom = make(map[string][]string)
-	// }
-	// arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), srv.Port)}
 	return func() {
 		slog.Info("Stopping http server")
-		srv.Listener.Close()
-
-		// buildSteps = build.NewBuildSteps()
-	}, addr
+		_ = srv.Listener.Close()
+	}, addr, nil
 }
 
-func (c *Command) Run(addr network.Address, target string, arg *container.Build) {
+func (c *Command) Run(addr network.Address, target string, arg *container.Build) error {
 	if arg.Custom == nil {
 		arg.Custom = make(map[string][]string)
 	}
@@ -325,24 +316,18 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 	})
 
 	if fnc, ok := c.targets[target]; ok {
-		err := fnc()
-		if err != nil {
-			hclog.Default().Debug("Failed to run command", "error", err)
-
+		if err := fnc(); err != nil {
 			slog.Error("Failed to run command", "error", err)
-			os.Exit(1)
+			return err
 		}
-	} else {
-		keys := []string{}
-		for k := range c.targets {
-			keys = append(keys, k)
-		}
-		slices.Sort(keys)
-		hclog.Default().Debug("Unknown target", "target", target, "available", keys)
-
-		fmt.Printf("Unknown target: %s, available targets: %s\n", target, strings.Join(keys, " "))
-		os.Exit(1)
+		return nil
 	}
+	keys := []string{}
+	for k := range c.targets {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	return fmt.Errorf("unknown target: %s (available: %s)", target, strings.Join(keys, " "))
 }
 
 // func (c *Command) Main(arg container.Build) {

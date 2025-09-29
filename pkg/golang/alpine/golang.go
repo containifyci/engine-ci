@@ -42,6 +42,8 @@ type GoContainer struct {
 	Tags           []string
 }
 
+// TODO (tight coupling buildsteps and build paramater) we have to uncouple the initialization from the build parameters
+// The build parameters will be injected in the Run function
 func New(build container.Build) *GoContainer {
 	platforms := []*types.PlatformSpec{build.Platform.Container}
 	if !build.Platform.Same() {
@@ -434,6 +436,12 @@ func (c *GoContainer) Prod() error {
 	if err != nil {
 		slog.Error("Failed to stop container: %s", "error", err)
 		os.Exit(1)
+	}
+
+	push := c.GetBuild().Custom.Bool("push", true)
+	if !push {
+		slog.Info("Skip pushing image")
+		return nil
 	}
 
 	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)

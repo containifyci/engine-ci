@@ -204,6 +204,16 @@ func (bs *BuildSteps) GetCategoryOrder() []BuildCategory {
 }
 
 func (bs *BuildSteps) String() string {
+	//TODO the for loop fails rarely looks like a race condition.
+	/*
+		panic: runtime error: index out of range [28] with length 28
+
+		goroutine 38 [running]:
+		github.com/containifyci/engine-ci/pkg/build.(*BuildSteps).String(0x106105760?)
+		        /Users/frank.ittermann@goflink.com/private/github/engine-ci/pkg/build/build.go:216 +0x1b4
+		github.com/containifyci/engine-ci/pkg/build.(*BuildSteps).PrintSteps(0x10519d8e0?)
+		        /Users/frank.ittermann@goflink.com/private/github/engine-ci/pkg/build/build.go:222 +0x1c
+	*/
 	if bs == nil || len(bs.Steps) == 0 {
 		return ""
 	}
@@ -231,7 +241,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 
 	for i, buildCtx := range bs.Steps {
 		if !buildCtx.build.Matches(*arg) {
-			slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
+			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
 			continue
 		}
 
@@ -239,7 +249,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 			continue
 		}
 
-		slog.Debug("Build step matches config", "step", buildCtx.build.Name(), "index", i, "async", buildCtx.build.IsAsync())
+		// slog.Debug("Build step matches config", "step", buildCtx.build.Name(), "index", i, "async", buildCtx.build.IsAsync())
 
 		if buildCtx.build.IsAsync() {
 			// Start async step immediately, don't wait
