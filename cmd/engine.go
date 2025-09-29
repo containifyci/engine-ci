@@ -210,7 +210,6 @@ func GetBuild(auto bool) container.BuildGroups {
 			}
 			arg.Defaults()
 			// args = append(args, &arg)
-			fmt.Printf("Builds: %v\n", arg)
 			g.Builds = append(g.Builds, &arg)
 		}
 		groups = append(groups, g)

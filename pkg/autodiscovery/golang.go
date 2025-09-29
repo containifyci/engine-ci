@@ -86,10 +86,9 @@ func DiscoverGoProjects(rootDir string) ([]Project, error) {
 		project, err := analyzeGoProject(goModPath)
 		moduleFolder, _ := strings.CutPrefix(project.ModulePath, rootDir)
 		moduleFolder = filepath.Base(moduleFolder)
-		fmt.Printf("Discovered Go project: %s (path: %s) (folder: %s)\n", project.AppName, project.ModulePath, moduleFolder)
 		if moduleFolder == "containifyci" || moduleFolder == "dagger" ||
 			moduleFolder == ".containifyci" || moduleFolder == ".dagger" {
-			fmt.Println("Skipping .containifyci directory")
+			fmt.Println("Skipping .containifyci/.dagger directories")
 			continue
 		}
 		if err != nil {
@@ -190,11 +189,9 @@ func deriveAppName(moduleName, modulePath string) string {
 // hasMainPackage checks if any of the Go files contains a main package
 func hasMainPackage(modulePath string, goFiles []string) (bool, string, error) {
 	for _, goFile := range goFiles {
-		fmt.Printf("Examining Go file: %s != %s\n", filepath.Dir(goFile), modulePath)
 		if filepath.Dir(goFile) != modulePath {
 			continue
 		}
-		fmt.Printf("Checking Go file for main package: %s\n", goFile)
 		isMain, err := isMainPackageFile(goFile)
 		if err != nil {
 			return false, "", fmt.Errorf("failed to check file %s: %w", goFile, err)
@@ -287,7 +284,6 @@ func GenerateBuildGroups(projects []Project) container.BuildGroups {
 
 	//TODO support concurrent builds based on project dependencies
 	for _, project := range projects {
-		fmt.Printf("Generating build for project: %s (Service: %t)\n", project.AppName, project.IsService)
 		build := GoProjectToBuild(project)
 		build.Defaults()
 

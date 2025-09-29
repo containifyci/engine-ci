@@ -82,7 +82,7 @@ func Init(arg *container.Build) *container.Build {
 	bld := container.NewBuild(arg)
 
 	logOpts := slog.HandlerOptions{
-		Level:       slog.LevelDebug,
+		Level:       slog.LevelInfo,
 		AddSource:   false,
 		ReplaceAttr: nil,
 	}
@@ -311,7 +311,7 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 			keys = append(keys, k)
 		}
 		slices.Sort(keys)
-		fmt.Printf("Available targets: %s\n", strings.Join(keys, " "))
+		slog.Info("Available targets", "targets", strings.Join(keys, " "))
 		return nil
 	})
 

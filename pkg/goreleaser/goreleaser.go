@@ -1,7 +1,6 @@
 package goreleaser
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -66,7 +65,7 @@ func CacheFolder() string {
 
 	// Print the GOMODCACHE location
 	gomodcache := strings.Trim(string(output), "\n")
-	fmt.Printf("GOMODCACHE location: %s\n", gomodcache)
+	slog.Debug("GOMODCACHE location", "path", gomodcache)
 	return gomodcache
 }
 

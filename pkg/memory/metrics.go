@@ -6,17 +6,8 @@ import "sync/atomic"
 type MemoryTracker struct {
 	enabled int64 // Use atomic for thread-safe enable/disable
 
-	// Basic allocation tracking
-	totalAllocations int64
-	totalAllocBytes  int64
-
-	// Performance tracking
-	operationCount int64
-	totalDuration  int64 // in nanoseconds
-
 	// Pool reuse metrics
 	bufferReuseCount int64
-	stringReuseCount int64
 }
 
 // Global memory tracker instance
