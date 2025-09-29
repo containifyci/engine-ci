@@ -29,7 +29,6 @@ type RunFunc func() error
 
 type BuildSteps struct {
 	Steps []*BuildContext
-	build container.Build
 	init  bool
 }
 
@@ -46,14 +45,6 @@ func ToBuildContexts(steps ...Build) []*BuildContext {
 
 func NewBuildSteps(steps ...Build) *BuildSteps {
 	return &BuildSteps{
-		init:  len(steps) > 0,
-		Steps: ToBuildContexts(steps...),
-	}
-}
-
-func NewBuildStepsWithArg(arg container.Build, steps ...Build) *BuildSteps {
-	return &BuildSteps{
-		build: arg,
 		init:  len(steps) > 0,
 		Steps: ToBuildContexts(steps...),
 	}
@@ -87,15 +78,15 @@ func (bs *BuildSteps) PrintSteps() {
 	slog.Info("Build step", "steps", bs.String())
 }
 
-func (bs *BuildSteps) Run(step ...string) error {
-	return bs.runAllMatchingBuilds(step)
+func (bs *BuildSteps) Run(arg *container.Build, step ...string) error {
+	return bs.runAllMatchingBuilds(arg, step)
 }
 
-func (bs *BuildSteps) runAllMatchingBuilds(step []string) error {
+func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) error {
 	var wg sync.WaitGroup
 
 	for i, buildCtx := range bs.Steps {
-		if !buildCtx.build.Matches(bs.build) {
+		if !buildCtx.build.Matches(*arg) {
 			slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
 			continue
 		}
