@@ -31,14 +31,17 @@ type BuildScript struct {
 
 func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, coverageMode CoverageMode, platforms ...*types.PlatformSpec) *BuildScript {
 	filename := "{{.app}}-{{.os}}-{{.arch}}"
-	output := "-o /src/" + filename
+	if folder == "" {
+		folder = "."
+	}
+	output := fmt.Sprintf("-o /src/%s", filename)
+	if folder != "." {
+		output = fmt.Sprintf("-o /src/%s/%s", folder, filename)
+	}
 	if mainfile == "" {
 		mainfile = "./..."
 		output = ""
 		filename = ""
-	}
-	if folder == "" {
-		folder = "."
 	}
 	script := &BuildScript{
 		AppName:      appName,

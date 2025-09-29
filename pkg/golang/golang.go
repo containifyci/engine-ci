@@ -16,7 +16,7 @@ func NewDebian(build container.Build) *debian.GoContainer {
 	return debian.New(build)
 }
 
-func NewProdDebian(build container.Build) build.Build {
+func NewProdDebian(build container.Build) build.BuildStep {
 	return debian.NewProd(build)
 }
 
@@ -24,10 +24,10 @@ func NewCGO(build container.Build) *debiancgo.GoContainer {
 	return debiancgo.New(build)
 }
 
-func NewProd(build container.Build) build.Build {
+func NewProd(build container.Build) build.BuildStep {
 	return alpine.NewProd(build)
 }
 
-func NewLinter(build container.Build) build.Build {
+func NewLinter(build container.Build) build.BuildStep {
 	return alpine.NewLinter(build)
 }

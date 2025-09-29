@@ -217,7 +217,7 @@ func (g PythonBuild) Matches(build container.Build) bool {
 	return build.BuildType == container.Python
 }
 
-func NewProd(build container.Build) build.Build {
+func NewProd(build container.Build) build.BuildStep {
 	container := New(build)
 	return PythonBuild{
 		rf: func() error {

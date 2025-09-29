@@ -175,7 +175,7 @@ func (c *GoContainer) Build() error {
 
 	c.Apply(&opts)
 
-	dir, _ := filepath.Abs(c.Folder)
+	dir, _ := filepath.Abs(".")
 
 	cache := CacheFolder()
 	if cache == "" {
@@ -223,7 +223,7 @@ func (c *GoContainer) BuildScript() string {
 	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, platforms...).String()
 }
 
-func NewProd(build container.Build) build.Build {
+func NewProd(build container.Build) build.BuildStep {
 	container := New(build)
 	return GoBuild{
 		rf: func() error {

@@ -174,15 +174,17 @@ func parseGoMod(goModPath string) (string, error) {
 // deriveAppName creates an application name from the module name or directory
 func deriveAppName(moduleName, modulePath string) string {
 	// Try to extract from module name first (e.g., "github.com/user/app" -> "app")
+	var name string
 	if moduleName != "" {
 		parts := strings.Split(moduleName, "/")
 		if len(parts) > 0 {
-			return parts[len(parts)-1]
+			name = parts[len(parts)-1]
 		}
+	} else {
+		name = filepath.Base(modulePath)
 	}
-
-	// Fallback to directory name
-	return filepath.Base(modulePath)
+	name = strings.TrimPrefix(name, ".") // remove leading dot if any
+	return name
 }
 
 // hasMainPackage checks if any of the Go files contains a main package
