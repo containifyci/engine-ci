@@ -71,6 +71,11 @@ func (c *ProtogufContainer) Name() string {
 	return "protobuf"
 }
 
+// Matches implements the Build interface - Protobuf only runs for golang builds
+func (c *ProtogufContainer) Matches(build container.Build) bool {
+	return build.BuildType == container.GoLang
+}
+
 func (c *ProtogufContainer) Pull() error {
 	image := c.Image()
 	err := c.Container.Pull(image)

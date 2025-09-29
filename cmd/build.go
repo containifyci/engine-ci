@@ -117,7 +117,7 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 	a := Init(arg)
 
 	if bs == nil {
-		bs = build.NewBuildSteps()
+		bs = build.NewBuildStepsWithArg(*a)
 	}
 	// buildSteps := build.NewBuildSteps()
 	// slog.Info("Build steps", "buildSteps", buildSteps)
@@ -127,43 +127,43 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 	// }
 	// bs := build.NewBuildSteps()
 
-	var from string
-	if v, ok := a.Custom["from"]; ok {
-		slog.Info("Using custom build", "from", v[0])
-		from = v[0]
-	}
-
 	if bs.IsNotInit() {
-		slog.Info("Init build steps", "build", *a)
+		slog.Info("Registering all build steps in original order", "build", *a)
+
+		// Register ALL build steps - let runtime decide what runs
+		// Original order maintained:
+
+		// 1. GCloud (always first)
 		bs.Add(gcloud.New(*a))
-		switch a.BuildType {
-		case container.GoLang:
-			bs.Add(protobuf.New(*a))
-			//TODO: register different build images automatically or at least in the build implementation itself
-			switch from {
-			case "debian":
-				bs.Add(golang.NewDebian(*a))
-				bs.Add(golang.NewProdDebian(*a))
-			case "debiancgo":
-				bs.Add(golang.NewCGO(*a))
-				bs.Add(golang.NewProdDebian(*a))
-			default:
-				bs.Add(golang.New(*a))
-				bs.Add(golang.NewProd(*a))
-			}
-			bs.AddAsync(golang.NewLinter(*a))
-			bs.Add(goreleaser.New(*a))
-			bs.Add(pulumi.New(*a))
-		case container.Maven:
-			bs.Add(maven.New(*a))
-			bs.Add(maven.NewProd(*a))
-		case container.Python:
-			bs.Add(python.New(*a))
-			bs.Add(python.NewProd(*a))
-		}
-		bs.AddAsync(sonarcloud.New(*a))
-		bs.Add(trivy.New(*a))
-		bs.AddAsync(github.New(*a))
+
+		// 2. Protobuf (golang only - will match via Matches())
+		bs.Add(protobuf.New(*a))
+
+		// 3. Build steps (language variants - only matching ones will run)
+		bs.Add(golang.New(*a))       // Alpine variant
+		bs.Add(golang.NewDebian(*a)) // Debian variant
+		bs.Add(golang.NewCGO(*a))    // CGO variant
+		bs.Add(maven.New(*a))        // Maven
+		bs.Add(python.New(*a))       // Python
+
+		// 4. Prod steps (only matching ones will run)
+		bs.Add(golang.NewProd(*a))       // Alpine prod
+		bs.Add(golang.NewProdDebian(*a)) // Debian prod
+		bs.Add(maven.NewProd(*a))        // Maven prod
+		bs.Add(python.NewProd(*a))       // Python prod
+
+		// 5. Async linter (golang only - will match via Matches())
+		bs.AddAsync(golang.NewLinter(*a)) // Golang linter
+
+		// 6. Additional golang steps (will match via Matches())
+		bs.Add(goreleaser.New(*a)) // Goreleaser
+		bs.Add(pulumi.New(*a))     // Pulumi
+
+		// 7. Common steps
+		bs.AddAsync(sonarcloud.New(*a)) // SonarCloud (async)
+		bs.Add(trivy.New(*a))           // Trivy
+		bs.AddAsync(github.New(*a))     // GitHub (async)
+
 		bs.Init()
 	}
 
@@ -182,7 +182,6 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 // }
 
 func (c *Command) RunBuild() {
-	fmt.Println("build called")
 	_, bs := c.Pre()
 	err := bs.Run()
 	if err != nil {

@@ -37,6 +37,18 @@ func (c *GoReleaserContainer) Name() string {
 	return "gorelease"
 }
 
+// Matches implements the Build interface - GoReleaser only runs for golang builds with goreleaser=true
+func (c *GoReleaserContainer) Matches(build container.Build) bool {
+	if build.BuildType != container.GoLang {
+		return false
+	}
+	// Check if goreleaser is enabled
+	if goreleaser, ok := build.Custom["goreleaser"]; ok && len(goreleaser) > 0 {
+		return goreleaser[0] == "true"
+	}
+	return false
+}
+
 func (c *GoReleaserContainer) Images() []string {
 	return []string{IMAGE}
 }

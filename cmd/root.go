@@ -145,3 +145,7 @@ func SetVersionInfo(version, commit, date, repo string) string {
 	rootCmd.Version = fmt.Sprintf("%s (Built on %s from Git SHA %s of %s)", version, date, commit, repo)
 	return rootCmd.Version
 }
+
+func RootCmd() *cobra.Command {
+	return rootCmd
+}

@@ -35,6 +35,11 @@ func (c *TrivyContainer) Name() string {
 	return "trivy"
 }
 
+// Matches implements the Build interface - Trivy runs for all builds
+func (c *TrivyContainer) Matches(build container.Build) bool {
+	return true // Trivy security scanning runs for all builds
+}
+
 func (c *TrivyContainer) Images() []string {
 	return []string{IMAGE}
 }

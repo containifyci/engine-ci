@@ -41,6 +41,11 @@ func (c *PulumiContainer) Name() string {
 	return "pulumi"
 }
 
+// Matches implements the Build interface - Pulumi only runs for golang builds
+func (c *PulumiContainer) Matches(build container.Build) bool {
+	return build.BuildType == container.GoLang
+}
+
 func (c *PulumiContainer) Images() []string {
 	return []string{IMAGE}
 }

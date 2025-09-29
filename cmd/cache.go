@@ -57,7 +57,7 @@ func init() {
 func SaveCache() error {
 	args := GetBuild(false) // Use plugin system for cache operations
 	_, bs := Pre(args[0].Builds[0], nil)
-	images := bs.Images()
+	images := bs.Images(args)
 	if len(images) == 0 {
 		return nil
 	}
@@ -98,7 +98,7 @@ func LoadCache() error {
 	args := GetBuild(false) // Use plugin system for cache operations
 	arg, bs := Pre(args[0].Builds[0], nil)
 
-	images := bs.Images()
+	images := bs.Images(args)
 	if len(images) == 0 {
 		return nil
 	}
