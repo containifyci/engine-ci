@@ -618,16 +618,11 @@ func (c *Container) CopyFileFromContainer(srcPath string) (string, error) {
 // ComputeChecksum computes SHA256 checksum with memory optimizations
 // Uses streaming approach and buffer pooling for better performance
 func ComputeChecksum(data []byte) string {
-	start := time.Now()
-	defer func() {
-		memory.TrackOperation(time.Since(start))
-	}()
 
 	// For very small data, use direct approach to avoid overhead
 	if len(data) <= 4096 { // 4KB threshold - reduced for better performance
 		hash := sha256.Sum256(data)
 		result := hex.EncodeToString(hash[:])
-		memory.TrackAllocation(int64(len(result)))
 		return result
 	}
 
@@ -637,20 +632,11 @@ func ComputeChecksum(data []byte) string {
 	hashBytes := hasher.Sum(nil)
 	result := hex.EncodeToString(hashBytes)
 
-	// Track allocations for metrics
-	memory.TrackAllocation(int64(len(result)))
-	memory.TrackBufferReuse()
-
 	return result
 }
 
 // SumChecksum combines multiple checksums with memory optimization
 func SumChecksum(sums ...[]byte) string {
-	start := time.Now()
-	defer func() {
-		memory.TrackOperation(time.Since(start))
-	}()
-
 	hasher := sha256.New()
 
 	// Direct approach - simpler and faster than buffer pool
@@ -658,19 +644,12 @@ func SumChecksum(sums ...[]byte) string {
 		hasher.Write(sum)
 	}
 
-	memory.TrackAllocation(32) // SHA256 hash size
-	memory.TrackBufferReuse()
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 // ComputeChecksumConcurrent computes SHA256 checksum using concurrent processing
 // for very large data sets. Splits the data into chunks and processes them in parallel.
 func ComputeChecksumConcurrent(data []byte, numWorkers int) string {
-	start := time.Now()
-	defer func() {
-		memory.TrackOperation(time.Since(start))
-	}()
-
 	// For smaller data, use regular computation to avoid goroutine overhead
 	if len(data) <= 1048576 { // 1MB threshold for concurrent processing
 		return ComputeChecksum(data)
@@ -710,7 +689,6 @@ func ComputeChecksumConcurrent(data []byte, numWorkers int) string {
 					index: chunk.index,
 					hash:  hasher.Sum(nil),
 				}
-				memory.TrackBufferReuse()
 			}
 		}()
 	}
@@ -750,9 +728,6 @@ func ComputeChecksumConcurrent(data []byte, numWorkers int) string {
 
 	finalHash := finalHasher.Sum(nil)
 	result := hex.EncodeToString(finalHash)
-
-	// Track the final allocation
-	memory.TrackAllocation(int64(len(result)))
 
 	return result
 }
@@ -885,11 +860,6 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 
 // TarDir creates a tar archive from a filesystem with memory optimizations and concurrent processing
 func TarDir(src fs.ReadDirFS) (*bytes.Buffer, error) {
-	start := time.Now()
-	defer func() {
-		memory.TrackOperation(time.Since(start))
-	}()
-
 	// Count files first to determine if concurrent processing is beneficial
 	fileCount := 0
 	totalSize := int64(0)
@@ -1057,7 +1027,6 @@ func TarDirConcurrent(src fs.ReadDirFS, fileCount int, totalSize int64) (*bytes.
 				return nil, err
 			}
 		}
-		memory.TrackAllocation(int64(len(result.content)))
 	}
 
 	// Close the tar writer
@@ -1065,11 +1034,6 @@ func TarDirConcurrent(src fs.ReadDirFS, fileCount int, totalSize int64) (*bytes.
 		slog.Error("Error closing the tar writer", "error", err)
 		return nil, err
 	}
-
-	// Track the final buffer allocation
-	bufferSize := int64(buf.Len())
-	memory.TrackAllocation(bufferSize)
-
 	return buf, nil
 }
 
@@ -1147,20 +1111,6 @@ func TarDirSequential(src fs.ReadDirFS) (*bytes.Buffer, error) {
 	if err := tw.Close(); err != nil {
 		slog.Error("Error closing the tar writer", "error", err)
 		return nil, err
-	}
-
-	// Track the final buffer allocation more accurately
-	bufferSize := int64(buf.Len())
-	bufferCapacity := int64(buf.Cap())
-	memory.TrackAllocation(bufferSize)
-
-	// Log efficiency metrics for monitoring
-	if bufferCapacity > 0 {
-		efficiency := float64(bufferSize) / float64(bufferCapacity)
-		if efficiency < 0.5 {
-			slog.Debug("Tar buffer efficiency could be improved",
-				"used", bufferSize, "capacity", bufferCapacity, "efficiency", efficiency)
-		}
 	}
 
 	return buf, nil

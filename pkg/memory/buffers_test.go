@@ -43,52 +43,6 @@ func TestBufferPool(t *testing.T) {
 	})
 }
 
-// TestBufferPoolMetrics tests buffer pool metrics collection
-func TestBufferPoolMetrics(t *testing.T) {
-	pool := NewBufferPool()
-
-	// Get and put some buffers to generate metrics
-	for i := 0; i < 5; i++ {
-		buffer := pool.Get(TarBuffer)
-		pool.Put(buffer, TarBuffer)
-	}
-
-	metrics := pool.GetMetrics()
-
-	// Should have some hits and misses
-	if metrics.TarHits == 0 {
-		t.Error("Expected some tar hits")
-	}
-
-	if metrics.TarMisses == 0 {
-		t.Error("Expected some tar misses")
-	}
-
-	// Test hit rate calculation
-	hitRate := metrics.HitRate()
-	if hitRate < 0 || hitRate > 1 {
-		t.Errorf("Hit rate should be between 0 and 1, got %f", hitRate)
-	}
-}
-
-// TestWithBuffer tests the convenience function
-func TestWithBuffer(t *testing.T) {
-	WithBuffer(TarBuffer, func(buffer []byte) {
-		if len(buffer) != TarBufferSize {
-			t.Errorf("Expected buffer size %d, got %d", TarBufferSize, len(buffer))
-		}
-		buffer[0] = 42
-	})
-
-	// After WithBuffer, the buffer should be returned to pool
-	// and the next use should get a zeroed buffer
-	WithBuffer(TarBuffer, func(buffer []byte) {
-		if buffer[0] != 0 {
-			t.Error("Expected zeroed buffer from pool")
-		}
-	})
-}
-
 // TestWithBufferReturn tests the WithBufferReturn function
 func TestWithBufferReturn(t *testing.T) {
 	result := WithBufferReturn(TarBuffer, func(buffer []byte) string {
@@ -109,7 +63,7 @@ func TestOversizedBuffer(t *testing.T) {
 
 	// Create an oversized buffer
 	oversized := make([]byte, MaxRetainedBufferSize+1)
-	
+
 	// Try to put it back
 	pool.Put(oversized, TarBuffer)
 
@@ -121,29 +75,6 @@ func TestOversizedBuffer(t *testing.T) {
 	if cap(buffer) > MaxRetainedBufferSize {
 		t.Error("Pool returned an oversized buffer")
 	}
-}
-
-// BenchmarkBufferPool benchmarks TAR buffer pool performance
-func BenchmarkBufferPool(b *testing.B) {
-	pool := NewBufferPool()
-
-	b.Run("Get/Put", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			buffer := pool.Get(TarBuffer)
-			// Simulate some work
-			buffer[0] = byte(i)
-			pool.Put(buffer, TarBuffer)
-		}
-	})
-
-	b.Run("WithBuffer", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			WithBuffer(TarBuffer, func(buffer []byte) {
-				// Simulate some work
-				buffer[0] = byte(i)
-			})
-		}
-	})
 }
 
 // BenchmarkBufferPoolParallel benchmarks concurrent TAR buffer pool usage

@@ -1,9 +1,6 @@
 package memory
 
-import (
-	"sync/atomic"
-	"time"
-)
+import "sync/atomic"
 
 // MemoryTracker tracks basic memory usage metrics for pools
 type MemoryTracker struct {
@@ -32,26 +29,6 @@ func NewMemoryTracker() *MemoryTracker {
 	}
 }
 
-// TrackAllocation records an allocation event
-func (mt *MemoryTracker) TrackAllocation(bytes int64) {
-	if atomic.LoadInt64(&mt.enabled) != 1 {
-		return
-	}
-
-	atomic.AddInt64(&mt.totalAllocations, 1)
-	atomic.AddInt64(&mt.totalAllocBytes, bytes)
-}
-
-// TrackOperation records the duration of an operation
-func (mt *MemoryTracker) TrackOperation(duration time.Duration) {
-	if atomic.LoadInt64(&mt.enabled) != 1 {
-		return
-	}
-
-	atomic.AddInt64(&mt.operationCount, 1)
-	atomic.AddInt64(&mt.totalDuration, duration.Nanoseconds())
-}
-
 // TrackBufferReuse increments buffer reuse counter
 func (mt *MemoryTracker) TrackBufferReuse() {
 	if atomic.LoadInt64(&mt.enabled) != 1 {
@@ -61,33 +38,7 @@ func (mt *MemoryTracker) TrackBufferReuse() {
 	atomic.AddInt64(&mt.bufferReuseCount, 1)
 }
 
-// TrackStringReuse increments string reuse counter
-func (mt *MemoryTracker) TrackStringReuse() {
-	if atomic.LoadInt64(&mt.enabled) != 1 {
-		return
-	}
-
-	atomic.AddInt64(&mt.stringReuseCount, 1)
-}
-
-// Convenience functions for the default tracker
-
-// TrackAllocation records an allocation using the default tracker
-func TrackAllocation(bytes int64) {
-	defaultMemoryTracker.TrackAllocation(bytes)
-}
-
-// TrackOperation records an operation duration using the default tracker
-func TrackOperation(duration time.Duration) {
-	defaultMemoryTracker.TrackOperation(duration)
-}
-
 // TrackBufferReuse increments buffer reuse counter using the default tracker
 func TrackBufferReuse() {
 	defaultMemoryTracker.TrackBufferReuse()
-}
-
-// TrackStringReuse increments string reuse counter using the default tracker
-func TrackStringReuse() {
-	defaultMemoryTracker.TrackStringReuse()
 }
