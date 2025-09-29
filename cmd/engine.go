@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
-var buildSteps *build.BuildSteps
+var buildSteps *build.BuildSteps = build.NewBuildSteps()
 
 // buildCmd represents the build command
 var engineCmd = &cobra.Command{
@@ -76,9 +76,9 @@ func Engine(cmd *cobra.Command, _ []string) error {
 				b.Leader = &leader
 				_buildSteps := buildSteps
 				slog.Info("Starting build", "build", b, "steps", _buildSteps.String())
-				if _buildSteps == nil {
-					_buildSteps = build.NewBuildSteps()
-				}
+				// if _buildSteps == nil {
+				// 	_buildSteps = build.NewBuildSteps()
+				// }
 				slog.Info("Starting build2", "build", b, "steps", _buildSteps.String())
 				c := NewCommand(*b, _buildSteps)
 				c.Run(addr, RootArgs.Target, b)
@@ -247,6 +247,15 @@ func CallPlugin(logger hclog.Logger, plugin interface{}) []*protos2.BuildArgsGro
 		}
 		return groups
 	}
+}
+
+// GetDefaultBuildSteps returns the current BuildSteps instance with all default build steps.
+// This allows engines to extend the default pipeline instead of replacing it completely.
+func GetDefaultBuildSteps(arg *container.Build) *build.BuildSteps {
+	if buildSteps.IsNotInit() {
+		arg, buildSteps = Pre(arg, buildSteps)
+	}
+	return buildSteps
 }
 
 // InitBuildSteps can be used to set the build steps for the build command

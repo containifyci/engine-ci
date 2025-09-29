@@ -133,7 +133,7 @@ func (g GoBuild) Matches(build container.Build) bool {
 	return true
 }
 
-func NewLinter(build container.Build) build.Build {
+func NewLinter(build container.Build) build.BuildStep {
 	return GoBuild{
 		rf: func() error {
 			container := New(build)
@@ -357,7 +357,7 @@ func (c *GoContainer) BuildScript() *buildscript.BuildScript {
 	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Verbose, nocoverage, coverageMode, c.Platforms...)
 }
 
-func NewProd(build container.Build) build.Build {
+func NewProd(build container.Build) build.BuildStep {
 	container := New(build)
 	return GoBuild{
 		rf: func() error {

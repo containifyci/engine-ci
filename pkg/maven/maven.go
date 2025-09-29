@@ -223,7 +223,7 @@ func (g MavenBuild) Matches(build container.Build) bool {
 	return build.BuildType == container.Maven
 }
 
-func NewProd(build container.Build) build.Build {
+func NewProd(build container.Build) build.BuildStep {
 	container := New(build)
 	return MavenBuild{
 		rf: func() error {
