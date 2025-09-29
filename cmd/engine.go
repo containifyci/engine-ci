@@ -86,7 +86,11 @@ func Engine(cmd *cobra.Command, _ []string) error {
 				}
 				// slog.Info("Starting build2", "build", b, "steps", _buildSteps.String())
 				c := NewCommand(*b, _buildSteps)
-				c.Run(addr, RootArgs.Target, b)
+				err := c.Run(addr, RootArgs.Target, b)
+				if err != nil {
+					slog.Error("Executing command", "command", c)
+					os.Exit(1)
+				}
 			}(b)
 		}
 		slog.Info("Waiting for all builds to complete")
