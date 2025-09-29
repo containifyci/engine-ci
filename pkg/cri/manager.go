@@ -100,7 +100,7 @@ func DetectContainerRuntime() utils.RuntimeType {
 			os.Exit(1)
 		}
 	}
-	
+
 	// Use parallel detection for faster startup
 	return detectRuntimeParallel()
 }
@@ -111,21 +111,21 @@ func detectRuntimeParallel() utils.RuntimeType {
 		runtime utils.RuntimeType
 		found   bool
 	}
-	
+
 	results := make(chan runtimeResult, 2)
-	
+
 	// Check Docker
 	go func() {
 		_, err := exec.LookPath("docker")
 		results <- runtimeResult{runtime: utils.Docker, found: err == nil}
 	}()
-	
+
 	// Check Podman
 	go func() {
 		_, err := exec.LookPath("podman")
 		results <- runtimeResult{runtime: utils.Podman, found: err == nil}
 	}()
-	
+
 	// Collect results with priority (Docker first)
 	var dockerFound, podmanFound bool
 	for i := 0; i < 2; i++ {
@@ -137,7 +137,7 @@ func detectRuntimeParallel() utils.RuntimeType {
 			podmanFound = result.found
 		}
 	}
-	
+
 	// Return in priority order
 	if dockerFound {
 		return utils.Docker
@@ -145,7 +145,7 @@ func detectRuntimeParallel() utils.RuntimeType {
 	if podmanFound {
 		return utils.Podman
 	}
-	
+
 	slog.Error("unknown container runtime")
 	return utils.RuntimeType("unknown")
 }
