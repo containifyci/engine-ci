@@ -77,7 +77,7 @@ func Engine(cmd *cobra.Command, _ []string) error {
 				_buildSteps := buildSteps
 				slog.Info("Starting build", "build", b, "steps", _buildSteps.String())
 				if _buildSteps == nil {
-					_buildSteps = build.NewBuildStepsWithArg(*b)
+					_buildSteps = build.NewBuildSteps()
 				}
 				slog.Info("Starting build2", "build", b, "steps", _buildSteps.String())
 				c := NewCommand(*b, _buildSteps)
