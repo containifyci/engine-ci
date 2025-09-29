@@ -15,13 +15,14 @@ import (
 )
 
 type rootCmdArgs struct {
-	Progress   string
-	Target     string
 	CPUProfile string
 	MemProfile string
+	Progress   string
+	Target     string
 	PProfPort  int
-	Verbose    bool
+	Auto       bool
 	PProfHTTP  bool
+	Verbose    bool
 }
 
 var RootArgs = &rootCmdArgs{}
@@ -122,6 +123,7 @@ func init() {
 	slogger := slog.New(logger.NewRootLog(logOpts))
 	slog.SetDefault(slogger)
 	rootCmd.PersistentFlags().BoolVarP(&RootArgs.Verbose, "verbose", "v", false, "Enable verbose logging")
+	rootCmd.PersistentFlags().BoolVarP(&RootArgs.Auto, "auto", "a", false, "The build target to run")
 	rootCmd.PersistentFlags().StringVarP(&RootArgs.Target, "target", "t", "all", "The build target to run")
 	rootCmd.PersistentFlags().StringVar(&RootArgs.Progress, "progress", "plain", "The progress logging format to use. Options are: progress, plain")
 
@@ -142,4 +144,8 @@ func init() {
 func SetVersionInfo(version, commit, date, repo string) string {
 	rootCmd.Version = fmt.Sprintf("%s (Built on %s from Git SHA %s of %s)", version, date, commit, repo)
 	return rootCmd.Version
+}
+
+func RootCmd() *cobra.Command {
+	return rootCmd
 }

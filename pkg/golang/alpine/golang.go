@@ -45,7 +45,7 @@ type GoContainer struct {
 func New(build container.Build) *GoContainer {
 	platforms := []*types.PlatformSpec{build.Platform.Container}
 	if !build.Platform.Same() {
-		slog.Info("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
+		slog.Debug("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
 		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
 	}
 	return &GoContainer{
@@ -70,6 +70,18 @@ func (c *GoContainer) IsAsync() bool {
 
 func (c *GoContainer) Name() string {
 	return "golang"
+}
+
+// Matches implements the Build interface provider matching logic
+func (c *GoContainer) Matches(build container.Build) bool {
+	// Only match golang builds
+	if build.BuildType != container.GoLang {
+		return false
+	}
+	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
+		return from[0] == "alpine"
+	}
+	return true
 }
 
 func CacheFolder() string {
@@ -107,6 +119,20 @@ func (g GoBuild) Name() string { return g.name }
 func (g GoBuild) Images() []string { return g.images }
 func (g GoBuild) IsAsync() bool    { return g.async }
 
+// Matches implements the Build interface provider matching logic
+func (g GoBuild) Matches(build container.Build) bool {
+	// Only match golang builds
+	if build.BuildType != container.GoLang {
+		return false
+	}
+
+	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
+		return from[0] == "alpine"
+	}
+
+	return true
+}
+
 func NewLinter(build container.Build) build.Build {
 	return GoBuild{
 		rf: func() error {
@@ -115,7 +141,7 @@ func NewLinter(build container.Build) build.Build {
 		},
 		name:   "golangci-lint",
 		images: []string{},
-		async:  false,
+		async:  true, // Linter runs async
 	}
 }
 func (c *GoContainer) Lint() error {
@@ -337,8 +363,7 @@ func NewProd(build container.Build) build.Build {
 		rf: func() error {
 			return container.Prod()
 		},
-		name: "golang-prod",
-		// images: []string{"alpine"},
+		name:  "golang-prod",
 		async: false,
 	}
 }

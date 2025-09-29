@@ -39,6 +39,11 @@ func (c *SonarcloudContainer) Name() string {
 	return "sonarcloud"
 }
 
+// Matches implements the Build interface - SonarCloud runs for all builds
+func (c *SonarcloudContainer) Matches(build container.Build) bool {
+	return true // SonarCloud analysis runs for all builds
+}
+
 func (c *SonarcloudContainer) Images() []string {
 	return []string{IMAGE}
 }

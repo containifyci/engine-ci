@@ -127,43 +127,43 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 	// }
 	// bs := build.NewBuildSteps()
 
-	var from string
-	if v, ok := a.Custom["from"]; ok {
-		slog.Info("Using custom build", "from", v[0])
-		from = v[0]
-	}
-
 	if bs.IsNotInit() {
-		slog.Info("Init build steps", "build", *a)
+		slog.Info("Registering all build steps in original order", "build", *a)
+
+		// Register ALL build steps - let runtime decide what runs
+		// Original order maintained:
+
+		// 1. GCloud (always first)
 		bs.Add(gcloud.New(*a))
-		switch a.BuildType {
-		case container.GoLang:
-			bs.Add(protobuf.New(*a))
-			//TODO: register different build images automatically or at least in the build implementation itself
-			switch from {
-			case "debian":
-				bs.Add(golang.NewDebian(*a))
-				bs.Add(golang.NewProdDebian(*a))
-			case "debiancgo":
-				bs.Add(golang.NewCGO(*a))
-				bs.Add(golang.NewProdDebian(*a))
-			default:
-				bs.Add(golang.New(*a))
-				bs.Add(golang.NewProd(*a))
-			}
-			bs.AddAsync(golang.NewLinter(*a))
-			bs.Add(goreleaser.New(*a))
-			bs.Add(pulumi.New(*a))
-		case container.Maven:
-			bs.Add(maven.New(*a))
-			bs.Add(maven.NewProd(*a))
-		case container.Python:
-			bs.Add(python.New(*a))
-			bs.Add(python.NewProd(*a))
-		}
-		bs.AddAsync(sonarcloud.New(*a))
-		bs.Add(trivy.New(*a))
-		bs.AddAsync(github.New(*a))
+
+		// 2. Protobuf (golang only - will match via Matches())
+		bs.Add(protobuf.New(*a))
+
+		// 3. Build steps (language variants - only matching ones will run)
+		bs.Add(golang.New(*a))       // Alpine variant
+		bs.Add(golang.NewDebian(*a)) // Debian variant
+		bs.Add(golang.NewCGO(*a))    // CGO variant
+		bs.Add(maven.New(*a))        // Maven
+		bs.Add(python.New(*a))       // Python
+
+		// 4. Prod steps (only matching ones will run)
+		bs.Add(golang.NewProd(*a))       // Alpine prod
+		bs.Add(golang.NewProdDebian(*a)) // Debian prod
+		bs.Add(maven.NewProd(*a))        // Maven prod
+		bs.Add(python.NewProd(*a))       // Python prod
+
+		// 5. Async linter (golang only - will match via Matches())
+		bs.AddAsync(golang.NewLinter(*a)) // Golang linter
+
+		// 6. Additional golang steps (will match via Matches())
+		bs.Add(goreleaser.New(*a)) // Goreleaser
+		bs.Add(pulumi.New(*a))     // Pulumi
+
+		// 7. Common steps
+		bs.AddAsync(sonarcloud.New(*a)) // SonarCloud (async)
+		bs.Add(trivy.New(*a))           // Trivy
+		bs.AddAsync(github.New(*a))     // GitHub (async)
+
 		bs.Init()
 	}
 
@@ -182,9 +182,8 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 // }
 
 func (c *Command) RunBuild() {
-	fmt.Println("build called")
-	_, bs := c.Pre()
-	err := bs.Run()
+	a, bs := c.Pre()
+	err := bs.Run(a)
 	if err != nil {
 		slog.Error("Failed to build", "error", err)
 		os.Exit(1)
@@ -247,36 +246,36 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 	switch arg.BuildType {
 	case container.GoLang:
 		c.AddTarget("lint", func() error {
-			return bs.Run("golangci-lint")
+			return bs.Run(arg, "golangci-lint")
 		})
 		c.AddTarget("build", func() error {
-			return bs.Run("golang")
+			return bs.Run(arg, "golang")
 		})
 		c.AddTarget("push", func() error {
-			return bs.Run("golang-prod")
+			return bs.Run(arg, "golang-prod")
 		})
 		c.AddTarget("protobuf", func() error {
-			return bs.Run("protobuf")
+			return bs.Run(arg, "protobuf")
 		})
 		c.AddTarget("release", func() error {
-			return bs.Run("gorelease")
+			return bs.Run(arg, "gorelease")
 		})
 		c.AddTarget("pulumi", func() error {
-			return bs.Run("pulumi")
+			return bs.Run(arg, "pulumi")
 		})
 	case container.Maven:
 		c.AddTarget("build", func() error {
-			return bs.Run("maven")
+			return bs.Run(arg, "maven")
 		})
 		c.AddTarget("push", func() error {
-			return bs.Run("maven-prod")
+			return bs.Run(arg, "maven-prod")
 		})
 	case container.Python:
 		c.AddTarget("build", func() error {
-			return bs.Run("python")
+			return bs.Run(arg, "python")
 		})
 		c.AddTarget("push", func() error {
-			return bs.Run("python-prod")
+			return bs.Run(arg, "python-prod")
 		})
 	}
 	c.AddTarget("all", func() error {
@@ -285,16 +284,16 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 		return nil
 	})
 	c.AddTarget("sonar", func() error {
-		return bs.Run("sonarcloud")
+		return bs.Run(arg, "sonarcloud")
 	})
 	c.AddTarget("trivy", func() error {
-		return bs.Run("trivy")
+		return bs.Run(arg, "trivy")
 	})
 	c.AddTarget("gcloud_oidc", func() error {
-		return bs.Run("gcloud_oidc")
+		return bs.Run(arg, "gcloud_oidc")
 	})
 	c.AddTarget("github", func() error {
-		return bs.Run("github")
+		return bs.Run(arg, "github")
 	})
 	c.AddTarget("github_actions", func() error {
 		return RunGithubAction()

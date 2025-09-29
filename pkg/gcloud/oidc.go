@@ -25,7 +25,7 @@ var f embed.FS
 var d embed.FS
 
 const (
-	CI_IMAGE = "golang:1.22.5-alpine"
+	CI_IMAGE = "golang:1.25.0-alpine"
 )
 
 type GCloudContainer struct {
@@ -43,6 +43,11 @@ func (c *GCloudContainer) IsAsync() bool    { return false }
 func (c *GCloudContainer) Name() string     { return "gcloud_oidc" }
 func (c *GCloudContainer) Pull() error      { return c.Container.Pull(CI_IMAGE) }
 func (c *GCloudContainer) Images() []string { return []string{CI_IMAGE} }
+
+// Matches implements the Build interface - GCloud runs for all builds
+func (c *GCloudContainer) Matches(build container.Build) bool {
+	return true // GCloud setup runs for all builds
+}
 
 // calculateDirChecksum computes a combined SHA-256 checksum for all files in the specified directory within the embed.FS.
 func calculateDirChecksum(_fs embed.FS) ([]byte, error) {
