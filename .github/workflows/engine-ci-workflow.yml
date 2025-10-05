@@ -150,6 +150,7 @@ jobs:
           chmod: 0755
           # token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
 
+      # Looks like this dependencies are not needed anymore stil keep it here for reference
       # - name: Install libbtrfs-dev needed by podman go module and libgpgme-dev for containers_image_openpgp
       #   if: ${{ !inputs.install_binary }}
       #   run: |
