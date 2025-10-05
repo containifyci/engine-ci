@@ -61,16 +61,6 @@ func (h *SimpleHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 func (h *SimpleHandler) Handle(ctx context.Context, r slog.Record) error {
 	buf := make([]byte, 0, 1024)
-	// if !r.Time.IsZero() {
-	// 	buf = h.appendAttr(buf, slog.Time(slog.TimeKey, r.Time), 0)
-	// }
-	// buf = h.appendAttr(buf, slog.Any(slog.LevelKey, r.Level))
-	// if r.PC != 0 {
-	// 	fs := runtime.CallersFrames([]uintptr{r.PC})
-	// 	f, _ := fs.Next()
-	// 	buf = h.appendAttr(buf, slog.String(slog.SourceKey, fmt.Sprintf("%s:%d", f.File, f.Line)))
-	// }
-	// buf = h.appendAttr(buf, slog.String(slog.MessageKey, r.Message))
 	buf = fmt.Appendf(buf, "%s ", r.Message)
 	// TODO: output the Attrs and groups from WithAttrs and WithGroup.
 	r.Attrs(func(a slog.Attr) bool {

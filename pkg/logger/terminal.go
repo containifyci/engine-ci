@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -53,8 +54,9 @@ type (
 
 	// LogAggregator manages log aggregation with memory optimization and concurrency
 	LogAggregator struct {
-		entryPool      sync.Pool
 		messagePool    sync.Pool
+		entryPool      sync.Pool
+		alt            *AltScreen
 		shutdown       chan struct{}
 		flushDone      chan struct{}
 		logChannel     chan LogMessage
@@ -380,6 +382,11 @@ func (la *LogAggregator) displayLoop() {
 	ticker := time.NewTicker(100 * time.Millisecond) // Update display every 100ms
 	defer ticker.Stop()
 
+	alt := NewAlt(os.Stdout)
+	la.alt = alt
+	alt.Enter()
+	defer alt.Exit()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -393,12 +400,63 @@ func (la *LogAggregator) displayLoop() {
 }
 
 // updateDisplay updates the terminal display
-func (la *LogAggregator) updateDisplay() {
-	// Clear screen by printing new lines
-	fmt.Print("\033[H\033[2J") // ANSI escape sequence to clear the screen
-	fmt.Println("Real-Time Log Aggregation (Concurrent)")
+// func (la *LogAggregator) updateDisplay() {
+// 	// Clear screen by printing new lines
+// 	fmt.Print("\033[H\033[2J") // ANSI escape sequence to clear the screen
+// 	fmt.Println("Real-Time Log Aggregation (Concurrent)")
 
-	// Display completed log entries first
+// 	// Display completed log entries first
+// 	for _, id := range la.routineOrder {
+// 		value, ok := la.logMap.Load(id)
+// 		if !ok {
+// 			continue
+// 		}
+
+// 		logEntry := value.(*LogEntry)
+// 		logEntry.mu.Lock()
+
+// 		if logEntry.isDone {
+// 			elapsed := logEntry.endTime.Sub(logEntry.startTime)
+// 			if !logEntry.isFailed {
+// 				logEntry.messages = []string{} // Remove the "Done" message
+// 				fmt.Printf("%s%s (Completed in %v)%s\n", green, id, elapsed, reset)
+// 			} else {
+// 				displayMessages := last5Messages(logEntry.messages)
+// 				fmt.Printf("%s%s (Failed in %v)%s\n", red, id, elapsed, reset)
+// 				for _, msg := range displayMessages {
+// 					fmt.Printf("   %s\n", msg)
+// 				}
+// 			}
+// 		}
+
+// 		logEntry.mu.Unlock()
+// 	}
+
+// 	// Display in-progress entries after completed ones
+// 	for _, id := range la.routineOrder {
+// 		value, ok := la.logMap.Load(id)
+// 		if !ok {
+// 			continue
+// 		}
+
+// 		logEntry := value.(*LogEntry)
+// 		logEntry.mu.Lock()
+
+// 		if !logEntry.isDone {
+// 			elapsed := time.Since(logEntry.startTime)
+// 			fmt.Printf("%s%s %v :%s\n", grayscale, id, elapsed, reset)
+// 			for _, msg := range logEntry.messages {
+// 				fmt.Printf("   %s\n", msg)
+// 			}
+// 		}
+
+// 		logEntry.mu.Unlock()
+// 	}
+// }
+
+func (la *LogAggregator) updateDisplay() {
+	var lines []string
+	lines = append(lines, "Real-Time Log Aggregation (Concurrent)")
 	for _, id := range la.routineOrder {
 		value, ok := la.logMap.Load(id)
 		if !ok {
@@ -412,12 +470,12 @@ func (la *LogAggregator) updateDisplay() {
 			elapsed := logEntry.endTime.Sub(logEntry.startTime)
 			if !logEntry.isFailed {
 				logEntry.messages = []string{} // Remove the "Done" message
-				fmt.Printf("%s%s (Completed in %v)%s\n", green, id, elapsed, reset)
+				lines = append(lines, fmt.Sprintf("%s%s (Completed in %v)%s", green, id, elapsed, reset))
 			} else {
 				displayMessages := last5Messages(logEntry.messages)
-				fmt.Printf("%s%s (Failed in %v)%s\n", red, id, elapsed, reset)
+				lines = append(lines, fmt.Sprintf("%s%s (Failed in %v)%s", red, id, elapsed, reset))
 				for _, msg := range displayMessages {
-					fmt.Printf("   %s\n", msg)
+					lines = append(lines, fmt.Sprintf("   %s", msg))
 				}
 			}
 		}
@@ -425,7 +483,6 @@ func (la *LogAggregator) updateDisplay() {
 		logEntry.mu.Unlock()
 	}
 
-	// Display in-progress entries after completed ones
 	for _, id := range la.routineOrder {
 		value, ok := la.logMap.Load(id)
 		if !ok {
@@ -437,12 +494,12 @@ func (la *LogAggregator) updateDisplay() {
 
 		if !logEntry.isDone {
 			elapsed := time.Since(logEntry.startTime)
-			fmt.Printf("%s%s %v :%s\n", grayscale, id, elapsed, reset)
+			lines = append(lines, fmt.Sprintf("%s%s %v :%s", grayscale, id, elapsed, reset))
 			for _, msg := range logEntry.messages {
-				fmt.Printf("   %s\n", msg)
+				lines = append(lines, fmt.Sprintf("   %s", msg))
 			}
 		}
-
 		logEntry.mu.Unlock()
 	}
+	la.alt.Render(lines)
 }
