@@ -150,11 +150,11 @@ jobs:
           chmod: 0755
           # token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
 
-      - name: Install libbtrfs-dev needed by podman go module and libgpgme-dev for containers_image_openpgp
-        if: ${{ !inputs.install_binary }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install libbtrfs-dev libgpgme-dev
+      # - name: Install libbtrfs-dev needed by podman go module and libgpgme-dev for containers_image_openpgp
+      #   if: ${{ !inputs.install_binary }}
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install libbtrfs-dev libgpgme-dev
 
       - name: Prepare Github Action
         run: |
