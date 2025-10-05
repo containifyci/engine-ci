@@ -27,7 +27,18 @@ type rootCmdArgs struct {
 	Auto           bool
 	PProfHTTP      bool
 	Verbose        bool
+
+	version VersionInfo
 }
+
+type VersionInfo struct {
+	Version string `json:"version"`
+	Commit  string `json:"commit"`
+	Date    string `json:"date"`
+	Repo    string `json:"repo"`
+}
+
+const skipRootHooks = "skipRootHooks"
 
 var RootArgs = &rootCmdArgs{}
 
@@ -44,6 +55,9 @@ to quickly create a Cobra application.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if cmd.Annotations[skipRootHooks] == "true" {
+			return nil
+		}
 		logOpts := slog.HandlerOptions{
 			Level:       slog.LevelInfo,
 			AddSource:   false,
@@ -56,7 +70,7 @@ to quickly create a Cobra application.`,
 		}
 		logger := slog.New(logger.New(RootArgs.Progress, logOpts))
 		slog.SetDefault(logger)
-		slog.Info("Progress logging format", "format", RootArgs.Progress)
+		slog.Info("Version", "version", RootArgs.version)
 
 		// Enable CPU profiling if requested
 		if RootArgs.CPUProfile != "" {
@@ -86,6 +100,9 @@ to quickly create a Cobra application.`,
 		return nil
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		if cmd.Annotations[skipRootHooks] == "true" {
+			return nil
+		}
 		slog.Info("Flushing logs")
 		logger.GetLogAggregator().Flush()
 
@@ -164,6 +181,12 @@ func init() {
 
 func SetVersionInfo(version, commit, date, repo string) string {
 	rootCmd.Version = fmt.Sprintf("%s (Built on %s from Git SHA %s of %s)", version, date, commit, repo)
+	RootArgs.version = VersionInfo{
+		Version: version,
+		Commit:  commit,
+		Date:    date,
+		Repo:    repo,
+	}
 	return rootCmd.Version
 }
 
