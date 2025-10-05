@@ -40,7 +40,31 @@ type GoContainer struct {
 	Platforms []*types.PlatformSpec
 }
 
-func New(build container.Build) *GoContainer {
+// Matches implements the Build interface - Debian variant runs when from=debian
+func Matches(build container.Build) bool {
+	if build.BuildType != container.GoLang {
+		return false
+	}
+	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
+		return from[0] == "debian"
+	}
+	return false
+}
+
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		Name_:     "golang",
+		Async_:    false,
+	}
+}
+
+func new(build container.Build) *GoContainer {
 	platforms := []*types.PlatformSpec{build.Platform.Container}
 	if !build.Platform.Same() {
 		slog.Debug("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
@@ -59,25 +83,6 @@ func New(build container.Build) *GoContainer {
 		Folder:    build.Folder,
 		Tags:      build.Custom["tags"],
 	}
-}
-
-func (c *GoContainer) IsAsync() bool {
-	return false
-}
-
-func (c *GoContainer) Name() string {
-	return "golang"
-}
-
-// Matches implements the Build interface - Debian variant runs when from=debian
-func (c *GoContainer) Matches(build container.Build) bool {
-	if build.BuildType != container.GoLang {
-		return false
-	}
-	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
-		return from[0] == "debian"
-	}
-	return false
 }
 
 func CacheFolder() string {
@@ -102,30 +107,7 @@ func (c *GoContainer) Pull() error {
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
-type GoBuild struct {
-	rf     build.RunFunc
-	name   string
-	images []string
-	async  bool
-}
-
-func (g GoBuild) Run() error       { return g.rf() }
-func (g GoBuild) Name() string     { return g.name }
-func (g GoBuild) Images() []string { return g.images }
-func (g GoBuild) IsAsync() bool    { return g.async }
-
-// Matches implements the Build interface - Debian variant runs when from=debian
-func (g GoBuild) Matches(build container.Build) bool {
-	if build.BuildType != container.GoLang {
-		return false
-	}
-	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
-		return from[0] == "debian"
-	}
-	return false
-}
-
-func (c *GoContainer) GoImage() string {
+func GoImage(build container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfilego")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
@@ -133,17 +115,17 @@ func (c *GoContainer) GoImage() string {
 	}
 	tag := container.ComputeChecksum(dockerFile)
 	image := fmt.Sprintf("golang-%s", DEFAULT_GO)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, image, tag)
+	return utils.ImageURI(build.ContainifyRegistry, image, tag)
 }
 
-func (c *GoContainer) Images() []string {
+func Images(build container.Build) []string {
 	image := fmt.Sprintf("golang:%s", DEFAULT_GO)
 
-	return []string{image, "alpine:latest", c.GoImage()}
+	return []string{image, "alpine:latest", GoImage(build)}
 }
 
 func (c *GoContainer) BuildGoImage() error {
-	image := c.GoImage()
+	image := GoImage(*c.GetBuild())
 
 	dockerFile, err := f.ReadFile("Dockerfilego")
 	if err != nil {
@@ -157,7 +139,7 @@ func (c *GoContainer) BuildGoImage() error {
 }
 
 func (c *GoContainer) Build() error {
-	imageTag := c.GoImage()
+	imageTag := GoImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
@@ -219,13 +201,14 @@ func (c *GoContainer) BuildScript() string {
 	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, c.Platforms...).String()
 }
 
-func NewProd(build container.Build) build.BuildStep {
-	container := New(build)
-	return GoBuild{
-		rf: func() error {
+func NewProd() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
 			return container.Prod()
 		},
-		name: "golang-prod",
+		MatchedFn: Matches,
+		Name_:     "golang-prod",
 		// images: []string{"alpine"},
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	utils "github.com/containifyci/engine-ci/pkg/utils"
@@ -22,22 +23,8 @@ type GoReleaserContainer struct {
 	*container.Container
 }
 
-func New(build container.Build) *GoReleaserContainer {
-	return &GoReleaserContainer{
-		Container: container.New(build),
-	}
-}
-
-func (c *GoReleaserContainer) IsAsync() bool {
-	return false
-}
-
-func (c *GoReleaserContainer) Name() string {
-	return "gorelease"
-}
-
 // Matches implements the Build interface - GoReleaser only runs for golang builds with goreleaser=true
-func (c *GoReleaserContainer) Matches(build container.Build) bool {
+func Matches(build container.Build) bool {
 	if build.BuildType != container.GoLang {
 		return false
 	}
@@ -48,8 +35,23 @@ func (c *GoReleaserContainer) Matches(build container.Build) bool {
 	return false
 }
 
-func (c *GoReleaserContainer) Images() []string {
-	return []string{IMAGE}
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  build.StepperImages(IMAGE),
+		Name_:     "gorelease",
+		Async_:    false,
+	}
+}
+
+func new(build container.Build) *GoReleaserContainer {
+	return &GoReleaserContainer{
+		Container: container.New(build),
+	}
 }
 
 func CacheFolder() string {

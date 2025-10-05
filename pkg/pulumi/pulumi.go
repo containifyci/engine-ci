@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
@@ -27,27 +28,28 @@ type PulumiContainer struct {
 	*container.Container
 }
 
-func New(build container.Build) *PulumiContainer {
-	return &PulumiContainer{
-		Container: container.New(build),
-	}
-}
-
-func (c *PulumiContainer) IsAsync() bool {
-	return false
-}
-
-func (c *PulumiContainer) Name() string {
-	return "pulumi"
-}
-
 // Matches implements the Build interface - Pulumi only runs for golang builds
-func (c *PulumiContainer) Matches(build container.Build) bool {
+func Matches(build container.Build) bool {
 	return build.BuildType == container.GoLang
 }
 
-func (c *PulumiContainer) Images() []string {
-	return []string{IMAGE}
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  build.StepperImages(IMAGE),
+		Name_:     "pulumi",
+		Async_:    false,
+	}
+}
+
+func new(build container.Build) *PulumiContainer {
+	return &PulumiContainer{
+		Container: container.New(build),
+	}
 }
 
 func CacheFolder() string {

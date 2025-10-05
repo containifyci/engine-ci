@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
@@ -33,20 +34,28 @@ type GCloudContainer struct {
 	applicationCredentials string
 }
 
-func New(build container.Build) *GCloudContainer {
-	return &GCloudContainer{
-		Container: container.New(build),
+// Matches implements the Build interface - GCloud runs for all builds
+func Matches(build container.Build) bool {
+	return true // GCloud setup runs for all builds
+}
+
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  build.StepperImages(CI_IMAGE),
+		Name_:     "gcloud_oidc",
+		Async_:    false,
 	}
 }
 
-func (c *GCloudContainer) IsAsync() bool    { return false }
-func (c *GCloudContainer) Name() string     { return "gcloud_oidc" }
-func (c *GCloudContainer) Pull() error      { return c.Container.Pull(CI_IMAGE) }
-func (c *GCloudContainer) Images() []string { return []string{CI_IMAGE} }
-
-// Matches implements the Build interface - GCloud runs for all builds
-func (c *GCloudContainer) Matches(build container.Build) bool {
-	return true // GCloud setup runs for all builds
+func new(build container.Build) *GCloudContainer {
+	return &GCloudContainer{
+		Container: container.New(build),
+	}
 }
 
 // calculateDirChecksum computes a combined SHA-256 checksum for all files in the specified directory within the embed.FS.

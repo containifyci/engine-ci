@@ -24,29 +24,29 @@ const (
 )
 
 type BuildContext struct {
-	build    BuildStep
+	build    BuildStepv2
 	category BuildCategory
 	async    bool
 }
 
 type MatchesFunc func(build container.Build) bool
 
-type BuildStep interface {
-	Run() error
+type BuildStepv2 interface {
 	Name() string
-	Images() []string
+	Images(build container.Build) []string
 	IsAsync() bool
 	Matches(build container.Build) bool
+	RunWithBuild(build container.Build) error
 }
 
-type RunFunc func() error
+type RunFuncv2 func(container.Build) error
 
 type BuildSteps struct {
 	Steps []*BuildContext
 	init  bool
 }
 
-func ToBuildContexts(steps ...BuildStep) []*BuildContext {
+func ToBuildContexts(steps ...BuildStepv2) []*BuildContext {
 	contexts := make([]*BuildContext, len(steps))
 	for i, step := range steps {
 		contexts[i] = &BuildContext{
@@ -58,7 +58,7 @@ func ToBuildContexts(steps ...BuildStep) []*BuildContext {
 	return contexts
 }
 
-func NewBuildSteps(steps ...BuildStep) *BuildSteps {
+func NewBuildSteps(steps ...BuildStepv2) *BuildSteps {
 	return &BuildSteps{
 		init:  len(steps) > 0,
 		Steps: ToBuildContexts(steps...),
@@ -67,32 +67,32 @@ func NewBuildSteps(steps ...BuildStep) *BuildSteps {
 
 func (bs *BuildSteps) IsNotInit() bool { return !bs.init }
 func (bs *BuildSteps) Init()           { bs.init = true }
-func (bs *BuildSteps) Add(step BuildStep) {
+func (bs *BuildSteps) Add(step BuildStepv2) {
 	bs.Steps = append(bs.Steps, &BuildContext{build: step, category: Build, async: false}) // Default to Build category
 }
-func (bs *BuildSteps) AddAsync(step BuildStep) {
+func (bs *BuildSteps) AddAsync(step BuildStepv2) {
 	bs.Steps = append(bs.Steps, &BuildContext{build: step, category: Build, async: true}) // Default to Build category
 }
 
 // Hook-based insertion methods
-func (bs *BuildSteps) AddBefore(stepName string, step BuildStep) error {
+func (bs *BuildSteps) AddBefore(stepName string, step BuildStepv2) error {
 	return bs.insertRelativeToStep(stepName, step, false, true)
 }
 
-func (bs *BuildSteps) AddAfter(stepName string, step BuildStep) error {
+func (bs *BuildSteps) AddAfter(stepName string, step BuildStepv2) error {
 	return bs.insertRelativeToStep(stepName, step, false, false)
 }
 
-func (bs *BuildSteps) AddAsyncBefore(stepName string, step BuildStep) error {
+func (bs *BuildSteps) AddAsyncBefore(stepName string, step BuildStepv2) error {
 	return bs.insertRelativeToStep(stepName, step, true, true)
 }
 
-func (bs *BuildSteps) AddAsyncAfter(stepName string, step BuildStep) error {
+func (bs *BuildSteps) AddAsyncAfter(stepName string, step BuildStepv2) error {
 	return bs.insertRelativeToStep(stepName, step, true, false)
 }
 
 // Replace existing step by name
-func (bs *BuildSteps) Replace(stepName string, step BuildStep) error {
+func (bs *BuildSteps) Replace(stepName string, step BuildStepv2) error {
 	for i, bctx := range bs.Steps {
 		if bctx.build.Name() == stepName {
 			// Preserve the existing category and use the step's async setting
@@ -104,7 +104,7 @@ func (bs *BuildSteps) Replace(stepName string, step BuildStep) error {
 }
 
 // Helper method for relative insertion
-func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStep, async bool, before bool) error {
+func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStepv2, async bool, before bool) error {
 	for i, bctx := range bs.Steps {
 		if bctx.build.Name() == stepName {
 			// Use the same category as the reference step
@@ -123,16 +123,16 @@ func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStep, asyn
 }
 
 // Category-based addition methods
-func (bs *BuildSteps) AddToCategory(category BuildCategory, step BuildStep) error {
+func (bs *BuildSteps) AddToCategory(category BuildCategory, step BuildStepv2) error {
 	return bs.insertAtCategoryEnd(category, step, false)
 }
 
-func (bs *BuildSteps) AddAsyncToCategory(category BuildCategory, step BuildStep) error {
+func (bs *BuildSteps) AddAsyncToCategory(category BuildCategory, step BuildStepv2) error {
 	return bs.insertAtCategoryEnd(category, step, true)
 }
 
 // Helper method to find category boundaries and insert at the end of a category
-func (bs *BuildSteps) insertAtCategoryEnd(category BuildCategory, step BuildStep, async bool) error {
+func (bs *BuildSteps) insertAtCategoryEnd(category BuildCategory, step BuildStepv2, async bool) error {
 	// Define category order for proper insertion
 	categoryOrder := []BuildCategory{Auth, PreBuild, Build, PostBuild, Quality, Apply, Publish}
 
@@ -254,22 +254,22 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 		if buildCtx.build.IsAsync() {
 			// Start async step immediately, don't wait
 			wg.Add(1)
-			go func(build BuildStep) {
+			go func(build BuildStepv2, arg container.Build) {
 				defer wg.Done()
 				slog.Debug("Starting async step", "step", build.Name())
 
-				if err := build.Run(); err != nil {
+				if err := build.RunWithBuild(arg); err != nil {
 					slog.Error("Failed to run build step: %s", "error", err)
 					os.Exit(1)
 				}
 
 				slog.Debug("Completed async step", "step", build.Name())
-			}(buildCtx.build)
+			}(buildCtx.build, *arg)
 			continue
 		}
 		// Execute sync step and wait for completion
 		slog.Debug("Executing sync step", "step", buildCtx.build.Name(), "index", i)
-		if err := buildCtx.build.Run(); err != nil {
+		if err := buildCtx.build.RunWithBuild(*arg); err != nil {
 			slog.Error("Failed to run build step: %s", "error", err)
 			return err
 		}
@@ -293,7 +293,7 @@ func (bs *BuildSteps) Images(groups container.BuildGroups) []string {
 				if !bctx.build.Matches(*build) {
 					continue
 				}
-				images = append(images, bctx.build.Images()...)
+				images = append(images, bctx.build.Images(*build)...)
 			}
 		}
 	}

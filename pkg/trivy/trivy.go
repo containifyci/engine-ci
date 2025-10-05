@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
@@ -21,27 +22,28 @@ type TrivyContainer struct {
 	*container.Container
 }
 
-func New(build container.Build) *TrivyContainer {
-	return &TrivyContainer{
-		Container: container.New(build),
-	}
-}
-
-func (c *TrivyContainer) IsAsync() bool {
-	return false
-}
-
-func (c *TrivyContainer) Name() string {
-	return "trivy"
-}
-
 // Matches implements the Build interface - Trivy runs for all builds
-func (c *TrivyContainer) Matches(build container.Build) bool {
+func Matches(build container.Build) bool {
 	return true // Trivy security scanning runs for all builds
 }
 
-func (c *TrivyContainer) Images() []string {
-	return []string{IMAGE}
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  build.StepperImages(IMAGE),
+		Name_:     "trivy",
+		Async_:    false,
+	}
+}
+
+func new(build container.Build) *TrivyContainer {
+	return &TrivyContainer{
+		Container: container.New(build),
+	}
 }
 
 func CacheFolder() string {

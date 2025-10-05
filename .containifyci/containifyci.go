@@ -44,9 +44,6 @@ func main() {
 		"goreleaser": build.NewList("true"),
 	}
 	opts1.Image = ""
-	opts1.ContainerFiles = map[string]*protos2.ContainerFile{
-		"build": DockerFile(),
-	}
 
 	custom := build.NewGoServiceBuild("engine-ci-custom")
 	custom.File = "main.go"
