@@ -19,6 +19,7 @@ import (
 type rootCmdArgs struct {
 	cpuProfileFile *os.File
 	httpSrv        *http.Server
+	version        VersionInfo
 	CPUProfile     string
 	MemProfile     string
 	Progress       string
@@ -27,8 +28,6 @@ type rootCmdArgs struct {
 	Auto           bool
 	PProfHTTP      bool
 	Verbose        bool
-
-	version VersionInfo
 }
 
 type VersionInfo struct {
