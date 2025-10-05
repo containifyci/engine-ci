@@ -25,10 +25,6 @@ var f embed.FS
 //go:embed src/*
 var d embed.FS
 
-const (
-	CI_IMAGE = "golang:1.25.0-alpine"
-)
-
 type GCloudContainer struct {
 	*container.Container
 	applicationCredentials string
@@ -46,7 +42,7 @@ func New() build.BuildStepv2 {
 			return container.Run()
 		},
 		MatchedFn: Matches,
-		ImagesFn:  build.StepperImages(CI_IMAGE),
+		ImagesFn:  Images,
 		Name_:     "gcloud_oidc",
 		Async_:    false,
 	}
@@ -172,6 +168,10 @@ func (c *GCloudContainer) Auth() error {
 	return c.Wait()
 }
 
+func Images(build container.Build) []string {
+	return []string{Image(&build)}
+}
+
 func Image(build *container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
@@ -187,7 +187,6 @@ func Image(build *container.Build) string {
 
 	dckCheckSum := sha256.Sum256(dockerFile)
 	tag := container.SumChecksum(fsCheckSum, dckCheckSum[:])
-	// tag := container.ComputeChecksum(dockerFile)
 	return utils.ImageURI(build.ContainifyRegistry, "gcloud", tag)
 }
 

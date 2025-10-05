@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/containifyci/engine-ci/cmd"
@@ -16,8 +15,7 @@ var (
 )
 
 func main() {
-	v := cmd.SetVersionInfo(version, commit, date, repo)
-	slog.Info("Version", "version", v)
+	cmd.SetVersionInfo(version, commit, date, repo)
 	err := cmd.Execute()
 	if err != nil {
 		fmt.Printf("Main Error: %v", err)
