@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
@@ -25,7 +26,25 @@ type ProtogufContainer struct {
 	WithTag        bool
 }
 
-func New(build container.Build) *ProtogufContainer {
+// Matches implements the Build interface - Protobuf only runs for golang builds
+func Matches(build container.Build) bool {
+	return build.BuildType == container.GoLang
+}
+
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := newC(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		Name_:     "protobuf",
+		Async_:    false,
+	}
+}
+
+func newC(build container.Build) *ProtogufContainer {
 	command := "protoc"
 	if v, ok := build.Custom["protobuf_cmd"]; ok {
 		command = v[0]
@@ -48,36 +67,22 @@ func New(build container.Build) *ProtogufContainer {
 	}
 }
 
-func (c *ProtogufContainer) IsAsync() bool {
-	return false
+func Images(build container.Build) []string {
+	return []string{Image(build)}
 }
 
-func (c *ProtogufContainer) Images() []string {
-	return []string{c.Image()}
-}
-
-func (c *ProtogufContainer) Image() string {
+func Image(build container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
 	}
 	tag := computeChecksum(dockerFile)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "protobuf", tag)
+	return utils.ImageURI(build.ContainifyRegistry, "protobuf", tag)
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "protobuf", tag)
 }
-
-func (c *ProtogufContainer) Name() string {
-	return "protobuf"
-}
-
-// Matches implements the Build interface - Protobuf only runs for golang builds
-func (c *ProtogufContainer) Matches(build container.Build) bool {
-	return build.BuildType == container.GoLang
-}
-
 func (c *ProtogufContainer) Pull() error {
-	image := c.Image()
+	image := Image(*c.GetBuild())
 	err := c.Container.Pull(image)
 	if err != nil {
 		slog.Info("Failed to pull image", "error", err, "image", image)
@@ -97,7 +102,7 @@ func (c *ProtogufContainer) CopyBuildScript() error {
 }
 
 func (c *ProtogufContainer) Generate() error {
-	image := c.Image()
+	image := Image(*c.GetBuild())
 
 	opts := types.ContainerConfig{}
 	opts.Image = image
@@ -149,7 +154,7 @@ func (c *ProtogufContainer) Generate() error {
 }
 
 func (c *ProtogufContainer) Build() error {
-	image := c.Image()
+	image := Image(*c.GetBuild())
 
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {

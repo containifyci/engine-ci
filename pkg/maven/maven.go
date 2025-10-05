@@ -38,7 +38,25 @@ type MavenContainer struct {
 	ImageTag string
 }
 
-func New(build container.Build) *MavenContainer {
+// Matches implements the Build interface - Debian variant runs when from=debian
+func Matches(build container.Build) bool {
+	return build.BuildType == container.Maven
+}
+
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		Name_:     "maven",
+		Async_:    false,
+	}
+}
+
+func new(build container.Build) *MavenContainer {
 	return &MavenContainer{
 		App:       build.App,
 		Container: container.New(build),
@@ -47,19 +65,6 @@ func New(build container.Build) *MavenContainer {
 		ImageTag:  build.ImageTag,
 		Platform:  build.Platform,
 	}
-}
-
-func (c *MavenContainer) IsAsync() bool {
-	return false
-}
-
-func (c *MavenContainer) Name() string {
-	return "maven"
-}
-
-// Matches implements the Build interface - Maven only runs for maven builds
-func (c *MavenContainer) Matches(build container.Build) bool {
-	return build.BuildType == container.Maven
 }
 
 func CacheFolder() string {
@@ -85,8 +90,8 @@ func (c *MavenContainer) Pull() error {
 	return c.Container.Pull(ProdImage)
 }
 
-func (c *MavenContainer) Images() []string {
-	return []string{c.MavenImage(), ProdImage}
+func Images(build container.Build) []string {
+	return []string{MavenImage(build), ProdImage}
 }
 
 // TODO: provide a shorter checksum
@@ -95,19 +100,19 @@ func ComputeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func (c *MavenContainer) MavenImage() string {
+func MavenImage(build container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfile.maven")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.maven", "error", err)
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "maven-3-eclipse-temurin-17-alpine", tag)
+	return utils.ImageURI(build.ContainifyRegistry, "maven-3-eclipse-temurin-17-alpine", tag)
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "maven-3-eclipse-temurin-17-alpine", tag)
 }
 
 func (c *MavenContainer) BuildMavenImage() error {
-	image := c.MavenImage()
+	image := MavenImage(*c.GetBuild())
 	dockerFile, err := f.ReadFile("Dockerfile.maven")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.maven", "error", err)
@@ -130,7 +135,7 @@ func (c *MavenContainer) Address() *network.Address {
 }
 
 func (c *MavenContainer) Build() error {
-	imageTag := c.MavenImage()
+	imageTag := MavenImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
@@ -206,32 +211,15 @@ func (c *MavenContainer) BuildScript() string {
 	return Script(NewBuildScript(c.Verbose))
 }
 
-type MavenBuild struct {
-	rf     build.RunFunc
-	name   string
-	images []string
-	async  bool
-}
-
-func (g MavenBuild) Run() error       { return g.rf() }
-func (g MavenBuild) Name() string     { return g.name }
-func (g MavenBuild) Images() []string { return g.images }
-func (g MavenBuild) IsAsync() bool    { return g.async }
-
-// Matches implements the Build interface - Maven builds only run for maven projects
-func (g MavenBuild) Matches(build container.Build) bool {
-	return build.BuildType == container.Maven
-}
-
-func NewProd(build container.Build) build.BuildStep {
-	container := New(build)
-	return MavenBuild{
-		rf: func() error {
+func NewProd() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
 			return container.Prod()
 		},
-		name:   "maven-prod",
-		images: []string{ProdImage},
-		async:  false,
+		ImagesFn: build.StepperImages(ProdImage),
+		Name_:    "maven-prod",
+		Async_:   false,
 	}
 }
 

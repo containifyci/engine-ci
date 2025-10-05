@@ -129,9 +129,9 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 		slog.Info("Registering all build steps by category", "build", *a)
 
 		// Helper function to add step and log error
-		addStep := func(category build.BuildCategory, step build.BuildStep, async bool) {
+		addStep := func(category build.BuildCategory, step build.BuildStepv2) {
 			var err error
-			if async {
+			if step.IsAsync() {
 				err = bs.AddAsyncToCategory(category, step)
 			} else {
 				err = bs.AddToCategory(category, step)
@@ -142,35 +142,35 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 		}
 
 		// Auth: Authentication & credentials
-		addStep(build.Auth, gcloud.New(*a), false)
+		addStep(build.Auth, gcloud.New())
 
 		// PreBuild: Setup, protobuf, dependencies
-		addStep(build.PreBuild, protobuf.New(*a), false)
+		addStep(build.PreBuild, protobuf.New())
 
 		// Build: Language-specific compilation
-		addStep(build.Build, golang.New(*a), false)       // Alpine variant
-		addStep(build.Build, golang.NewDebian(*a), false) // Debian variant
-		addStep(build.Build, golang.NewCGO(*a), false)    // CGO variant
-		addStep(build.Build, maven.New(*a), false)        // Maven
-		addStep(build.Build, python.New(*a), false)       // Python
+		addStep(build.Build, golang.New())       // Alpine variant
+		addStep(build.Build, golang.NewDebian()) // Debian variant
+		addStep(build.Build, golang.NewCGO())    // CGO variant
+		addStep(build.Build, maven.New())        // Maven
+		addStep(build.Build, python.New())       // Python
 
 		// PostBuild: Production artifacts, packaging
-		addStep(build.PostBuild, golang.NewProd(*a), false)       // Alpine prod
-		addStep(build.PostBuild, golang.NewProdDebian(*a), false) // Debian prod
-		addStep(build.PostBuild, maven.NewProd(*a), false)        // Maven prod
-		addStep(build.PostBuild, python.NewProd(*a), false)       // Python prod
+		addStep(build.PostBuild, golang.NewProd())       // Alpine prod
+		addStep(build.PostBuild, golang.NewProdDebian()) // Debian prod
+		addStep(build.PostBuild, maven.NewProd())        // Maven prod
+		addStep(build.PostBuild, python.NewProd())       // Python prod
 
 		// Quality: Linting, testing, security scanning
-		addStep(build.Quality, golang.NewLinter(*a), true) // Golang linter (async)
-		addStep(build.Quality, sonarcloud.New(*a), true)   // SonarCloud (async)
-		addStep(build.Quality, trivy.New(*a), false)       // Trivy
+		addStep(build.Quality, golang.NewLinter()) // Golang linter (async)
+		addStep(build.Quality, sonarcloud.New())   // SonarCloud (async)
+		addStep(build.Quality, trivy.New())        // Trivy
 
 		// Apply: Infrastructure changes
-		addStep(build.Apply, pulumi.New(*a), false) // Pulumi
+		addStep(build.Apply, pulumi.New()) // Pulumi
 
 		// Publish: Publishing, releases, notifications
-		addStep(build.Publish, goreleaser.New(*a), false) // Goreleaser
-		addStep(build.Publish, github.New(*a), true)      // GitHub (async)
+		addStep(build.Publish, goreleaser.New()) // Goreleaser
+		addStep(build.Publish, github.New())     // GitHub (async)
 
 		bs.Init()
 	}

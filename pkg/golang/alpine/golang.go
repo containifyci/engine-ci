@@ -42,9 +42,20 @@ type GoContainer struct {
 	Tags           []string
 }
 
-// TODO (tight coupling buildsteps and build paramater) we have to uncouple the initialization from the build parameters
-// The build parameters will be injected in the Run function
-func New(build container.Build) *GoContainer {
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  GoImages,
+		Name_:     "golang",
+		Async_:    false,
+	}
+}
+
+func new(build container.Build) *GoContainer {
 	platforms := []*types.PlatformSpec{build.Platform.Container}
 	if !build.Platform.Same() {
 		slog.Debug("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
@@ -64,26 +75,6 @@ func New(build container.Build) *GoContainer {
 		Folder: build.Folder,
 		Tags:   build.Custom["tags"],
 	}
-}
-
-func (c *GoContainer) IsAsync() bool {
-	return false
-}
-
-func (c *GoContainer) Name() string {
-	return "golang"
-}
-
-// Matches implements the Build interface provider matching logic
-func (c *GoContainer) Matches(build container.Build) bool {
-	// Only match golang builds
-	if build.BuildType != container.GoLang {
-		return false
-	}
-	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
-		return from[0] == "alpine"
-	}
-	return true
 }
 
 func CacheFolder() string {
@@ -108,46 +99,19 @@ func (c *GoContainer) Pull() error {
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
-type GoBuild struct {
-	rf     build.RunFunc
-	name   string
-	images []string
-	async  bool
-}
-
-func (g GoBuild) Run() error   { return g.rf() }
-func (g GoBuild) Name() string { return g.name }
-
-func (g GoBuild) Images() []string { return g.images }
-func (g GoBuild) IsAsync() bool    { return g.async }
-
-// Matches implements the Build interface provider matching logic
-func (g GoBuild) Matches(build container.Build) bool {
-	// Only match golang builds
-	if build.BuildType != container.GoLang {
-		return false
-	}
-
-	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
-		return from[0] == "alpine"
-	}
-
-	return true
-}
-
-func NewLinter(build container.Build) build.BuildStep {
-	return GoBuild{
-		rf: func() error {
-			container := New(build)
+func NewLinter() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
 			return container.Lint()
 		},
-		name:   "golangci-lint",
-		images: []string{},
-		async:  true, // Linter runs async
+		MatchedFn: Matches,
+		Name_:     "golangci-lint",
+		Async_:    true, // Linter runs async
 	}
 }
 func (c *GoContainer) Lint() error {
-	image := c.GoImage()
+	image := GoImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
@@ -224,13 +188,13 @@ func (c *GoContainer) Lint() error {
 	return err
 }
 
-func (c *GoContainer) dockerFile() (*protos2.ContainerFile, error) {
-	if v, ok := c.ContainerFiles["build"]; ok {
+func dockerFile(build container.Build) (*protos2.ContainerFile, error) {
+	if v, ok := build.ContainerFiles["build"]; ok {
 		return v, nil
 	}
 
 	dockerFileName := "Dockerfile_go"
-	typ := c.GetBuild().CustomString("go_type")
+	typ := build.CustomString("go_type")
 	name := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
 	if typ != "" {
 		dockerFileName = fmt.Sprintf("Dockerfile_%s_go", typ)
@@ -247,8 +211,13 @@ func (c *GoContainer) dockerFile() (*protos2.ContainerFile, error) {
 	}, nil
 }
 
-func (c *GoContainer) GoImage() string {
-	dockerFile, err := c.dockerFile()
+func GoImages(build container.Build) []string {
+	image := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
+	return []string{image, "alpine:latest", GoImage(build)}
+}
+
+func GoImage(build container.Build) string {
+	dockerFile, err := dockerFile(build)
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
@@ -256,19 +225,13 @@ func (c *GoContainer) GoImage() string {
 	tag := container.ComputeChecksum([]byte(dockerFile.Content))
 	// image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
 	image := dockerFile.Name
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, image, tag)
-}
-
-func (c *GoContainer) Images() []string {
-	image := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
-
-	return []string{image, "alpine:latest", c.GoImage()}
+	return utils.ImageURI(build.ContainifyRegistry, image, tag)
 }
 
 func (c *GoContainer) BuildGoImage() error {
-	image := c.GoImage()
+	image := GoImage(*c.GetBuild())
 
-	dockerFile, err := c.dockerFile()
+	dockerFile, err := dockerFile(*c.GetBuild())
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
@@ -280,7 +243,7 @@ func (c *GoContainer) BuildGoImage() error {
 }
 
 func (c *GoContainer) Build() error {
-	imageTag := c.GoImage()
+	imageTag := GoImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
@@ -359,14 +322,29 @@ func (c *GoContainer) BuildScript() *buildscript.BuildScript {
 	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Verbose, nocoverage, coverageMode, c.Platforms...)
 }
 
-func NewProd(build container.Build) build.BuildStep {
-	container := New(build)
-	return GoBuild{
-		rf: func() error {
+func Matches(build container.Build) bool {
+	// Only match golang builds
+	if build.BuildType != container.GoLang {
+		return false
+	}
+
+	if from, ok := build.Custom["from"]; ok && len(from) > 0 {
+		return from[0] == "alpine"
+	}
+
+	return true
+}
+
+func NewProd() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
 			return container.Prod()
 		},
-		name:  "golang-prod",
-		async: false,
+		Name_:     "golang-prod",
+		ImagesFn:  build.StepperImages("alpine"),
+		Async_:    false,
+		MatchedFn: Matches,
 	}
 }
 

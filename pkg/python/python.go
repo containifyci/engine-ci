@@ -37,7 +37,25 @@ type PythonContainer struct {
 	ImageTag string
 }
 
-func New(build container.Build) *PythonContainer {
+// Matches implements the Build interface - Debian variant runs when from=debian
+func Matches(build container.Build) bool {
+	return build.BuildType == container.Python
+}
+
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		Name_:     "python",
+		Async_:    false,
+	}
+}
+
+func new(build container.Build) *PythonContainer {
 	return &PythonContainer{
 		App:       build.App,
 		Container: container.New(build),
@@ -46,19 +64,6 @@ func New(build container.Build) *PythonContainer {
 		ImageTag:  build.ImageTag,
 		Platform:  build.Platform,
 	}
-}
-
-func (c *PythonContainer) IsAsync() bool {
-	return false
-}
-
-func (c *PythonContainer) Name() string {
-	return "python"
-}
-
-// Matches implements the Build interface - Python only runs for python builds
-func (c *PythonContainer) Matches(build container.Build) bool {
-	return build.BuildType == container.Python
 }
 
 func CacheFolder() string {
@@ -79,8 +84,8 @@ func (c *PythonContainer) Pull() error {
 	return c.Container.Pull(BaseImage)
 }
 
-func (c *PythonContainer) Images() []string {
-	return []string{c.PythonImage(), BaseImage}
+func Images(build container.Build) []string {
+	return []string{PythonImage(build), BaseImage}
 }
 
 // TODO: provide a shorter checksum
@@ -89,14 +94,14 @@ func ComputeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func (c *PythonContainer) PythonImage() string {
+func PythonImage(build container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfile.python")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.Python", "error", err)
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "python-3.13-slim-bookworm", tag)
+	return utils.ImageURI(build.ContainifyRegistry, "python-3.13-slim-bookworm", tag)
 
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "python-3.11-slim-bookworm", tag)
 }
@@ -131,7 +136,7 @@ RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --o
 		slog.Error("Failed to render Dockerfile.Python", "error", err)
 		os.Exit(1)
 	}
-	image := c.PythonImage()
+	image := PythonImage(*c.GetBuild())
 
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
@@ -144,7 +149,7 @@ func (c *PythonContainer) Address() *network.Address {
 }
 
 func (c *PythonContainer) Build() (string, error) {
-	imageTag := c.PythonImage()
+	imageTag := PythonImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
@@ -200,32 +205,15 @@ func (c *PythonContainer) BuildScript() string {
 	return Script(NewBuildScript(c.Verbose))
 }
 
-type PythonBuild struct {
-	rf     build.RunFunc
-	name   string
-	images []string
-	async  bool
-}
-
-func (g PythonBuild) Run() error       { return g.rf() }
-func (g PythonBuild) Name() string     { return g.name }
-func (g PythonBuild) Images() []string { return g.images }
-func (g PythonBuild) IsAsync() bool    { return g.async }
-
-// Matches implements the Build interface - Python builds only run for python projects
-func (g PythonBuild) Matches(build container.Build) bool {
-	return build.BuildType == container.Python
-}
-
-func NewProd(build container.Build) build.BuildStep {
-	container := New(build)
-	return PythonBuild{
-		rf: func() error {
+func NewProd() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
 			return container.Prod()
 		},
-		name:   "python-prod",
-		images: []string{container.PythonImage()},
-		async:  false,
+		ImagesFn: Images,
+		Name_:    "python-prod",
+		Async_:   false,
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
@@ -26,28 +27,33 @@ type GithubContainer struct {
 	*container.Container
 }
 
-func New(build container.Build) *GithubContainer {
+// Matches implements the Build interface - GitHub runs for all builds
+func Matches(build container.Build) bool {
+	return true // GitHub integration runs for all builds
+}
+
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		Name_:     "github",
+		Async_:    true,
+	}
+}
+
+func new(build container.Build) *GithubContainer {
 	return &GithubContainer{
 		Container: container.New(build),
 		git:       svc.GitInfo(),
 	}
 }
 
-func (c *GithubContainer) IsAsync() bool {
-	return true
-}
-
-func (c *GithubContainer) Name() string {
-	return "github"
-}
-
-// Matches implements the Build interface - GitHub runs for all builds
-func (c *GithubContainer) Matches(build container.Build) bool {
-	return true // GitHub integration runs for all builds
-}
-
-func (c *GithubContainer) Images() []string {
-	return []string{c.Image()}
+func Images(build container.Build) []string {
+	return []string{Image(build)}
 }
 
 func (c *GithubContainer) CopyScript() error {
@@ -64,20 +70,20 @@ gh pr comment %s --repo %s --edit-last --body-file /src/trivy.md || gh pr commen
 	return err
 }
 
-func (c *GithubContainer) Image() string {
+func Image(build container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
 		os.Exit(1)
 	}
 	tag := container.ComputeChecksum(dockerFile)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "gh", tag)
+	return utils.ImageURI(build.ContainifyRegistry, "gh", tag)
 
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "gh", tag)
 }
 
 func (c *GithubContainer) BuildImage() error {
-	image := c.Image()
+	image := Image(*c.GetBuild())
 
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
@@ -93,7 +99,7 @@ func (c *GithubContainer) BuildImage() error {
 
 func (c *GithubContainer) Comment() error {
 	opts := types.ContainerConfig{}
-	opts.Image = c.Image()
+	opts.Image = Image(*c.GetBuild())
 	//FIX: this should fix the permission issue with the mounted cache folder
 	// opts.User = "root"
 

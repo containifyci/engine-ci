@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/filesystem"
@@ -25,27 +26,28 @@ type SonarcloudContainer struct {
 	*container.Container
 }
 
-func New(build container.Build) *SonarcloudContainer {
-	return &SonarcloudContainer{
-		Container: container.New(build),
-	}
-}
-
-func (c *SonarcloudContainer) IsAsync() bool {
-	return true
-}
-
-func (c *SonarcloudContainer) Name() string {
-	return "sonarcloud"
-}
-
 // Matches implements the Build interface - SonarCloud runs for all builds
-func (c *SonarcloudContainer) Matches(build container.Build) bool {
+func Matches(build container.Build) bool {
 	return true // SonarCloud analysis runs for all builds
 }
 
-func (c *SonarcloudContainer) Images() []string {
-	return []string{IMAGE}
+func New() build.BuildStepv2 {
+	return build.Stepper{
+		RunFn: func(build container.Build) error {
+			container := new(build)
+			return container.Run()
+		},
+		MatchedFn: Matches,
+		ImagesFn:  build.StepperImages(IMAGE),
+		Name_:     "sonarcloud",
+		Async_:    true,
+	}
+}
+
+func new(build container.Build) *SonarcloudContainer {
+	return &SonarcloudContainer{
+		Container: container.New(build),
+	}
 }
 
 func CacheFolder() string {
