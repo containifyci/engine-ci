@@ -8,6 +8,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/copier"
 	"github.com/containifyci/engine-ci/pkg/gcloud"
 	"github.com/containifyci/engine-ci/pkg/github"
 	"github.com/containifyci/engine-ci/pkg/golang"
@@ -144,6 +145,7 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 		addStep(build.Auth, gcloud.New())
 
 		// PreBuild: Setup, protobuf, dependencies
+		addStep(build.PreBuild, copier.New())
 		addStep(build.PreBuild, protobuf.New())
 
 		// Build: Language-specific compilation
