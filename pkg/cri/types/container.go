@@ -33,21 +33,22 @@ type ReadinessProbe struct {
 }
 
 type ContainerConfig struct {
-	ExposedPorts []Binding
-	Volumes      []Volume // List of volumes (mounts) used for the container
-	Platform     *Platform
 	Readiness    *ReadinessProbe `json:"-"`
-	Image        string          // Name of the image as it was passed by the operator (e.g., could be symbolic)
+	Secrets      map[string]string
+	Platform     *Platform
+	WorkingDir   string
+	Image        string
 	Name         string
 	Script       string
-	User         string // User that will run the command(s) inside the container, also supports user:group
-	WorkingDir   string // Current directory (PWD) in which the command will be launched
+	User         string
+	ExposedPorts []Binding
 	Cmd          []string
 	Entrypoint   []string
-	Env          []string // List of environment variable to set in the container
+	Env          []string
+	Volumes      []Volume
 	Memory       int64
 	CPU          uint64
-	Tty          bool // Attach standard streams to a tty, including stdin if it is not closed
+	Tty          bool
 }
 
 // type ContainerConfig struct {

@@ -110,6 +110,7 @@ func TestStartHttpServer(t *testing.T) {
 
 	// Test the /health endpoint
 	req := httptest.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", srv.Secret))
 	w := httptest.NewRecorder()
 	http.DefaultServeMux.ServeHTTP(w, req)
 
@@ -127,6 +128,7 @@ func TestStartHttpServer(t *testing.T) {
 	url = fmt.Sprintf("http://localhost:%d/mem/foo", srv.Port)
 
 	req = httptest.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", srv.Secret))
 	req.SetPathValue("key", "foo")
 	w = httptest.NewRecorder()
 	http.DefaultServeMux.ServeHTTP(w, req)

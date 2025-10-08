@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/containifyci/engine-ci/pkg/filesystem"
@@ -65,10 +66,10 @@ func (cg *customGCL) Defaults() {
 	}
 }
 
-func (c GolangCiLint) Command(tags string) string {
+func (c GolangCiLint) Command(tags string, folder string) string {
 	cmd := fmt.Sprintf("golangci-lint -v run %s --timeout=5m", tags)
-	if c.reader.FileExists(".custom-gcl.yml") {
-		cnt, err := c.reader.ReadFile(".custom-gcl.yml")
+	if c.reader.FileExists(filepath.Join(folder, ".custom-gcl.yml")) {
+		cnt, err := c.reader.ReadFile(filepath.Join(folder, ".custom-gcl.yml"))
 		if err != nil {
 			slog.Error("Failed to read .custom-gcl.yml file", "error", err)
 			os.Exit(1)
@@ -88,13 +89,13 @@ func (c GolangCiLint) Command(tags string) string {
 	return cmd
 }
 
-func (c GolangCiLint) LintScript(tags []string) string {
+func (c GolangCiLint) LintScript(tags []string, folder string) string {
 	_tags := ""
 	if len(tags) > 0 {
 		_tags = "--build-tags " + strings.Join(tags, ",")
 	}
 
-	cmd := c.Command(_tags)
+	cmd := c.Command(_tags, folder)
 	//TODO: add suport for custom-gcl in the future
 	script := fmt.Sprintf(`#!/bin/sh
 set -x

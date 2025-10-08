@@ -1,14 +1,51 @@
 package python
 
-type Image string
+import (
+	"fmt"
+	"strings"
 
-type BuildScript struct {
-	Verbose bool
+	"github.com/containifyci/engine-ci/pkg/container"
+)
+
+type Image string
+type PrivateIndex string
+
+func NewPrivateIndex(custom container.Custom) PrivateIndex {
+	pi := custom.String("private_index")
+	return PrivateIndex(pi)
 }
 
-func NewBuildScript(verbose bool) *BuildScript {
+func (pi PrivateIndex) String() string {
+	return strings.ReplaceAll(strings.ToUpper(string(pi)), "-", "_")
+}
+
+func (pi PrivateIndex) Username() string {
+	if pi == "" {
+		return ""
+	}
+	return fmt.Sprintf("UV_INDEX_%s_USERNAME=oauth2accesstoken", pi.String())
+}
+
+func (pi PrivateIndex) Environ() string {
+	if pi == "" {
+		return ""
+	}
+	return fmt.Sprintf("export UV_INDEX_%s_PASSWORD=\"$(curl -fsS -H \"Authorization: Bearer ${CONTAINIFYCI_AUTH}\" \"${CONTAINIFYCI_HOST}/mem/accesstoken\")\"", pi.String())
+}
+
+type BuildScript struct {
+	Folder       string
+	PrivateIndex PrivateIndex
+	Commands     Commands
+	Verbose      bool
+}
+
+func NewBuildScript(folder string, verbose bool, privateIndex PrivateIndex, commands Commands) *BuildScript {
 	return &BuildScript{
-		Verbose: verbose,
+		Folder:       folder,
+		Verbose:      verbose,
+		Commands:     commands,
+		PrivateIndex: privateIndex,
 	}
 }
 
@@ -20,23 +57,23 @@ func Script(bs *BuildScript) string {
 }
 
 func simpleScript(bs *BuildScript) string {
-	return `#!/bin/sh
+	cmd := bs.Commands.String()
+	return fmt.Sprintf(`#!/bin/sh
+set -e
+%s
 set -xe
-#pip3 --disable-pip-version-check install -r requirements.txt --no-compile --no-warn-script-location
-uv pip install -r requirements.txt  --system
-#pip install  -r requirements.txt
-# coverage run -m pytest && coverage xml
-#chmod 0755 -R /root/.cache/pip
-`
+cd %s
+%s
+`, bs.PrivateIndex.Environ(), bs.Folder, cmd)
 }
 
 func verboseScript(bs *BuildScript) string {
-	return `#!/bin/sh
+	cmd := bs.Commands.String()
+	return fmt.Sprintf(`#!/bin/sh
+set -e
+%s
 set -xe
-#pip3 --disable-pip-version-check install -r requirements.txt --no-compile --no-warn-script-location
-uv pip install -r requirements.txt --system
-#pip install -r requirements.txt
-# coverage run -m pytest && coverage xml
-#chmod 0755 -R /root/.cache/pip
-`
+cd %s
+%s
+`, bs.PrivateIndex.Environ(), bs.Folder, cmd)
 }

@@ -70,9 +70,9 @@ func (e *EnvType) Type() string {
 
 type Container struct {
 	t
-	Source fs.ReadDirFS
-	Build  *Build
-	// concurrentManager *ConcurrentContainerManager
+	Source  fs.ReadDirFS
+	Build   *Build
+	Secret  map[string]string
 	Env     EnvType
 	Prefix  string
 	Image   string
@@ -108,7 +108,7 @@ func New(build Build) *Container {
 
 	// Use background context with reasonable timeout instead of TODO
 	ctx := context.Background()
-	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Verbose: build.Verbose}
+	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Secret: build.Secret, Verbose: build.Verbose}
 
 	return container
 }

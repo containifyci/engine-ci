@@ -8,7 +8,7 @@ import (
 
 func TestCopyLintScript(t *testing.T) {
 	gcl := NewGolangCiLint()
-	script := gcl.LintScript([]string{"build_tag"})
+	script := gcl.LintScript([]string{"build_tag"}, ".")
 
 	assert.Equal(t, `#!/bin/sh
 set -x
@@ -30,7 +30,7 @@ func TestCopyLintScriptGCL(t *testing.T) {
 			},
 		},
 	}
-	script := gcl.LintScript([]string{"build_tag"})
+	script := gcl.LintScript([]string{"build_tag"}, ".")
 
 	assert.Equal(t, `#!/bin/sh
 set -x

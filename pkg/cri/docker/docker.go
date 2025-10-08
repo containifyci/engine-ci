@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -93,6 +94,16 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 	hostConfig := &container.HostConfig{
 		Mounts:       ToMounts(opts.Volumes),
 		PortBindings: portMap,
+	}
+
+	//There is no easy secret management for docker containers similar to podman
+	if len(opts.Secrets) > 0 {
+		if len(config.Env) == 0 {
+			config.Env = []string{}
+		}
+		for k, v := range opts.Secrets {
+			config.Env = append(config.Env, fmt.Sprintf("%s=%s", k, v))
+		}
 	}
 
 	netConfig := &network.NetworkingConfig{}

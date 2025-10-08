@@ -15,6 +15,7 @@ var RuntimeOS = runtime.GOOS
 type Address struct {
 	Host         string
 	InternalHost string
+	Secret       string
 	Port         int
 }
 

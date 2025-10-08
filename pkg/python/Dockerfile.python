@@ -3,13 +3,13 @@ ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
 RUN apt-get update && \
-    apt-get install -y gcc python3-dev libpq-dev && \
+    apt-get install -y gcc python3-dev libpq-dev curl && \
     apt-get clean autoclean && \
     apt-get autoremove --yes && \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
 
 # RUN pip3 --no-cache install uv
 # RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --only-binary=:all: --target ./ uv
-{{ .INSTALL_UV }}
+{{ .INSTALL_BUILD_TOOLS }}
 
 WORKDIR /app

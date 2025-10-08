@@ -26,6 +26,7 @@ import (
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/bindings/manifests"
+	"github.com/containers/podman/v5/pkg/bindings/secrets"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/docker/docker/api/types/container"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
@@ -103,6 +104,15 @@ func (d *PodmanManager) Name() string {
 	return "podman"
 }
 
+func (p *PodmanManager) ensureSecret(ctx context.Context, name, value string) error {
+	// Create/replace from an in-memory reader
+	r := strings.NewReader(value)
+	_, err := secrets.Create(p.conn, r, new(secrets.CreateOptions).
+		WithName(name).
+		WithReplace(true)) // or WithIgnore(true) on newer releases
+	return err
+}
+
 // CreateContainer creates a container
 func (p *PodmanManager) CreateContainer(ctx context.Context, opts *types.ContainerConfig, authBase64 string) (string, error) {
 	s := specgen.NewSpecGenerator(opts.Image, false)
@@ -137,6 +147,16 @@ func (p *PodmanManager) CreateContainer(ctx context.Context, opts *types.Contain
 			envs[k] = v
 		}
 		s.Env = envs
+	}
+	if len(opts.Secrets) > 0 {
+		s.EnvSecrets = map[string]string{}
+		for k, v := range opts.Secrets {
+			s.EnvSecrets[k] = k
+			err := p.ensureSecret(ctx, k, v)
+			if err != nil {
+				return "", fmt.Errorf("failed to ensure secret %s: %w", k, err)
+			}
+		}
 	}
 	s.Name = opts.Name
 	s.User = opts.User
@@ -576,7 +596,7 @@ func (p *PodmanManager) InspectContainer(ctx context.Context, id string) (*types
 		Entrypoint:   meta.Config.Entrypoint,
 		Env:          meta.Config.Env,
 		ExposedPorts: ports,
-		Image:        meta.Image,
+		Image:        meta.ImageName,
 		Name:         meta.Name,
 		Platform:     platform,
 		Tty:          meta.Config.Tty,

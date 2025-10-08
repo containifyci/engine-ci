@@ -164,7 +164,7 @@ func (c *GoContainer) Lint() error {
 		os.Exit(1)
 	}
 
-	script := NewGolangCiLint().LintScript(c.Tags)
+	script := NewGolangCiLint().LintScript(c.Tags, c.Folder)
 	err = c.CopyContentTo(script, "/tmp/script.sh")
 	if err != nil {
 		slog.Error("Failed to start container", "error", err)

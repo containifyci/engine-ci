@@ -1,10 +1,12 @@
 package kv
 
 import (
+	"crypto/rand"
+	"crypto/subtle"
 	"fmt"
 	"io"
 	"log/slog"
-	"math/rand"
+	"math/big"
 	"net"
 	"net/http"
 	"strings"
@@ -13,6 +15,7 @@ import (
 
 type Server struct {
 	Listener net.Listener
+	Secret   string
 	Port     int
 }
 
@@ -89,7 +92,11 @@ func (kv *KeyValueStore) Set(w http.ResponseWriter, r *http.Request) {
 func getRandomPort() (*Server, error) {
 	//TODO define maximal retries
 	for {
-		port := rand.Intn(65535-1024) + 1024 // Random port between 1024 and 65535
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(65535-1024)))
+		if err != nil {
+			panic(fmt.Sprintf("crypto/rand failed: %v", err))
+		}
+		port := int(num.Int64()) + 1024
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err == nil {
 			return &Server{
@@ -100,6 +107,23 @@ func getRandomPort() (*Server, error) {
 	}
 }
 
+func authMiddleware(secret []byte, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got := r.Header.Get("Authorization")
+		const prefix = "Bearer "
+		if len(got) < len(prefix) || got[:len(prefix)] != prefix {
+			http.Error(w, "missing auth", http.StatusUnauthorized)
+			return
+		}
+		token := []byte(got[len(prefix):])
+		if subtle.ConstantTimeCompare(token, secret) != 1 {
+			http.Error(w, "invalid auth", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func StartHttpServer(kvStore *KeyValueStore) (*Server, func(), error) {
 	srv, err := getRandomPort()
 	if err != nil {
@@ -108,7 +132,6 @@ func StartHttpServer(kvStore *KeyValueStore) (*Server, func(), error) {
 	}
 
 	handler := http.NewServeMux()
-	http.DefaultServeMux = handler
 
 	handler.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "okay")
@@ -117,11 +140,30 @@ func StartHttpServer(kvStore *KeyValueStore) (*Server, func(), error) {
 	handler.Handle("GET /mem/{key}", http.HandlerFunc(kvStore.Get))
 	handler.Handle("POST /mem/{key}", http.HandlerFunc(kvStore.Set))
 
+	handler2 := http.NewServeMux()
+	srv.Secret = randomString(32)
+	handler2.Handle("/", authMiddleware([]byte(srv.Secret), handler))
+
+	http.DefaultServeMux = handler2
+
 	return srv, func() {
-		if err := http.Serve(srv.Listener, handler); err != nil &&
+		if err := http.Serve(srv.Listener, nil); err != nil &&
 			!strings.HasSuffix(err.Error(), "use of closed network connection") {
 			slog.Error("Failed to start http server", "error", err)
 		}
 	}, nil
 
+}
+
+func randomString(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, n)
+	for i := range b {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			panic(fmt.Sprintf("crypto/rand failed: %v", err))
+		}
+		b[i] = letters[num.Int64()]
+	}
+	return string(b)
 }
