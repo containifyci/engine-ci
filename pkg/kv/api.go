@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"crypto/rand"
 	"crypto/subtle"
 	"fmt"
 	"io"
@@ -91,7 +92,11 @@ func (kv *KeyValueStore) Set(w http.ResponseWriter, r *http.Request) {
 func getRandomPort() (*Server, error) {
 	//TODO define maximal retries
 	for {
-		port := rand.Intn(65535-1024) + 1024 // Random port between 1024 and 65535
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(65535-1024)))
+		if err != nil {
+			panic(fmt.Sprintf("crypto/rand failed: %v", err))
+		}
+		port := int(num.Int64()) + 1024
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err == nil {
 			return &Server{
