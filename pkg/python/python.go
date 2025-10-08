@@ -217,7 +217,11 @@ func (c *PythonContainer) BuildScript() string {
 	// Create a temporary script in-memory
 
 	builder := NewBuilder(c.Folder)
-	builder.Analyze()
+	_, err := builder.Analyze()
+	if err != nil {
+		slog.Error("Failed to analyze python project", "error", err)
+		os.Exit(1)
+	}
 	cmds, err := builder.Build()
 	if err != nil {
 		slog.Error("Failed to build python commands", "error", err)

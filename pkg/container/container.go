@@ -70,9 +70,9 @@ func (e *EnvType) Type() string {
 
 type Container struct {
 	t
-	Source fs.ReadDirFS
-	Build  *Build
-	// concurrentManager *ConcurrentContainerManager
+	Source  fs.ReadDirFS
+	Build   *Build
+	Secret  map[string]string
 	Env     EnvType
 	Prefix  string
 	Image   string
@@ -80,9 +80,6 @@ type Container struct {
 	ID      string
 	Opts    types.ContainerConfig
 	Verbose bool
-
-	//TODO suppress in log output
-	Secret map[string]string
 }
 
 type PushOption struct {

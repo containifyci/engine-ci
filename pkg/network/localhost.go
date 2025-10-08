@@ -15,8 +15,8 @@ var RuntimeOS = runtime.GOOS
 type Address struct {
 	Host         string
 	InternalHost string
-	Port         int
 	Secret       string
+	Port         int
 }
 
 func (a *Address) NewAddress(arg *container.Build) {

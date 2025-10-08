@@ -69,8 +69,8 @@ func TestMatches_EmptyFolder(t *testing.T) {
 func TestExtractTemplateData(t *testing.T) {
 	tests := []struct {
 		custom   map[string][]string
-		expected []string
 		name     string
+		expected []string
 	}{
 		{
 			name: "all parameters provided",

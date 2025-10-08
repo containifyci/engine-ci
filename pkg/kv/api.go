@@ -14,8 +14,8 @@ import (
 
 type Server struct {
 	Listener net.Listener
-	Port     int
 	Secret   string
+	Port     int
 }
 
 // In-memory key-value store

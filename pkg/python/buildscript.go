@@ -35,9 +35,9 @@ func (pi PrivateIndex) Environ() string {
 
 type BuildScript struct {
 	Folder       string
-	Verbose      bool
-	Commands     Commands
 	PrivateIndex PrivateIndex
+	Commands     Commands
+	Verbose      bool
 }
 
 func NewBuildScript(folder string, verbose bool, privateIndex PrivateIndex, commands Commands) *BuildScript {

@@ -21,8 +21,8 @@ type CopierContainer struct {
 	Build        *container.Build
 	SourceFolder string
 	TargetFolder string
-	TemplateData []string
 	TemplatePath string
+	TemplateData []string
 }
 
 func New() build.BuildStepv2 {

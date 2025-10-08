@@ -152,7 +152,10 @@ func (p *PodmanManager) CreateContainer(ctx context.Context, opts *types.Contain
 		s.EnvSecrets = map[string]string{}
 		for k, v := range opts.Secrets {
 			s.EnvSecrets[k] = k
-			p.ensureSecret(ctx, k, v)
+			err := p.ensureSecret(ctx, k, v)
+			if err != nil {
+				return "", fmt.Errorf("failed to ensure secret %s: %w", k, err)
+			}
 		}
 	}
 	s.Name = opts.Name

@@ -97,26 +97,24 @@ type Build struct {
 	Custom             Custom
 	Registries         map[string]*protos2.ContainerRegistry
 	ContainerFiles     map[string]*protos2.ContainerFile
-	Registry           string
-	File               string
-	App                string `json:"app"`
+	Secret             map[string]string
+	ContainifyRegistry string
+	Runtime            utils.RuntimeType
 	Image              string `json:"image"`
 	ImageTag           string `json:"image_tag"`
-	ContainifyRegistry string
+	File               string
 	Env                EnvType
 	Folder             string
 	Repository         string
 	Organization       string
-	Runtime            utils.RuntimeType
+	App                string    `json:"app"`
 	BuildType          BuildType `json:"build_type"`
-	BuilderFunction    string    // Name of the client build function to use (e.g., "NewGoServiceBuild")
-	SourceFiles        []string
+	BuilderFunction    string
+	Registry           string
 	SourcePackages     []string
+	SourceFiles        []string
 	Verbose            bool
 	defaults           bool
-
-	// Internal fields not exposed via CLI or API
-	Secret map[string]string
 }
 
 type BuildGroup struct {
