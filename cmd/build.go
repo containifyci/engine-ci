@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"slices"
 	"strings"
 
@@ -179,25 +178,6 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 	return a, bs
 }
 
-// func RunBuild(_ *cobra.Command, _ []string) {
-// 	fmt.Println("build called2")
-// 	_, bs := Pre(buildArgs)
-// 	err := bs.Run()
-// 	if err != nil {
-// 		slog.Error("Failed to build", "error", err)
-// 		os.Exit(1)
-// 	}
-// }
-
-func (c *Command) RunBuild() {
-	a, bs := c.Pre()
-	err := bs.Run(a)
-	if err != nil {
-		slog.Error("Failed to build", "error", err)
-		os.Exit(1)
-	}
-}
-
 type Command struct {
 	targets    map[string]func() error
 	buildArgs  *container.Build
@@ -231,7 +211,7 @@ func Start() (func(), network.Address, error) {
 	}
 	go fnc()
 	slog.Info("Started http server", "address", srv.Listener.Addr().String())
-	addr := network.Address{Host: "localhost", Port: srv.Port}
+	addr := network.Address{Host: "localhost", Port: srv.Port, Secret: srv.Secret}
 	return func() {
 		slog.Info("Stopping http server")
 		_ = srv.Listener.Close()
@@ -243,6 +223,7 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 		arg.Custom = make(map[string][]string)
 	}
 	arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), addr.Port)}
+	arg.Secret = map[string]string{"CONTAINIFYCI_AUTH": addr.Secret}
 	_, bs := Pre(arg, c.buildSteps)
 	switch arg.BuildType {
 	case container.GoLang:
@@ -280,9 +261,7 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 		})
 	}
 	c.AddTarget("all", func() error {
-		// return All(arg)
-		c.RunBuild()
-		return nil
+		return bs.Run(arg)
 	})
 	c.AddTarget("sonar", func() error {
 		return bs.Run(arg, "sonarcloud")

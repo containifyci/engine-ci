@@ -48,6 +48,8 @@ type ContainerConfig struct {
 	Memory       int64
 	CPU          uint64
 	Tty          bool // Attach standard streams to a tty, including stdin if it is not closed
+
+	Secrets map[string]string
 }
 
 // type ContainerConfig struct {

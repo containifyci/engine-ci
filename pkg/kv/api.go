@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"io"
 	"log/slog"
@@ -14,6 +15,7 @@ import (
 type Server struct {
 	Listener net.Listener
 	Port     int
+	Secret   string
 }
 
 // In-memory key-value store
@@ -100,6 +102,23 @@ func getRandomPort() (*Server, error) {
 	}
 }
 
+func authMiddleware(secret []byte, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got := r.Header.Get("Authorization")
+		const prefix = "Bearer "
+		if len(got) < len(prefix) || got[:len(prefix)] != prefix {
+			http.Error(w, "missing auth", http.StatusUnauthorized)
+			return
+		}
+		token := []byte(got[len(prefix):])
+		if subtle.ConstantTimeCompare(token, secret) != 1 {
+			http.Error(w, "invalid auth", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func StartHttpServer(kvStore *KeyValueStore) (*Server, func(), error) {
 	srv, err := getRandomPort()
 	if err != nil {
@@ -108,7 +127,6 @@ func StartHttpServer(kvStore *KeyValueStore) (*Server, func(), error) {
 	}
 
 	handler := http.NewServeMux()
-	http.DefaultServeMux = handler
 
 	handler.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "okay")
@@ -117,11 +135,26 @@ func StartHttpServer(kvStore *KeyValueStore) (*Server, func(), error) {
 	handler.Handle("GET /mem/{key}", http.HandlerFunc(kvStore.Get))
 	handler.Handle("POST /mem/{key}", http.HandlerFunc(kvStore.Set))
 
+	handler2 := http.NewServeMux()
+	srv.Secret = randomString(32)
+	handler2.Handle("/", authMiddleware([]byte(srv.Secret), handler))
+
+	http.DefaultServeMux = handler2
+
 	return srv, func() {
-		if err := http.Serve(srv.Listener, handler); err != nil &&
+		if err := http.Serve(srv.Listener, nil); err != nil &&
 			!strings.HasSuffix(err.Error(), "use of closed network connection") {
 			slog.Error("Failed to start http server", "error", err)
 		}
 	}, nil
 
+}
+
+func randomString(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }

@@ -16,6 +16,7 @@ type Address struct {
 	Host         string
 	InternalHost string
 	Port         int
+	Secret       string
 }
 
 func (a *Address) NewAddress(arg *container.Build) {

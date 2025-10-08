@@ -30,11 +30,13 @@ var f embed.FS
 type PythonContainer struct {
 	Platform types.Platform
 	*container.Container
-	App      string
-	File     string
-	Folder   string
-	Image    string
-	ImageTag string
+	App          string
+	File         string
+	Folder       string
+	Image        string
+	ImageTag     string
+	Secret       map[string]string
+	PrivateIndex PrivateIndex
 }
 
 // Matches implements the Build interface - Debian variant runs when from=debian
@@ -57,12 +59,14 @@ func New() build.BuildStepv2 {
 
 func new(build container.Build) *PythonContainer {
 	return &PythonContainer{
-		App:       build.App,
-		Container: container.New(build),
-		Image:     build.Image,
-		Folder:    build.Folder,
-		ImageTag:  build.ImageTag,
-		Platform:  build.Platform,
+		App:          build.App,
+		Container:    container.New(build),
+		Image:        build.Image,
+		Folder:       build.Folder,
+		ImageTag:     build.ImageTag,
+		Platform:     build.Platform,
+		Secret:       build.Secret,
+		PrivateIndex: NewPrivateIndex(build.Custom),
 	}
 }
 
@@ -120,18 +124,19 @@ func (c *PythonContainer) BuildPythonImage() error {
 
 	var buf bytes.Buffer
 
-	installUv := "RUN pip3 --no-cache install uv"
+	installUv := "RUN pip3 --no-cache install uv poetry"
 
 	// Podman can't run uv installed with x86_64.manylinux packages
 	if c.GetBuild().Runtime == utils.Podman {
 		installUv = `
 RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --only-binary=:all: --target /tmp/uv uv && \
+	pip3 --no-cache install poetry && \
 	mv /tmp/uv/bin/uv /usr/local/bin && \
 	rm -rf /tmp/uv
 `
 	}
 
-	err = tmpl.Execute(&buf, map[string]string{"INSTALL_UV": installUv})
+	err = tmpl.Execute(&buf, map[string]string{"INSTALL_BUILD_TOOLS": installUv})
 	if err != nil {
 		slog.Error("Failed to render Dockerfile.Python", "error", err)
 		os.Exit(1)
@@ -162,9 +167,12 @@ func (c *PythonContainer) Build() (string, error) {
 	opts.Env = append(opts.Env, []string{
 		"_PIP_USE_IMPORTLIB_METADATA=0",
 		"UV_CACHE_DIR=/root/.cache/pip",
+		//TODO this env var should be set in the CI/CD environment because the name of the secret may vary the DATA_UTILS is the name of the dependency
+		c.PrivateIndex.Username(),
 	}...)
 
 	opts.Platform = types.AutoPlatform
+	opts.Secrets = c.Secret
 	opts.WorkingDir = "/src"
 
 	dir, _ := filepath.Abs(".")
@@ -191,6 +199,11 @@ func (c *PythonContainer) Build() (string, error) {
 		os.Exit(1)
 	}
 
+	if c.Image == "" {
+		slog.Debug("No image name provided, skipping commit")
+		return "", nil
+	}
+
 	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"python\", \"/src/main.py\"]") /*, "USER worker")*/
 	if err != nil {
 		slog.Error("Failed to commit container: %s", "error", err)
@@ -202,7 +215,15 @@ func (c *PythonContainer) Build() (string, error) {
 
 func (c *PythonContainer) BuildScript() string {
 	// Create a temporary script in-memory
-	return Script(NewBuildScript(c.Verbose))
+
+	builder := NewBuilder(c.Folder)
+	builder.Analyze()
+	cmds, err := builder.Build()
+	if err != nil {
+		slog.Error("Failed to build python commands", "error", err)
+		os.Exit(1)
+	}
+	return Script(NewBuildScript(c.Folder, c.Verbose, c.PrivateIndex, cmds))
 }
 
 func NewProd() build.BuildStepv2 {
@@ -224,6 +245,8 @@ func (c *PythonContainer) Prod() error {
 	opts.Platform = types.AutoPlatform
 	opts.Cmd = []string{"sleep", "300"}
 	// opts.User = "185"
+
+	opts.Secrets = c.Secret
 
 	err := c.Create(opts)
 	if err != nil {
@@ -289,6 +312,11 @@ func (c *PythonContainer) Run() error {
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
 		return err
+	}
+
+	if c.Image == "" {
+		slog.Debug("No image name provided, skipping tagging")
+		return nil
 	}
 
 	err = c.Tag(imageID, fmt.Sprintf("%s:%s", c.Image, c.ImageTag))

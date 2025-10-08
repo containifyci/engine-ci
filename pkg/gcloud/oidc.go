@@ -121,6 +121,7 @@ func (c *GCloudContainer) Auth() error {
 	}
 
 	opts.Env = []string{}
+	opts.Secrets = c.Secret
 
 	googleADC := u.GetEnvWithDefault("GOOGLE_APPLICATION_CREDENTIALS", func() string {
 		//TODO support multiple os (its only for macos)
@@ -191,7 +192,7 @@ func Image(build *container.Build) string {
 }
 
 func (c *GCloudContainer) Run() error {
-	if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" ||
+	if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" &&
 		c.GetBuild().CustomString("gcloud_oidc") == "" {
 		slog.Info("No ACTIONS_ID_TOKEN_REQUEST_URL found and Custom property gcloud_oidc not set, skipping gcloud_oidc container", "ACTIONS_ID_TOKEN_REQUEST_URL", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), "gcloud_oidc", c.GetBuild().CustomString("gcloud_oidc"))
 		return nil

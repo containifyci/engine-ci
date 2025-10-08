@@ -44,14 +44,22 @@ func setValue(key, value string) error {
 
 	fmt.Printf("Store in mem %s", url)
 
-	resp, err := http.Post(url, "text/plain", bytes.NewBuffer([]byte(value)))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer([]byte(value)))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("CONTAINIFYCI_AUTH"))
 	if err != nil {
-		slog.Error("error post request", "error", err)
+		fmt.Println("error create request", "error", err)
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Println("error post request", "error", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		fmt.Println("failed to set key-value pair", "error", err, resp.Status)
 		return fmt.Errorf("failed to set key-value pair: %s", resp.Status)
 	}
 

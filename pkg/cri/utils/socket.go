@@ -44,6 +44,9 @@ func PodmanSocket() (*ContainerSocket, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get podman socket info: %w", err)
 	}
+	if strings.HasPrefix(string(cmd), "unix://") {
+		cmd = cmd[7:]
+	}
 	podmanSocket := strings.TrimSpace(string(cmd))
 	return &ContainerSocket{
 		RuntimeType: Podman,

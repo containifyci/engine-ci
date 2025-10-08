@@ -114,6 +114,9 @@ type Build struct {
 	SourcePackages     []string
 	Verbose            bool
 	defaults           bool
+
+	// Internal fields not exposed via CLI or API
+	Secret map[string]string
 }
 
 type BuildGroup struct {

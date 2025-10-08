@@ -80,6 +80,9 @@ type Container struct {
 	ID      string
 	Opts    types.ContainerConfig
 	Verbose bool
+
+	//TODO suppress in log output
+	Secret map[string]string
 }
 
 type PushOption struct {
@@ -108,7 +111,7 @@ func New(build Build) *Container {
 
 	// Use background context with reasonable timeout instead of TODO
 	ctx := context.Background()
-	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Verbose: build.Verbose}
+	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Secret: build.Secret, Verbose: build.Verbose}
 
 	return container
 }
