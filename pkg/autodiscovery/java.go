@@ -13,53 +13,6 @@ import (
 	"github.com/containifyci/engine-ci/protos2"
 )
 
-// // JavaProject represents a discovered Java/Maven project
-// type JavaProject struct {
-// 	ProjectRoot   string
-// 	AppName       string
-// 	ConfigFile    string
-// 	ConfigType    string
-// 	PackagingType string
-// 	GroupId       string
-// 	ArtifactId    string
-// 	Version       string
-// 	MainClass     string
-// 	SourceFiles   []string
-// 	IsService     bool
-// }
-
-// // Implement Project interface methods
-// func (p JavaProject) GetAppName() string {
-// 	return p.AppName
-// }
-
-// func (p JavaProject) GetModulePath() string {
-// 	return p.ProjectRoot
-// }
-
-// func (p JavaProject) IsServiceProject() bool {
-// 	return p.IsService
-// }
-
-// func (p JavaProject) GetProjectType() ProjectType {
-// 	return ProjectTypeJava
-// }
-
-// func (p JavaProject) GetSourceFiles() []string {
-// 	return p.SourceFiles
-// }
-
-// func (p JavaProject) BuilderFunction() string {
-// 	if p.IsService {
-// 		return "NewMavenServiceBuild"
-// 	}
-// 	return "NewMavenLibraryBuild"
-// }
-
-// func (p JavaProject) ToBuild() container.Build {
-// 	return JavaProjectToBuild(p)
-// }
-
 // DiscoverJavaProjects scans the given root directory recursively for Java projects
 func DiscoverJavaProjects(rootDir string) ([]Project, error) {
 	var projects []Project
@@ -192,40 +145,13 @@ func parsePomXml(project *Project, pomFile string) error {
 			continue
 		}
 
-		// // Extract tag content (basic approach)
-		// if strings.HasPrefix(line, "<groupId>") && strings.HasSuffix(line, "</groupId>") {
-		// 	content := extractXmlContent(line, "groupId")
-		// 	if content != "" && project.GroupId == "" {
-		// 		project.GroupId = content
-		// 	}
-		// }
-
 		if strings.HasPrefix(line, "<artifactId>") && strings.HasSuffix(line, "</artifactId>") {
 			content := extractXmlContent(line, "artifactId")
 			if content != "" {
 				project.AppName = content
 			}
 		}
-
-		// if strings.HasPrefix(line, "<version>") && strings.HasSuffix(line, "</version>") {
-		// 	content := extractXmlContent(line, "version")
-		// 	if content != "" && project.Version == "" {
-		// 		project.Version = content
-		// 	}
-		// }
-
-		// if strings.HasPrefix(line, "<packaging>") && strings.HasSuffix(line, "</packaging>") {
-		// 	content := extractXmlContent(line, "packaging")
-		// 	if content != "" {
-		// 		project.PackagingType = content
-		// 	}
-		// }
 	}
-
-	// // Default packaging type for Maven is jar
-	// if project.PackagingType == "" {
-	// 	project.PackagingType = "jar"
-	// }
 
 	return scanner.Err()
 }
@@ -241,36 +167,18 @@ func parseBuildGradle(project *Project, gradleFile string) error {
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-		// line := strings.TrimSpace(scanner.Text())
+		line := strings.TrimSpace(scanner.Text())
 
-		// // Look for version assignment
-		// if strings.HasPrefix(line, "version") && strings.Contains(line, "=") {
-		// 	if idx := strings.Index(line, "="); idx != -1 {
-		// 		version := strings.TrimSpace(line[idx+1:])
-		// 		version = strings.Trim(version, `"'`)
-		// 		if version != "" {
-		// 			project.Version = version
-		// 		}
-		// 	}
-		// }
-
-		// // Look for war plugin (highest priority) - either "id 'war'" or "war" with "plugin"
-		// if strings.Contains(line, "war") && (strings.Contains(line, "plugin") || strings.Contains(line, "id")) {
-		// 	project.PackagingType = "war"
-		// }
-
-		// // Look for application plugin (indicates it's a service)
-		// if strings.Contains(line, "application") && (strings.Contains(line, "plugin") || strings.Contains(line, "apply") || strings.Contains(line, "id")) {
-		// 	if project.PackagingType == "" {
-		// 		project.PackagingType = "jar"
-		// 	}
-		// }
+		// Look for rootProject.name or project.name
+		if strings.HasPrefix(line, "rootProject.name") || strings.HasPrefix(line, "project.name") {
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 {
+				name := strings.TrimSpace(parts[1])
+				name = strings.Trim(name, `"'`)
+				project.AppName = name
+			}
+		}
 	}
-
-	// // Default packaging type for Gradle is jar
-	// if project.PackagingType == "" {
-	// 	project.PackagingType = "jar"
-	// }
 
 	return scanner.Err()
 }

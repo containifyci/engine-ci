@@ -24,27 +24,6 @@ type Project struct {
 	BuildType   protos2.BuildType
 }
 
-// // Implement Project interface methods
-// func (p GoProject) GetAppName() string {
-// 	return p.AppName
-// }
-
-// func (p GoProject) GetModulePath() string {
-// 	return p.ModulePath
-// }
-
-// func (p GoProject) IsServiceProject() bool {
-// 	return p.IsService
-// }
-
-// func (p GoProject) GetProjectType() ProjectType {
-// 	return ProjectTypeGo
-// }
-
-// func (p GoProject) GetSourceFiles() []string {
-// 	return p.SourceFiles
-// }
-
 func (p Project) BuilderFunction() string {
 	switch p.BuildType {
 	case protos2.BuildType_GoLang:
@@ -66,10 +45,6 @@ func (p Project) BuilderFunction() string {
 		panic("unknown build type")
 	}
 }
-
-// func (p GoProject) ToBuild() container.Build {
-// 	return GoProjectToBuild(p)
-// }
 
 // DiscoverGoProjects scans the given root directory recursively for Go projects
 func DiscoverGoProjects(rootDir string) ([]Project, error) {
