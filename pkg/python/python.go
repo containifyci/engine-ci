@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	BaseImage     = "python:3.13-slim-bookworm"
+	BaseImage     = "python:3.14-slim-bookworm"
 	CacheLocation = "/root/.cache/pip"
 )
 
@@ -105,7 +105,7 @@ func PythonImage(build container.Build) string {
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(build.ContainifyRegistry, "python-3.13-slim-bookworm", tag)
+	return utils.ImageURI(build.ContainifyRegistry, "python-3.14-slim-bookworm", tag)
 
 	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "python-3.11-slim-bookworm", tag)
 }
@@ -125,16 +125,6 @@ func (c *PythonContainer) BuildPythonImage() error {
 	var buf bytes.Buffer
 
 	installUv := "RUN pip3 --no-cache install uv poetry"
-
-	// Podman can't run uv installed with x86_64.manylinux packages
-	if c.GetBuild().Runtime == utils.Podman {
-		installUv = `
-RUN pip3 install --force-reinstall --platform musllinux_1_1_x86_64 --upgrade --only-binary=:all: --target /tmp/uv uv && \
-	pip3 --no-cache install poetry && \
-	mv /tmp/uv/bin/uv /usr/local/bin && \
-	rm -rf /tmp/uv
-`
-	}
 
 	err = tmpl.Execute(&buf, map[string]string{"INSTALL_BUILD_TOOLS": installUv})
 	if err != nil {
@@ -167,9 +157,12 @@ func (c *PythonContainer) Build() (string, error) {
 	opts.Env = append(opts.Env, []string{
 		"_PIP_USE_IMPORTLIB_METADATA=0",
 		"UV_CACHE_DIR=/root/.cache/pip",
-		//TODO this env var should be set in the CI/CD environment because the name of the secret may vary the DATA_UTILS is the name of the dependency
-		c.PrivateIndex.Username(),
 	}...)
+
+	//TODO this env var should be set in the CI/CD environment because the name of the secret may vary the DATA_UTILS is the name of the dependency
+	if c.PrivateIndex.Username() != "" {
+		opts.Env = append(opts.Env, c.PrivateIndex.Username())
+	}
 
 	opts.Platform = types.AutoPlatform
 	opts.Secrets = c.Secret
