@@ -11,61 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParsePyprojectToml(t *testing.T) {
-	tests := []struct {
-		name        string
-		content     string
-		expectedApp string
-		expectedPkg string
-	}{
-		{
-			name: "basic pyproject.toml",
-			content: `[project]
-name = "myapp"
-version = "1.0.0"
-description = "My Python app"
-
-[build-system]
-requires = ["poetry-core"]`,
-			expectedApp: "myapp",
-			expectedPkg: "myapp",
-		},
-		{
-			name: "pyproject.toml with single quotes",
-			content: `[project]
-name = 'my-python-app'
-version = '2.1.0'`,
-			expectedApp: "my-python-app",
-			expectedPkg: "my-python-app",
-		},
-		{
-			name: "pyproject.toml without project section",
-			content: `[build-system]
-requires = ["setuptools", "wheel"]`,
-			expectedApp: "",
-			expectedPkg: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := os.CreateTemp("", "pyproject.toml")
-			require.NoError(t, err)
-			defer os.Remove(tmpFile.Name())
-
-			_, err = tmpFile.WriteString(tt.content)
-			require.NoError(t, err)
-			tmpFile.Close()
-
-			project := &Project{}
-			err = parsePyprojectToml(project, tmpFile.Name())
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.expectedApp, project.AppName)
-		})
-	}
-}
-
 func TestDetermineServiceType(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -258,6 +203,58 @@ if __name__ == "__main__":
 	require.True(t, exists, "Flask service project not found")
 	assert.True(t, flaskProject.IsService)
 	assert.Contains(t, flaskProject.MainFile, "app.py")
+
+	// Check modern app
+	modernProject, exists := projectsByName["modern-app"]
+	require.True(t, exists, "Modern app project not found")
+	assert.True(t, modernProject.IsService)
+	assert.Contains(t, modernProject.MainFile, "main.py")
+}
+
+func TestDiscoverPythonProjectsIntegrationSingle(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create pyproject.toml project
+	pyprojectDir := filepath.Join(tmpDir, "modern-app")
+	err := os.MkdirAll(pyprojectDir, 0755)
+	require.NoError(t, err)
+
+	pyprojectContent := `[project]
+name = "modern-app"
+version = "2.0.0"
+description = "A modern Python application"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+`
+	err = os.WriteFile(filepath.Join(pyprojectDir, "pyproject.toml"), []byte(pyprojectContent), 0644)
+	require.NoError(t, err)
+
+	mainContent := `def main():
+    print("Modern app main")
+
+if __name__ == "__main__":
+    main()
+`
+	err = os.WriteFile(filepath.Join(pyprojectDir, "main.py"), []byte(mainContent), 0644)
+	require.NoError(t, err)
+
+	err = os.Chdir(pyprojectDir)
+	require.NoError(t, err)
+
+	// Test discovery
+	projects, err := DiscoverPythonProjects(".")
+	require.NoError(t, err)
+
+	// Should find 3 projects
+	assert.Len(t, projects, 1)
+
+	// Verify projects by name
+	projectsByName := make(map[string]Project)
+	for _, project := range projects {
+		projectsByName[project.AppName] = project
+	}
 
 	// Check modern app
 	modernProject, exists := projectsByName["modern-app"]

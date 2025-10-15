@@ -1,10 +1,8 @@
 package autodiscovery
 
 import (
-	"bufio"
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -12,46 +10,6 @@ import (
 	"github.com/containifyci/engine-ci/pkg/filesystem"
 	"github.com/containifyci/engine-ci/protos2"
 )
-
-// // PythonProject represents a discovered Python project
-// type PythonProject struct {
-// 	ProjectRoot string
-// 	AppName     string
-// 	ConfigFile  string
-// 	ConfigType  string
-// 	MainModule  string
-// 	PackageName string
-// 	SourceFiles []string
-// 	IsService   bool
-// }
-
-// // Implement Project interface methods
-// func (p PythonProject) GetAppName() string {
-// 	return p.AppName
-// }
-
-// func (p PythonProject) GetModulePath() string {
-// 	return p.ProjectRoot
-// }
-
-// func (p PythonProject) IsServiceProject() bool {
-// 	return p.IsService
-// }
-
-// func (p PythonProject) GetProjectType() ProjectType {
-// 	return ProjectTypePython
-// }
-
-// func (p PythonProject) GetSourceFiles() []string {
-// 	return p.SourceFiles
-// }
-
-// func (p PythonProject) BuilderFunction() string {
-// 	if p.IsService {
-// 		return "NewPythonServiceBuild"
-// 	}
-// 	return "NewPythonLibraryBuild"
-// }
 
 func (p Project) ToBuild() container.Build {
 	switch p.BuildType {
@@ -126,6 +84,14 @@ func analyzePythonProject(projectDir string, configFiles []string) (Project, err
 		project.AppName = filepath.Base(projectDir)
 	}
 
+	if project.AppName == "." {
+		absPath, err := filepath.Abs(projectDir)
+		if err != nil {
+			return project, fmt.Errorf("failed to get absolute path: %w", err)
+		}
+		project.AppName = filepath.Base(absPath)
+	}
+
 	// Find all Python source files
 	fileCache := filesystem.NewFileCache("python_files_cache.yaml")
 	pyFiles, err := fileCache.FindFilesBySuffix(projectDir, ".py")
@@ -140,49 +106,6 @@ func analyzePythonProject(projectDir string, configFiles []string) (Project, err
 	project.MainFile = mainFile
 
 	return project, nil
-}
-
-// parsePyprojectToml extracts project name from pyproject.toml (basic parsing)
-func parsePyprojectToml(project *Project, pyprojectFile string) error {
-	file, err := os.Open(pyprojectFile)
-	if err != nil {
-		return fmt.Errorf("failed to open pyproject.toml: %w", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	inProjectSection := false
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-
-		// Check for [project] section
-		if line == "[project]" {
-			inProjectSection = true
-			continue
-		}
-
-		// Check for other sections (exit project section)
-		if strings.HasPrefix(line, "[") && line != "[project]" {
-			inProjectSection = false
-			continue
-		}
-
-		// Parse name in project section
-		if inProjectSection && strings.HasPrefix(line, "name") {
-			if idx := strings.Index(line, "="); idx != -1 {
-				nameStr := strings.TrimSpace(line[idx+1:])
-				nameStr = strings.Trim(nameStr, `"'`)
-				if nameStr != "" {
-					project.AppName = nameStr
-					// project.PackageName = nameStr
-					break
-				}
-			}
-		}
-	}
-
-	return scanner.Err()
 }
 
 // determineServiceType checks if this is a deployable service or a library
