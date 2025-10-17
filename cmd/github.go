@@ -69,7 +69,6 @@ Available workflow types:
   - release: Creates release workflow for main branch pushes
   - publish: Creates publish workflow for manual releases
   - pull-request: Creates PR validation workflow
-  - legacy: Creates the original engine-ci workflow template
 
 Examples:
   # Generate all workflows
@@ -90,9 +89,9 @@ func init() {
 	rootCmd.AddCommand(githubCmd)
 
 	// Add flags
-	githubCmd.Flags().StringVar(&githubArgs.WorkflowType, "type", "", "Workflow type to generate (release, publish, pull-request, legacy)")
+	githubCmd.Flags().StringVar(&githubArgs.WorkflowType, "type", "", "Workflow type to generate (release, publish, pull-request)")
 	githubCmd.Flags().StringVarP(&githubArgs.OutputDir, "output", "o", ".github/workflows", "Output directory for workflow files")
-	githubCmd.Flags().BoolVarP(&githubArgs.All, "all", "a", false, "Generate all workflow files")
+	githubCmd.Flags().BoolVar(&githubArgs.All, "all", true, "Generate all workflow files")
 	githubCmd.Flags().BoolVar(&githubArgs.DryRun, "dry-run", false, "Preview what files would be created without writing them")
 	githubCmd.Flags().BoolVarP(&githubArgs.Force, "force", "f", false, "Overwrite existing files without prompting")
 }
