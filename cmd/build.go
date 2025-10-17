@@ -9,6 +9,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/copier"
+	"github.com/containifyci/engine-ci/pkg/dummy"
 	"github.com/containifyci/engine-ci/pkg/gcloud"
 	"github.com/containifyci/engine-ci/pkg/github"
 	"github.com/containifyci/engine-ci/pkg/golang"
@@ -173,6 +174,8 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 		addStep(build.Publish, goreleaser.New()) // Goreleaser
 		addStep(build.Publish, github.New())     // GitHub (async)
 
+		addStep(build.Publish, dummy.New()) // Goreleaser
+
 		bs.Init()
 	}
 
@@ -260,6 +263,9 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 		})
 		c.AddTarget("push", func() error {
 			return bs.Run(arg, "python-prod")
+		})
+		c.AddTarget("release", func() error {
+			return bs.Run(arg, "dummy")
 		})
 	}
 	c.AddTarget("all", func() error {
