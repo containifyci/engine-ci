@@ -88,7 +88,7 @@ func Engine(cmd *cobra.Command, _ []string) error {
 				c := NewCommand(*b, _buildSteps)
 				err := c.Run(addr, RootArgs.Target, b)
 				if err != nil {
-					slog.Error("Executing command", "command", c)
+					slog.Error("Executing command", "error", err, "command", c)
 					os.Exit(1)
 				}
 			}(b)
