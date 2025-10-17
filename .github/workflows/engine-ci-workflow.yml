@@ -70,7 +70,7 @@ env:
   CONTAINER_RUNTIME: ${{ inputs.runtime }}
   DOCKER_USER: ${{ inputs.dockerhub_user }}
   DOCKER_TOKEN: ${{ secrets.CONTAINIFYCI_DOCKER_TOKEN }}
-  ENGINE_CACHE: /home/runner/go/pkg/mod
+  CONTAINIFYCI_CACHE: /home/runner/go/pkg/mod
   ENGINE_COMMAND: ${{ inputs.engine_command }}
   CONTAINIFYCI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   CONTAINIFYCI_FILE: ${{ inputs.containifyci_file }}
@@ -132,7 +132,7 @@ jobs:
         uses: actions/cache@v4
         if: ${{ !inputs.install_binary }}
         with:
-          path: /home/runner/go/pkg/mod
+          path: ${{CONTAINIFYCI_CACHE}}
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-

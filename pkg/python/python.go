@@ -17,6 +17,8 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/filesystem"
 	"github.com/containifyci/engine-ci/pkg/network"
+
+	u "github.com/containifyci/engine-ci/pkg/utils"
 )
 
 const (
@@ -71,7 +73,7 @@ func new(build container.Build) *PythonContainer {
 }
 
 func CacheFolder() string {
-	pipCache := os.Getenv("PIP_CACHE_DIR")
+	pipCache := u.GetEnvs([]string{"PIP_CACHE_DIR", "CONTAINIFYCI_CACHE"}, "build")
 	if pipCache == "" {
 		pipCache = os.TempDir() + ".pip"
 		slog.Info("Python_HOME not set, using default", "pipCache", pipCache)
