@@ -132,10 +132,22 @@ jobs:
         uses: actions/cache@v4
         if: ${{ !inputs.install_binary }}
         with:
-          path: ${{CONTAINIFYCI_CACHE}}
+          path: ${{ env.CONTAINIFYCI_CACHE }}
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
+      - name: Set current date
+        run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        if: ${{ inputs.install_binary }}
+        with:
+          path: ${{ env.CONTAINIFYCI_CACHE }}
+          key: ${{ runner.os }}-cache-${{ env.DATE }}
+          restore-keys: |
+            ${{ runner.os }}-cache-
 
       - name: Install Engine CI
         uses: jaxxstorm/action-install-gh-release@v1
