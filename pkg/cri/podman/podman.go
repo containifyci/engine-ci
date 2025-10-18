@@ -195,10 +195,18 @@ func (p *PodmanManager) CreateContainer(ctx context.Context, opts *types.Contain
 			slog.Error("Failed to convert host port to int", "error", err)
 			return "", err
 		}
+		if hport < 0 || hport > 65535 {
+			slog.Error("Host port out of range", "port", hport)
+			return "", fmt.Errorf("host port %d out of range (0-65535)", hport)
+		}
 		cport, err := strconv.Atoi(p.Container.Port)
 		if err != nil {
 			slog.Error("Failed to convert container port to int", "error", err)
 			return "", err
+		}
+		if cport < 0 || cport > 65535 {
+			slog.Error("Container port out of range", "port", cport)
+			return "", fmt.Errorf("container port %d out of range (0-65535)", cport)
 		}
 
 		s.PortMappings = append(s.PortMappings, nettypes.PortMapping{
