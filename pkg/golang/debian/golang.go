@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.25.0"
+	DEFAULT_GO = "1.25.3"
 	PROJ_MOUNT = "/src"
 	OUT_DIR    = "/out/"
 )
