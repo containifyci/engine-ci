@@ -15,18 +15,6 @@ updates:
           - "minor"
           - "patch"
   - package-ecosystem: "docker"
-    directory: "pkg/maven"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-    groups:
-      minor:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-  - package-ecosystem: "docker"
     directory: "pkg/protobuf"
     schedule:
       interval: "weekly"
@@ -40,6 +28,42 @@ updates:
           - "patch"
   - package-ecosystem: "docker"
     directory: "pkg/python"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "pkg/golang/alpine"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "pkg/golang/debian"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    groups:
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "pkg/golang/debiancgo"
     schedule:
       interval: "weekly"
       day: "sunday"

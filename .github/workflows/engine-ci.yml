@@ -24,7 +24,7 @@ jobs:
       dockerhub_user: "containifyci"
       runtime: ${{ matrix.runtime }}
       upload_artifacts: ${{ matrix.is_uploader }}
-      engine_command: "go run --tags containers_image_openpgp main.go"
+      engine_command: "go run --tags containers_image_openpgp,exclude_graphdriver_btrfs main.go"
       install_binary: false
       remote_debug: true
       remote_debug_user: "fr12k"
