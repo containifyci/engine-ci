@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // extractTar extracts a tar archive from the provided io.Reader to the target directory.
@@ -25,7 +26,11 @@ func ExtractTar(r io.Reader, targetDir string) error {
 		}
 
 		// Determine the target file path
+		// Resolve the target path and ensure it is within the target directory
 		targetPath := filepath.Join(targetDir, header.Name)
+		if !strings.HasPrefix(filepath.Clean(targetPath), filepath.Join(filepath.Clean(targetDir), string(os.PathSeparator))) {
+			return fmt.Errorf("invalid file path in tar archive: %s", header.Name)
+		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:
