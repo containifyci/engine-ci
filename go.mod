@@ -7,7 +7,7 @@ require (
 	github.com/containers/buildah v1.41.5
 	github.com/containers/common v0.64.2
 	github.com/containers/podman/v5 v5.6.2
-	github.com/containifyci/engine-ci/protos2 v0.19.0
+	github.com/containifyci/engine-ci/protos2 v0.20.0
 	github.com/containifyci/go-self-update v0.2.4
 	github.com/docker/docker v28.5.1+incompatible
 	github.com/docker/go-connections v0.6.0
@@ -154,7 +154,7 @@ require (
 	golang.org/x/time v0.13.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250826171959-ef028d996bc1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251002232023-7c0ddcbb5797 // indirect
-	google.golang.org/grpc v1.75.1 // indirect
+	google.golang.org/grpc v1.76.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
