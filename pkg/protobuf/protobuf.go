@@ -28,7 +28,8 @@ type ProtogufContainer struct {
 
 // Matches implements the Build interface - Protobuf only runs for golang builds
 func Matches(build container.Build) bool {
-	return build.BuildType == container.GoLang
+	return build.BuildType == container.GoLang &&
+		len(build.SourceFiles) > 0
 }
 
 func New() build.BuildStepv2 {

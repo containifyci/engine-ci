@@ -22,9 +22,16 @@ type TrivyContainer struct {
 	*container.Container
 }
 
-// Matches implements the Build interface - Trivy runs for all builds
 func Matches(build container.Build) bool {
-	return true // Trivy security scanning runs for all builds
+	if build.Env == container.LocalEnv {
+		slog.Warn("trivy: Image not set, skip trivy scan")
+		return false
+	}
+	if build.Image == "" {
+		slog.Warn("trivy: Image not set, skip trivy scan")
+		return false
+	}
+	return true
 }
 
 func New() build.BuildStepv2 {

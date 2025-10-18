@@ -63,7 +63,7 @@ func SaveCache() error {
 	}
 
 	// Channel to collect errors
-	errs := make(chan error, 10)
+	errs := make(chan error, len(images)+1)
 
 	var wg sync.WaitGroup
 
@@ -104,7 +104,7 @@ func LoadCache() error {
 	}
 
 	// Channel to collect errors
-	errs := make(chan error, 10)
+	errs := make(chan error, len(images)+1)
 
 	var wg sync.WaitGroup
 

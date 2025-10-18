@@ -28,6 +28,11 @@ type SonarcloudContainer struct {
 
 // Matches implements the Build interface - SonarCloud runs for all builds
 func Matches(build container.Build) bool {
+	_token := container.GetEnv("SONAR_TOKEN")
+	if _token == "" {
+		slog.Warn("SONAR_TOKEN is not set skip sonar analysis")
+		return false
+	}
 	return true // SonarCloud analysis runs for all builds
 }
 

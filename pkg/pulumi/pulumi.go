@@ -30,7 +30,12 @@ type PulumiContainer struct {
 
 // Matches implements the Build interface - Pulumi only runs for golang builds
 func Matches(build container.Build) bool {
+	v, ok := build.Custom["pulumi"]
+	if !ok || v[0] != "true" {
+		return false
+	}
 	return build.BuildType == container.GoLang
+
 }
 
 func New() build.BuildStepv2 {

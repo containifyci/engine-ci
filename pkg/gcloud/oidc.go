@@ -32,7 +32,12 @@ type GCloudContainer struct {
 
 // Matches implements the Build interface - GCloud runs for all builds
 func Matches(build container.Build) bool {
-	return true // GCloud setup runs for all builds
+	// GCloud setup has to be enabled explicit
+	if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" &&
+		build.CustomString("gcloud_oidc") == "" {
+		return false
+	}
+	return true
 }
 
 func New() build.BuildStepv2 {
