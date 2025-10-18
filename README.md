@@ -2,7 +2,9 @@
 
 Welcome to the **engine-ci** project, a key component of the **containifyci** organization. **engine-ci** is a robust CI/CD pipeline engine designed to operate in a containerized environment. It supports both Docker and Podman as container runtimes and is implemented in Go.
 
-Think of it as a single binary that knows how to build any project of you always in the same way and using the same tools (versions) and processes like running post build process like scaning images (trivy) building releases (gorelease) all encapsulated in one single binary.
+Think of it as a single binary that knows how to build any project from you and ensure that they are always build in the same way and using the same tools (versions) and processes like running post build process like scaning images (trivy) building releases (gorelease) all encapsulated in one single binary. This single binary is capable of running in CI/CD (Github) or local as well.
+
+At the moment its only tested on **Ubuntu** and **MacOS**.
 
 Here you see an example local build of engine-ci with engine-ci itself. The engince-ci build consists of four modules:
 * protos2 package
