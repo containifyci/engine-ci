@@ -1,15 +1,11 @@
 package python
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"embed"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"text/template"
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
@@ -17,6 +13,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/filesystem"
 	"github.com/containifyci/engine-ci/pkg/network"
+	"github.com/containifyci/engine-ci/protos2"
 
 	u "github.com/containifyci/engine-ci/pkg/utils"
 )
@@ -94,43 +91,37 @@ func Images(build container.Build) []string {
 	return []string{PythonImage(build), BaseImage}
 }
 
-// TODO: provide a shorter checksum
-func ComputeChecksum(data []byte) string {
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
+func PythonImage(build container.Build) string {
+	dockerFile, err := dockerFile(build)
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
+		os.Exit(1)
+	}
+	tag := container.ComputeChecksum([]byte(dockerFile.Content))
+	image := dockerFile.Name
+	return utils.ImageURI(build.ContainifyRegistry, image, tag)
 }
 
-func PythonImage(build container.Build) string {
+func dockerFile(build container.Build) (*protos2.ContainerFile, error) {
+	if v, ok := build.ContainerFiles["build"]; ok {
+		return v, nil
+	}
+
 	dockerFile, err := f.ReadFile("Dockerfile.python")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.Python", "error", err)
 		os.Exit(1)
 	}
-	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(build.ContainifyRegistry, "python-3.14-slim-bookworm", tag)
-
-	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "python-3.11-slim-bookworm", tag)
+	return &protos2.ContainerFile{
+		Name:    "python-3.14-slim-bookworm",
+		Content: string(dockerFile),
+	}, nil
 }
 
 func (c *PythonContainer) BuildPythonImage() error {
-	dockerFile, err := f.ReadFile("Dockerfile.python")
+	dockerFile, err := dockerFile(*c.GetBuild())
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.Python", "error", err)
-		os.Exit(1)
-	}
-	tmpl, err := template.New("Dockerfile.python").Parse(string(dockerFile))
-	if err != nil {
-		slog.Error("Failed to parse Dockerfile.Python", "error", err)
-		os.Exit(1)
-	}
-
-	var buf bytes.Buffer
-
-	installUv := "RUN pip3 --no-cache install uv poetry"
-
-	err = tmpl.Execute(&buf, map[string]string{"INSTALL_BUILD_TOOLS": installUv})
-	if err != nil {
-		slog.Error("Failed to render Dockerfile.Python", "error", err)
 		os.Exit(1)
 	}
 	image := PythonImage(*c.GetBuild())
@@ -138,7 +129,7 @@ func (c *PythonContainer) BuildPythonImage() error {
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	return c.BuildIntermidiateContainer(image, buf.Bytes(), platforms...)
+	return c.BuildIntermidiateContainer(image, ([]byte)(dockerFile.Content), platforms...)
 }
 
 func (c *PythonContainer) Address() *network.Address {
