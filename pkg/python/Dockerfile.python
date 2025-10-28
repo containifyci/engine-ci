@@ -8,6 +8,6 @@ RUN apt-get update && \
     apt-get autoremove --yes && \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
 
-{{ .INSTALL_BUILD_TOOLS }}
+RUN pip3 --no-cache install uv poetry
 
 WORKDIR /app

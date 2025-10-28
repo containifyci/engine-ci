@@ -166,6 +166,8 @@ func (c *Container) Create(opts types.ContainerConfig) error {
 		opts.Env = append(opts.Env, fmt.Sprintf("CONTAINIFYCI_HOST=%s", c.getContainifyHost()))
 	}
 
+	opts.Env = append(opts.Env, fmt.Sprintf("CONTAINIFYCI_FOLDER=%s", c.Build.Folder))
+
 	if opts.Platform == types.AutoPlatform {
 		opts.Platform = types.GetPlatformSpec()
 	}
@@ -773,7 +775,7 @@ func (c *Container) BuildingContainer(opts types.ContainerConfig) error {
 
 	err = c.Wait()
 	if err != nil {
-		slog.Error("Failed to wait for container", "error", err, "name", c.Name, "image", c.Image)
+		slog.Error("Failed to wait for container", "error", err, "name", c.Name, "id", c.ID, "image", c.Image)
 		os.Exit(1)
 	}
 	return err
