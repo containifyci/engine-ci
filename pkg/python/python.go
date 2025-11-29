@@ -247,6 +247,12 @@ func (c *PythonContainer) Prod() error {
 
 	opts.Secrets = c.Secret
 
+	opts.Volumes = []types.Volume{{
+		Type:   "bind",
+		Source: CacheFolder(),
+		Target: CacheLocation,
+	}}
+
 	err := c.Create(opts)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
