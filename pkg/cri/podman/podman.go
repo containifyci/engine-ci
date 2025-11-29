@@ -375,12 +375,13 @@ func tarDir(srcPath string) (*bytes.Buffer, error) {
 			return err
 		}
 
-		if srcPath == "." ||
-			srcPath == "./" {
-			srcPath = ""
+		// Compute relative path properly to avoid leading slashes
+		relPath, err := filepath.Rel(srcPath, file)
+		if err != nil {
+			return err
 		}
 		// Ensure the header has the correct name
-		header.Name = filepath.ToSlash(file[len(srcPath):])
+		header.Name = filepath.ToSlash(relPath)
 
 		// Write the header to the tar writer
 		if err := tw.WriteHeader(header); err != nil {

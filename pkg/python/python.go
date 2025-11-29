@@ -62,6 +62,7 @@ func new(build container.Build) *PythonContainer {
 		Container:    container.New(build),
 		Image:        build.Image,
 		Folder:       build.Folder,
+		File:         build.File,
 		ImageTag:     build.ImageTag,
 		Platform:     build.Platform,
 		Secret:       build.Secret,
@@ -177,7 +178,7 @@ func (c *PythonContainer) Build() (string, error) {
 	}
 
 	opts = ssh.Apply(&opts)
-	opts.Script = c.BuildScript()
+	opts.Script = c.BuildScript().Script()
 
 	err = c.BuildingContainer(opts)
 	if err != nil {
@@ -199,7 +200,7 @@ func (c *PythonContainer) Build() (string, error) {
 	return imageId, err
 }
 
-func (c *PythonContainer) BuildScript() string {
+func (c *PythonContainer) BuildScript() *BuildScript {
 	// Create a temporary script in-memory
 
 	builder := NewBuilder(c.Folder)
@@ -213,7 +214,12 @@ func (c *PythonContainer) BuildScript() string {
 		slog.Error("Failed to build python commands", "error", err)
 		os.Exit(1)
 	}
-	return Script(NewBuildScript(c.Folder, c.Verbose, c.PrivateIndex, cmds))
+	installCmds, err := builder.Install()
+	if err != nil {
+		slog.Error("Failed to build python commands", "error", err)
+		os.Exit(1)
+	}
+	return NewBuildScript(c.Folder, c.Verbose, c.PrivateIndex, cmds, installCmds)
 }
 
 func NewProd() build.BuildStepv2 {
@@ -222,18 +228,21 @@ func NewProd() build.BuildStepv2 {
 			container := new(build)
 			return container.Prod()
 		},
-		ImagesFn: Images,
-		Name_:    "python-prod",
-		Async_:   false,
+		ImagesFn:  Images,
+		Name_:     "python-prod",
+		MatchedFn: Matches,
+		Async_:    false,
 	}
 }
 
 func (c *PythonContainer) Prod() error {
 	opts := types.ContainerConfig{}
-	opts.Image = fmt.Sprintf("%s:%s", c.Image, c.ImageTag)
+	// opts.Image = fmt.Sprintf("%s:%s", c.Image, c.ImageTag)
+	opts.Image = BaseImage
 	opts.Env = []string{}
 	opts.Platform = types.AutoPlatform
 	opts.Cmd = []string{"sleep", "300"}
+	opts.WorkingDir = "/app"
 	// opts.User = "185"
 
 	opts.Secrets = c.Secret
@@ -250,19 +259,30 @@ func (c *PythonContainer) Prod() error {
 		os.Exit(1)
 	}
 
-	err = c.CopyDirectoryTo(c.Folder, "/app")
+	err = c.Exec("mkdir", "-p", "/app/dist")
+	if err != nil {
+		slog.Error("Failed to create directory in container: %s", "error", err)
+		os.Exit(1)
+	}
+
+	err = c.CopyDirectoryTo(c.Folder+"/dist/", "/app/dist")
 	if err != nil {
 		slog.Error("Failed to copy directory to container: %s", "error", err)
 		os.Exit(1)
 	}
 
-	err = c.Exec([]string{"pip", "install", "--no-cache", "/app/wheels/*"}...)
-	if err != nil {
-		slog.Error("Failed to install wheels: %s", "error", err)
-		os.Exit(1)
+	cmds := c.BuildScript().InstallCommands
+
+	for _, cmd := range cmds {
+		slog.Info("Running command in container", "cmd", cmd)
+		err = c.Exec(cmd...)
+		if err != nil {
+			slog.Error("Failed to run", "error", err, "cmd", cmd)
+			os.Exit(1)
+		}
 	}
 
-	imageId, err := c.Commit(opts.Image, "Created from container", "CMD [\"python\", \"/app/main.py\"]", "WORKDIR /app") /*, "USER 185")*/
+	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"python\", \"-m\", \""+c.File+"\"]", "WORKDIR /app") /*, "USER 185")*/
 	if err != nil {
 		slog.Error("Failed to commit container: %s", "error", err)
 		os.Exit(1)

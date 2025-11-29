@@ -273,12 +273,13 @@ func tarDir(srcPath string) (*bytes.Buffer, error) {
 			return err
 		}
 
-		if srcPath == "." ||
-			srcPath == "./" {
-			srcPath = ""
+		// Compute relative path properly to avoid leading slashes
+		relPath, err := filepath.Rel(srcPath, file)
+		if err != nil {
+			return err
 		}
 		// Ensure the header has the correct name
-		header.Name = filepath.ToSlash(file[len(srcPath):])
+		header.Name = filepath.ToSlash(relPath)
 
 		// Write the header to the tar writer
 		if err := tw.WriteHeader(header); err != nil {
@@ -286,9 +287,10 @@ func tarDir(srcPath string) (*bytes.Buffer, error) {
 		}
 
 		// If the file is not a directory, write the file content
-		if !fi.IsDir() {
+		if !fi.IsDir() && fi.Mode().Type() != os.ModeSymlink {
 			data, err := os.Open(file)
 			if err != nil {
+				slog.Error("Error opening file for tar", "error", err, "file", file, "mode", fi.Mode().String())
 				return err
 			}
 			defer data.Close()
@@ -355,6 +357,7 @@ func (d *DockerManager) ExecContainer(ctx context.Context, id string, cmd []stri
 	execResp, err := d.client.ContainerExecCreate(ctx, id, container.ExecOptions{
 		Cmd:          cmd,
 		AttachStdout: attachStdOut,
+		AttachStderr: attachStdOut,
 	})
 	if err != nil {
 		return nil, err
@@ -366,7 +369,6 @@ func (d *DockerManager) ExecContainer(ctx context.Context, id string, cmd []stri
 	if err != nil {
 		return nil, err
 	}
-
 	return resp.Reader, nil
 }
 
