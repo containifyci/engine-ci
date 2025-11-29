@@ -44,11 +44,10 @@ jobs:
           tag: ${{ inputs.tag_name }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Looks like this dependencies are not needed anymore stil keep it here for reference
-      # - name: Install libbtrfs-dev needed by podman go module
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install libbtrfs-dev
+      - name: Install libbtrfs-dev needed by podman go module
+        run: |
+          sudo apt-get update
+          sudo apt-get install libbtrfs-dev
 
       - name: Install go
         uses: actions/setup-go@v6
