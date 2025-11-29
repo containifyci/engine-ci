@@ -76,8 +76,8 @@ func main() {
 
 func DockerFile() *protos2.ContainerFile {
 	return &protos2.ContainerFile{
-		Name: "golang-1.25-0-alpine",
-		Content: `FROM golang:1.25.0-alpine
+		Name: "golang-1.25-4-alpine",
+		Content: `FROM golang:1.25.4-alpine
 
 RUN apk --no-cache add git openssh-client && \
   rm -rf /var/cache/apk/*

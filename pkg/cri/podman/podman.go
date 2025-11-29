@@ -19,7 +19,6 @@ import (
 
 	"github.com/docker/docker/api/types/registry"
 
-	nettypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/podman/v5/libpod/define"
 	"github.com/containers/podman/v5/pkg/api/handlers"
 	"github.com/containers/podman/v5/pkg/bindings"
@@ -30,6 +29,7 @@ import (
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/docker/docker/api/types/container"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
+	nettypes "go.podman.io/common/libnetwork/types"
 
 	buildahDefine "github.com/containers/buildah/define"
 
