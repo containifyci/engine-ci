@@ -12,6 +12,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/cri/parser"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
@@ -22,7 +23,6 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.25.3"
 	PROJ_MOUNT = "/src"
 	OUT_DIR    = "/out/"
 )
@@ -95,7 +95,12 @@ func CacheFolder() string {
 }
 
 func (c *GoContainer) Pull() error {
-	imageTag := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
+	_, version, err := dockerFile(c.GetBuild())
+	if err != nil {
+		slog.Error("Failed to get Dockerfile version", "error", err)
+		os.Exit(1)
+	}
+	imageTag := fmt.Sprintf("golang:%s", version)
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
@@ -188,36 +193,60 @@ func (c *GoContainer) Lint() error {
 	return err
 }
 
-func dockerFile(build container.Build) (*protos2.ContainerFile, error) {
-	if v, ok := build.ContainerFiles["build"]; ok {
-		return v, nil
+func dockerFileVersion(dockerFile []byte) string {
+	p := parser.New(dockerFile)
+	from, err := p.ParseFrom()
+	if err != nil {
+		slog.Error("Failed to parse Dockerfile", "error", err)
+		os.Exit(1)
+	}
+	return from[0].BaseVersion
+}
+
+func dockerFile(build *container.Build) (*protos2.ContainerFile, string, error) {
+	if build != nil {
+		if v, ok := build.ContainerFiles["build"]; ok {
+			version := dockerFileVersion([]byte(v.Content))
+			return v, version, nil
+		}
 	}
 
 	dockerFileName := "Dockerfile_go"
 	typ := build.CustomString("go_type")
-	name := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
 	if typ != "" {
 		dockerFileName = fmt.Sprintf("Dockerfile_%s_go", typ)
-		name = fmt.Sprintf("golang-%s-alpine-%s", DEFAULT_GO, typ)
 	}
 	dockerFile, err := f.ReadFile(dockerFileName)
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
 		os.Exit(1)
 	}
+
+	version := dockerFileVersion(dockerFile)
+	name := fmt.Sprintf("golang-%s", version)
+	if typ != "" {
+		name = fmt.Sprintf("golang-%s-%s", version, typ)
+	}
+
 	return &protos2.ContainerFile{
 		Name:    name,
 		Content: string(dockerFile),
-	}, nil
+	}, version, nil
 }
 
 func GoImages(build container.Build) []string {
-	image := fmt.Sprintf("golang:%s-alpine", DEFAULT_GO)
+	_, version, err := dockerFile(&build)
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
+		os.Exit(1)
+	}
+
+	image := fmt.Sprintf("golang:%s", version)
 	return []string{image, "alpine:latest", GoImage(build)}
 }
 
 func GoImage(build container.Build) string {
-	dockerFile, err := dockerFile(build)
+	dockerFile, _, err := dockerFile(&build)
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
@@ -231,7 +260,7 @@ func GoImage(build container.Build) string {
 func (c *GoContainer) BuildGoImage() error {
 	image := GoImage(*c.GetBuild())
 
-	dockerFile, err := dockerFile(*c.GetBuild())
+	dockerFile, _, err := dockerFile(c.GetBuild())
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
