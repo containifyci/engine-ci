@@ -5,7 +5,6 @@ go 1.25.0
 require (
 	cloud.google.com/go/iam v1.5.3
 	github.com/containers/buildah v1.42.1
-	github.com/containers/common v0.64.2
 	github.com/containers/podman/v5 v5.7.0
 	github.com/containifyci/engine-ci/protos2 v0.20.1
 	github.com/containifyci/go-self-update v0.2.4
@@ -19,9 +18,10 @@ require (
 	github.com/moby/buildkit v0.26.2
 	github.com/moby/term v0.5.2
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/opencontainers/runtime-spec v1.3.0
+	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
+	go.podman.io/common v0.66.0
 	golang.org/x/oauth2 v0.33.0
 	google.golang.org/api v0.256.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -48,7 +48,6 @@ require (
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.2.1 // indirect
 	github.com/containers/psgo v1.9.1-0.20250826150930-4ae76f200c86 // indirect
-	github.com/containers/storage v1.59.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.6.0 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect
 	github.com/cyphar/filepath-securejoin v0.5.1 // indirect
@@ -137,7 +136,6 @@ require (
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
-	go.podman.io/common v0.66.0 // indirect
 	go.podman.io/image/v5 v5.38.0 // indirect
 	go.podman.io/storage v1.61.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
