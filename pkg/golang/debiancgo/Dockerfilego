@@ -1,7 +1,7 @@
-FROM golang:1.25.0
+FROM golang:1.25.4
 
 RUN apt-get update && \
-    apt-get install -y build-essential \
+    apt-get install -y clang build-essential \
     libssl-dev \
     gcc \
     libc6-dev \
