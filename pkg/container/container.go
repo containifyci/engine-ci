@@ -302,6 +302,7 @@ func (c *Container) Exec(cmd ...string) error {
 		slog.Error("Failed to exec command", "error", err)
 		return err
 	}
+	//TODO: the stdout is not showing up at all, need to fix that
 	_, err = io.Copy(os.Stdout, reader)
 	if err != nil {
 		slog.Error("Failed to copy output", "error", err)

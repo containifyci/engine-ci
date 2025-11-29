@@ -12,11 +12,15 @@ type Tool string
 type Commands [][]string
 
 func (c Commands) String() string {
+	return strings.Join(c.Commands(), "\n")
+}
+
+func (c Commands) Commands() []string {
 	var cmds []string
 	for _, cmd := range c {
 		cmds = append(cmds, strings.Join(cmd, " "))
 	}
-	return strings.Join(cmds, "\n")
+	return cmds
 }
 
 const (
@@ -84,6 +88,7 @@ func (b *Builder) Analyze() (Tool, error) {
 	return chosen, nil
 }
 
+// TODO: abstract tool into its own struct with build method
 func (b *Builder) Build() (Commands, error) {
 
 	fmt.Printf("🔎 Detected build tool: %s\n", b.Tool)
@@ -115,6 +120,33 @@ func (b *Builder) Build() (Commands, error) {
 		} else {
 			return nil, errors.New("no recognizable Python project files found (need pyproject.toml or requirements.txt)")
 		}
+	default:
+		return nil, fmt.Errorf("unknown tool %q", b.Tool)
+	}
+
+	return plan, nil
+}
+
+func (b *Builder) Install() (Commands, error) {
+	folder := "/app" //b.Folder
+	fmt.Printf("🔎 Detected Install tool: %s\n", b.Tool)
+	// Build command plan
+	var plan Commands
+	plan = append(plan, []string{"ls", "-lha", folder + "/dist/"})
+	switch b.Tool {
+	case ToolUV:
+		plan = append(plan,
+			[]string{"bash", "-c", fmt.Sprintf("uv run pip install --no-cache %s/dist/*.whl", folder)},
+		)
+	case ToolPoetry:
+		plan = append(plan,
+			[]string{"bash", "-c", fmt.Sprintf("poetry run pip install --no-cache %s/dist/*.whl", folder)},
+		)
+	case ToolPip:
+		// plan = append(plan, []string{"pip", "install", "--no-cache", folder + "/dist/engine_python-0.1.0-py3-none-any.whl"})
+		plan = append(plan,
+			[]string{"bash", "-c", fmt.Sprintf("pip install --no-cache %s/dist/*.whl", folder)},
+		)
 	default:
 		return nil, fmt.Errorf("unknown tool %q", b.Tool)
 	}

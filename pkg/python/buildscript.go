@@ -34,22 +34,24 @@ func (pi PrivateIndex) Environ() string {
 }
 
 type BuildScript struct {
-	Folder       string
-	PrivateIndex PrivateIndex
-	Commands     Commands
-	Verbose      bool
+	Folder          string
+	PrivateIndex    PrivateIndex
+	Commands        Commands
+	InstallCommands Commands
+	Verbose         bool
 }
 
-func NewBuildScript(folder string, verbose bool, privateIndex PrivateIndex, commands Commands) *BuildScript {
+func NewBuildScript(folder string, verbose bool, privateIndex PrivateIndex, commands Commands, installCommands Commands) *BuildScript {
 	return &BuildScript{
-		Folder:       folder,
-		Verbose:      verbose,
-		Commands:     commands,
-		PrivateIndex: privateIndex,
+		Folder:          folder,
+		Verbose:         verbose,
+		Commands:        commands,
+		InstallCommands: installCommands,
+		PrivateIndex:    privateIndex,
 	}
 }
 
-func Script(bs *BuildScript) string {
+func (bs *BuildScript) Script() string {
 	if bs.Verbose {
 		return verboseScript(bs)
 	}
