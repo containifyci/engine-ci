@@ -11,6 +11,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/cri/parser"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
@@ -20,7 +21,6 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.25.0"
 	PROJ_MOUNT = "/src"
 	OUT_DIR    = "/out/"
 )
@@ -66,18 +66,11 @@ func New() build.BuildStepv2 {
 
 func new(build container.Build) *GoContainer {
 	platforms := []*types.PlatformSpec{build.Platform.Container}
-	if !build.Platform.Same() {
-		slog.Debug("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
-		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
-	}
 	return &GoContainer{
 		App:       build.App,
 		Container: container.New(build),
 		Image:     build.Image,
 		ImageTag:  build.ImageTag,
-		// TODO: only build multiple platforms when buildenv and localenv are running on different platforms
-		// FIX: linux-arm64 go build is needed when building contains on MacOS M1/M2
-		// Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")},
 		Platforms: platforms,
 		File:      u.SrcFile(build.File),
 		Folder:    build.Folder,
@@ -102,24 +95,39 @@ func CacheFolder() string {
 	return gomodcache
 }
 
-func (c *GoContainer) Pull() error {
-	imageTag := fmt.Sprintf("golang:%s", DEFAULT_GO)
-	return c.Container.Pull(imageTag, "alpine:latest")
-}
-
-func GoImage(build container.Build) string {
+func dockerFile() ([]byte, string, string) {
 	dockerFile, err := f.ReadFile("Dockerfilego")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
 		os.Exit(1)
 	}
+
+	p := parser.New(dockerFile)
+	from, err := p.ParseFrom()
+	if err != nil {
+		slog.Error("Failed to parse Dockerfile", "error", err)
+		os.Exit(1)
+	}
+
 	tag := container.ComputeChecksum(dockerFile)
-	image := fmt.Sprintf("golang-%s-cgo", DEFAULT_GO)
+	return dockerFile, tag, from[0].BaseVersion
+}
+
+func (c *GoContainer) Pull() error {
+	_, _, version := dockerFile()
+	imageTag := fmt.Sprintf("golang:%s", version)
+	return c.Container.Pull(imageTag, "alpine:latest")
+}
+
+func GoImage(build container.Build) string {
+	_, tag, version := dockerFile()
+	image := fmt.Sprintf("golang-%s-cgo", version)
 	return utils.ImageURI(build.ContainifyRegistry, image, tag)
 }
 
 func Images(build container.Build) []string {
-	image := fmt.Sprintf("golang:%s", DEFAULT_GO)
+	_, _, version := dockerFile()
+	image := fmt.Sprintf("golang:%s", version)
 
 	return []string{image, "alpine:latest", GoImage(build)}
 }
