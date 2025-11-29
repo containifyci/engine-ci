@@ -11,6 +11,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/cri/parser"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
@@ -20,7 +21,6 @@ import (
 )
 
 const (
-	DEFAULT_GO = "1.25.3"
 	PROJ_MOUNT = "/src"
 	OUT_DIR    = "/out/"
 )
@@ -103,23 +103,38 @@ func CacheFolder() string {
 }
 
 func (c *GoContainer) Pull() error {
-	imageTag := fmt.Sprintf("golang:%s", DEFAULT_GO)
+	_, _, version := dockerFile()
+	imageTag := fmt.Sprintf("golang:%s", version)
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
 func GoImage(build container.Build) string {
+	_, tag, version := dockerFile()
+	image := fmt.Sprintf("golang-%s", version)
+	return utils.ImageURI(build.ContainifyRegistry, image, tag)
+}
+
+func dockerFile() ([]byte, string, string) {
 	dockerFile, err := f.ReadFile("Dockerfilego")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.go", "error", err)
 		os.Exit(1)
 	}
+
+	p := parser.New(dockerFile)
+	from, err := p.ParseFrom()
+	if err != nil {
+		slog.Error("Failed to parse Dockerfile", "error", err)
+		os.Exit(1)
+	}
+
 	tag := container.ComputeChecksum(dockerFile)
-	image := fmt.Sprintf("golang-%s", DEFAULT_GO)
-	return utils.ImageURI(build.ContainifyRegistry, image, tag)
+	return dockerFile, tag, from[0].BaseVersion
 }
 
 func Images(build container.Build) []string {
-	image := fmt.Sprintf("golang:%s", DEFAULT_GO)
+	_, _, version := dockerFile()
+	image := fmt.Sprintf("golang:%s", version)
 
 	return []string{image, "alpine:latest", GoImage(build)}
 }
