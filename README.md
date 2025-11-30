@@ -45,6 +45,19 @@ engine-ci run
 
 For a practical example of how **engine-ci** is used, check out the [containifyci.go](./.containifyci/containifyci.go) file within this repository. It demonstrates how the **engine-ci** project is self-hosted using its own pipeline.
 
+## Development
+
+### Code Generation
+
+The project uses `go generate` to extract Dockerfile metadata at compile-time for improved performance. It is run automatically during the build process with engine-ci itself.
+
+The generated `docker_metadata_gen.go` files contain:
+- `GoVersion`: Golang version extracted from the Dockerfile
+- `DockerfileChecksum`: Checksum of the Dockerfile content
+- `DockerfileContent`: The full Dockerfile content as a string
+
+This eliminates runtime parsing overhead and catches Dockerfile syntax errors at generate-time rather than runtime.
+
 ## Roadmap
 
 ### Completed Tasks:

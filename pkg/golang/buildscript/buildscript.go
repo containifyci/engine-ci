@@ -1,10 +1,12 @@
 package buildscript
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -15,21 +17,96 @@ type CoverageMode string
 
 type Image string
 
-type BuildScript struct {
-	AppName      string
-	MainFile     string
-	Folder       string
-	Output       string
-	CoverageMode CoverageMode
-	FileName     string
-	Tags         []string
-	Platforms    []*types.PlatformSpec
-	Artifacts    []string
-	Verbose      bool
-	NoCoverage   bool
+type GenerateMode string
+
+const (
+	GenerateModeAuto     GenerateMode = "auto"
+	GenerateModeEnabled  GenerateMode = "enabled"
+	GenerateModeDisabled GenerateMode = "disabled"
+)
+
+var excludedDirs = map[string]bool{
+	"vendor":       true,
+	"node_modules": true,
+	"venv":         true,
+	".git":         true,
+	".cache":       true,
+	"build":        true,
+	"dist":         true,
+	"bin":          true,
+	"target":       true,
 }
 
-func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, coverageMode CoverageMode, platforms ...*types.PlatformSpec) *BuildScript {
+// detectGoGenerate scans the folder for //go:generate directives in .go files.
+// It skips common excluded directories for performance and returns true on first match.
+func detectGoGenerate(folder string) bool {
+	found := false
+	err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip files/dirs with errors
+		}
+
+		// Skip excluded directories
+		if info.IsDir() {
+			dirName := info.Name()
+			// Skip hidden directories
+			if strings.HasPrefix(dirName, ".") && dirName != "." {
+				return filepath.SkipDir
+			}
+			// Skip excluded directories
+			if excludedDirs[dirName] {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Only process .go files
+		if !strings.HasSuffix(path, ".go") {
+			return nil
+		}
+
+		// Scan file for //go:generate directive
+		file, err := os.Open(path)
+		if err != nil {
+			return nil // Skip files that can't be opened
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if strings.HasPrefix(line, "//go:generate") {
+				found = true
+				return filepath.SkipAll // Stop walking immediately
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil && err != filepath.SkipAll {
+		slog.Debug("Error during go:generate detection", "error", err)
+	}
+
+	return found
+}
+
+type BuildScript struct {
+	AppName        string
+	MainFile       string
+	Folder         string
+	Output         string
+	CoverageMode   CoverageMode
+	FileName       string
+	Tags           []string
+	Platforms      []*types.PlatformSpec
+	Artifacts      []string
+	Verbose        bool
+	NoCoverage     bool
+	ShouldGenerate bool
+}
+
+func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, coverageMode CoverageMode, generateMode string, platforms ...*types.PlatformSpec) *BuildScript {
 	filename := "{{.app}}-{{.os}}-{{.arch}}"
 	if folder == "" {
 		folder = "."
@@ -43,20 +120,38 @@ func NewBuildScript(appName, mainfile string, folder string, tags []string, verb
 		output = ""
 		filename = ""
 	}
+
+	// Determine if go generate should run based on generateMode
+	shouldGenerate := shouldGenerate(generateMode, folder)
+
 	script := &BuildScript{
-		AppName:      appName,
-		CoverageMode: coverageMode,
-		Folder:       folder,
-		MainFile:     mainfile,
-		NoCoverage:   nocoverage,
-		Output:       output,
-		Platforms:    platforms,
-		Tags:         tags,
-		Verbose:      verbose,
-		FileName:     filename,
-		Artifacts:    []string{},
+		AppName:        appName,
+		CoverageMode:   coverageMode,
+		Folder:         folder,
+		MainFile:       mainfile,
+		NoCoverage:     nocoverage,
+		Output:         output,
+		Platforms:      platforms,
+		Tags:           tags,
+		Verbose:        verbose,
+		FileName:       filename,
+		Artifacts:      []string{},
+		ShouldGenerate: shouldGenerate,
 	}
 	return script
+}
+
+func shouldGenerate(generateMode string, folder string) bool {
+	switch GenerateMode(generateMode) {
+	case GenerateModeEnabled:
+		return true
+	case GenerateModeDisabled:
+		return false
+	case GenerateModeAuto:
+		fallthrough
+	default:
+		return detectGoGenerate(folder)
+	}
 }
 
 // TODO: the -race flag needs CDO enabled for now https://github.com/golang/go/issues/6508
@@ -66,14 +161,18 @@ func (bs *BuildScript) String() string {
 
 func script(bs *BuildScript) string {
 	goBuildCmd := goBuildCmds(bs)
+	generateCmd := ""
+	if bs.ShouldGenerate {
+		generateCmd = "go generate ./...\n"
+	}
 	script := fmt.Sprintf(`#!/bin/sh
 set -xe
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
 cd %s
-%s
-`, bs.Folder, goBuildCmd)
+%s%s
+`, bs.Folder, generateCmd, goBuildCmd)
 
 	return script
 }

@@ -1,0 +1,5 @@
+package vendor
+
+//go:generate echo "this should be ignored"
+
+func Vendor() {}
