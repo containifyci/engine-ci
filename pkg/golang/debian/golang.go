@@ -1,7 +1,8 @@
 package debian
 
+//go:generate go run ../../../tools/dockerfile-metadata/ -input Dockerfilego -output docker_metadata_gen.go -package debian
+
 import (
-	"embed"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
-	"github.com/containifyci/engine-ci/pkg/cri/parser"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/golang/buildscript"
@@ -25,8 +25,8 @@ const (
 	OUT_DIR    = "/out/"
 )
 
-//go:embed Dockerfile*
-var f embed.FS
+// Dockerfile content is now available via generated constants in docker_metadata_gen.go
+// No longer need embed.FS for Dockerfile parsing
 
 type GoContainer struct {
 	//TODO add option to fail on linter or not
@@ -103,54 +103,26 @@ func CacheFolder() string {
 }
 
 func (c *GoContainer) Pull() error {
-	_, _, version := dockerFile()
-	imageTag := fmt.Sprintf("golang:%s", version)
+	imageTag := fmt.Sprintf("golang:%s", GoVersion)
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
 func GoImage(build container.Build) string {
-	_, tag, version := dockerFile()
-	image := fmt.Sprintf("golang-%s", version)
-	return utils.ImageURI(build.ContainifyRegistry, image, tag)
-}
-
-func dockerFile() ([]byte, string, string) {
-	dockerFile, err := f.ReadFile("Dockerfilego")
-	if err != nil {
-		slog.Error("Failed to read Dockerfile.go", "error", err)
-		os.Exit(1)
-	}
-
-	p := parser.New(dockerFile)
-	from, err := p.ParseFrom()
-	if err != nil {
-		slog.Error("Failed to parse Dockerfile", "error", err)
-		os.Exit(1)
-	}
-
-	tag := container.ComputeChecksum(dockerFile)
-	return dockerFile, tag, from[0].BaseVersion
+	image := fmt.Sprintf("golang-%s", GoVersion)
+	return utils.ImageURI(build.ContainifyRegistry, image, DockerfileChecksum)
 }
 
 func Images(build container.Build) []string {
-	_, _, version := dockerFile()
-	image := fmt.Sprintf("golang:%s", version)
-
+	image := fmt.Sprintf("golang:%s", GoVersion)
 	return []string{image, "alpine:latest", GoImage(build)}
 }
 
 func (c *GoContainer) BuildGoImage() error {
 	image := GoImage(*c.GetBuild())
 
-	dockerFile, err := f.ReadFile("Dockerfilego")
-	if err != nil {
-		slog.Error("Failed to read Dockerfile", "error", err)
-		os.Exit(1)
-	}
-
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
-	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	return c.BuildIntermidiateContainer(image, []byte(DockerfileContent), platforms...)
 }
 
 func (c *GoContainer) Build() error {
@@ -213,7 +185,11 @@ func (c *GoContainer) BuildScript() string {
 	// Create a temporary script in-memory
 	nocoverage := c.GetBuild().Custom.Bool("nocoverage", false)
 	coverageMode := buildscript.CoverageMode(c.GetBuild().Custom.String("coverage_mode"))
-	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, c.Platforms...).String()
+	generateMode := c.GetBuild().Custom.String("generate")
+	if generateMode == "" {
+		generateMode = "auto"
+	}
+	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, generateMode, c.Platforms...).String()
 }
 
 func NewProd() build.BuildStepv2 {

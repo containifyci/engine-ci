@@ -1,7 +1,8 @@
 package alpine
 
+//go:generate go run ../../../tools/dockerfile-metadata/ -package alpine -output docker_metadata_gen.go -input Dockerfile_go -variant "" -input Dockerfile_chromium_go -variant "chromium"
+
 import (
-	"embed"
 	"fmt"
 	"log/slog"
 	"os"
@@ -27,8 +28,8 @@ const (
 	OUT_DIR    = "/out/"
 )
 
-//go:embed Dockerfile*
-var f embed.FS
+// Dockerfile content is now available via generated constants in docker_metadata_gen.go
+// No longer need embed.FS for Dockerfile parsing
 
 type GoContainer struct {
 	*container.Container
@@ -211,18 +212,11 @@ func dockerFile(build *container.Build) (*protos2.ContainerFile, string, error) 
 		}
 	}
 
-	dockerFileName := "Dockerfile_go"
 	typ := build.CustomString("go_type")
-	if typ != "" {
-		dockerFileName = fmt.Sprintf("Dockerfile_%s_go", typ)
-	}
-	dockerFile, err := f.ReadFile(dockerFileName)
-	if err != nil {
-		slog.Error("Failed to read Dockerfile.go", "error", err)
-		os.Exit(1)
-	}
 
-	version := dockerFileVersion(dockerFile)
+	// Use generated metadata helper for all variants
+	version, _, content := GetDockerfileMetadata(typ)
+
 	name := fmt.Sprintf("golang-%s", version)
 	if typ != "" {
 		name = fmt.Sprintf("golang-%s-%s", version, typ)
@@ -230,7 +224,7 @@ func dockerFile(build *container.Build) (*protos2.ContainerFile, string, error) 
 
 	return &protos2.ContainerFile{
 		Name:    name,
-		Content: string(dockerFile),
+		Content: content,
 	}, version, nil
 }
 
@@ -348,7 +342,11 @@ func (c *GoContainer) BuildScript() *buildscript.BuildScript {
 	// Create a temporary script in-memory
 	nocoverage := c.GetBuild().Custom.Bool("nocoverage", false)
 	coverageMode := buildscript.CoverageMode(c.GetBuild().Custom.String("coverage_mode"))
-	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Verbose, nocoverage, coverageMode, c.Platforms...)
+	generateMode := c.GetBuild().Custom.String("generate")
+	if generateMode == "" {
+		generateMode = "auto"
+	}
+	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Verbose, nocoverage, coverageMode, generateMode, c.Platforms...)
 }
 
 func Matches(build container.Build) bool {
