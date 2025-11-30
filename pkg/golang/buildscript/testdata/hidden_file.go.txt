@@ -1,0 +1,5 @@
+package hidden
+
+//go:generate echo "this should be ignored"
+
+func Hidden() {}
