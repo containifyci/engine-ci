@@ -1,0 +1,7 @@
+package main
+
+//go:generate echo "this should be ignored"
+
+func main() {
+	// code here
+}
