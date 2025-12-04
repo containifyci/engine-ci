@@ -4,8 +4,8 @@ package debiancgo
 
 // Default Dockerfile (Dockerfilego)
 const (
-	// GoVersion is the golang version extracted from the Dockerfile
-	GoVersion = "1.25.4"
+	// ImageVersion is the golang version extracted from the Dockerfile
+	ImageVersion = "1.25.4"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
 	DockerfileChecksum = "afdf56054901a8dd63a947be24ee6d57925ff7cde5c6dbdc0013b27af3b952b7"
@@ -50,6 +50,6 @@ ENV CGO_LDFLAGS="-L/usr/lib/aarch64-linux-gnu -lssl -lcrypto"
 func GetDockerfileMetadata(variantType string) (version, checksum, content string) {
 	switch variantType {
 	default: // "" or any unknown type defaults to standard
-		return GoVersion, DockerfileChecksum, DockerfileContent
+		return ImageVersion, DockerfileChecksum, DockerfileContent
 	}
 }

@@ -4,8 +4,8 @@ package debian
 
 // Default Dockerfile (Dockerfilego)
 const (
-	// GoVersion is the golang version extracted from the Dockerfile
-	GoVersion = "1.25.4"
+	// ImageVersion is the golang version extracted from the Dockerfile
+	ImageVersion = "1.25.4"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
 	DockerfileChecksum = "39a8c792338369683ad80d5c3e03a0badfcd46c344c9ad9bf31a9a18fbda777d"
@@ -38,6 +38,6 @@ RUN go install github.com/wadey/gocovmerge@latest && \
 func GetDockerfileMetadata(variantType string) (version, checksum, content string) {
 	switch variantType {
 	default: // "" or any unknown type defaults to standard
-		return GoVersion, DockerfileChecksum, DockerfileContent
+		return ImageVersion, DockerfileChecksum, DockerfileContent
 	}
 }
