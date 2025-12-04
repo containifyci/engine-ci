@@ -18,9 +18,14 @@ import (
 )
 
 const (
-	GoLang  BuildType = "GoLang"
-	Maven   BuildType = "Maven"
-	Python  BuildType = "Python"
+	GoLang     BuildType = "GoLang"
+	Maven      BuildType = "Maven"
+	Python     BuildType = "Python"
+	NodeJS     BuildType = "NodeJS"
+	Typescript BuildType = "Typescript"
+	Zig        BuildType = "Zig"
+	Rust       BuildType = "Rust"
+
 	Generic BuildType = "Generic"
 )
 
@@ -37,11 +42,11 @@ func (e *BuildType) String() string {
 // Set must have pointer receiver so it doesn't change the value of a copy
 func (e *BuildType) Set(v string) error {
 	switch v {
-	case string(GoLang), string(Maven), string(Python), string(Generic):
+	case string(GoLang), string(Maven), string(Python), string(Generic), string(NodeJS), string(Typescript), string(Zig), string(Rust):
 		*e = BuildType(v)
 		return nil
 	default:
-		return errors.New(`must be one of go, maven, python, generic`)
+		return errors.New(`must be one of go, maven, python, zig, generic`)
 	}
 }
 
