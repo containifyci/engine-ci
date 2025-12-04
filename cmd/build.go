@@ -24,6 +24,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/sonarcloud"
 	"github.com/containifyci/engine-ci/pkg/svc"
 	"github.com/containifyci/engine-ci/pkg/trivy"
+	"github.com/containifyci/engine-ci/pkg/zig"
 
 	"github.com/spf13/cobra"
 )
@@ -155,12 +156,14 @@ func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.B
 		addStep(build.Build, golang.NewCGO())    // CGO variant
 		addStep(build.Build, maven.New())        // Maven
 		addStep(build.Build, python.New())       // Python
+		addStep(build.Build, zig.New())          // Zig
 
 		// PostBuild: Production artifacts, packaging
 		addStep(build.PostBuild, golang.NewProd())       // Alpine prod
 		addStep(build.PostBuild, golang.NewProdDebian()) // Debian prod
 		addStep(build.PostBuild, maven.NewProd())        // Maven prod
 		addStep(build.PostBuild, python.NewProd())       // Python prod
+		addStep(build.PostBuild, zig.NewProd())          // Zig prod
 
 		// Quality: Linting, testing, security scanning
 		addStep(build.Quality, golang.NewLinter()) // Golang linter (async)
@@ -266,6 +269,13 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 		})
 		c.AddTarget("release", func() error {
 			return bs.Run(arg, "dummy")
+		})
+	case container.Zig:
+		c.AddTarget("build", func() error {
+			return bs.Run(arg, "zig")
+		})
+		c.AddTarget("push", func() error {
+			return bs.Run(arg, "zig-prod")
 		})
 	}
 	c.AddTarget("all", func() error {
