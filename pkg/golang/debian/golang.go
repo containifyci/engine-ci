@@ -103,17 +103,17 @@ func CacheFolder() string {
 }
 
 func (c *GoContainer) Pull() error {
-	imageTag := fmt.Sprintf("golang:%s", GoVersion)
+	imageTag := fmt.Sprintf("golang:%s", ImageVersion)
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
 func GoImage(build container.Build) string {
-	image := fmt.Sprintf("golang-%s", GoVersion)
+	image := fmt.Sprintf("golang-%s", ImageVersion)
 	return utils.ImageURI(build.ContainifyRegistry, image, DockerfileChecksum)
 }
 
 func Images(build container.Build) []string {
-	image := fmt.Sprintf("golang:%s", GoVersion)
+	image := fmt.Sprintf("golang:%s", ImageVersion)
 	return []string{image, "alpine:latest", GoImage(build)}
 }
 

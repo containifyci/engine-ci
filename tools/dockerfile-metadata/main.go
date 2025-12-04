@@ -21,8 +21,8 @@ package {{ .Package }}
 {{ if .IsDefault }}
 // Default Dockerfile ({{ .InputFile }})
 const (
-	// GoVersion is the golang version extracted from the Dockerfile
-	GoVersion = "{{ .Version }}"
+	// ImageVersion is the golang version extracted from the Dockerfile
+	ImageVersion = "{{ .Version }}"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
 	DockerfileChecksum = "{{ .Checksum }}"
@@ -33,8 +33,8 @@ var DockerfileContent = ` + "`" + `{{ .Content }}` + "`" + `
 {{ else }}
 // {{ .VariantName }} variant ({{ .InputFile }})
 const (
-	// GoVersion{{ .VariantSuffix }} is the golang version extracted from the Dockerfile
-	GoVersion{{ .VariantSuffix }} = "{{ .Version }}"
+	// ImageVersion{{ .VariantSuffix }} is the golang version extracted from the Dockerfile
+	ImageVersion{{ .VariantSuffix }} = "{{ .Version }}"
 
 	// DockerfileChecksum{{ .VariantSuffix }} is the checksum of the Dockerfile content
 	DockerfileChecksum{{ .VariantSuffix }} = "{{ .Checksum }}"
@@ -49,9 +49,9 @@ var DockerfileContent{{ .VariantSuffix }} = ` + "`" + `{{ .Content }}` + "`" + `
 func GetDockerfileMetadata(variantType string) (version, checksum, content string) {
 	switch variantType {
 	{{ range .Variants }}{{ if not .IsDefault }}case "{{ .VariantName }}":
-		return GoVersion{{ .VariantSuffix }}, DockerfileChecksum{{ .VariantSuffix }}, DockerfileContent{{ .VariantSuffix }}
+		return ImageVersion{{ .VariantSuffix }}, DockerfileChecksum{{ .VariantSuffix }}, DockerfileContent{{ .VariantSuffix }}
 	{{ end }}{{ end }}default: // "" or any unknown type defaults to standard
-		return GoVersion, DockerfileChecksum, DockerfileContent
+		return ImageVersion, DockerfileChecksum, DockerfileContent
 	}
 }
 `

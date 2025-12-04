@@ -4,8 +4,8 @@ package alpine
 
 // Default Dockerfile (Dockerfile_go)
 const (
-	// GoVersion is the golang version extracted from the Dockerfile
-	GoVersion = "1.25.4-alpine"
+	// ImageVersion is the golang version extracted from the Dockerfile
+	ImageVersion = "1.25.4-alpine"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
 	DockerfileChecksum = "51f34b1f5932ba1d41959a8d758e361df447a36c0c41510f5f64afc5490711e4"
@@ -26,8 +26,8 @@ RUN go install github.com/wadey/gocovmerge@latest && \
 
 // chromium variant (Dockerfile_chromium_go)
 const (
-	// GoVersionChromium is the golang version extracted from the Dockerfile
-	GoVersionChromium = "1.25.-alpine"
+	// ImageVersionChromium is the golang version extracted from the Dockerfile
+	ImageVersionChromium = "1.25.4-alpine"
 
 	// DockerfileChecksumChromium is the checksum of the Dockerfile content
 	DockerfileChecksumChromium = "2aee11334f096b1d85c658dfee273bc52f6bc627ca2446775212fec501f0d298"
@@ -51,8 +51,8 @@ RUN go install github.com/wadey/gocovmerge@latest && \
 func GetDockerfileMetadata(variantType string) (version, checksum, content string) {
 	switch variantType {
 	case "chromium":
-		return GoVersionChromium, DockerfileChecksumChromium, DockerfileContentChromium
+		return ImageVersionChromium, DockerfileChecksumChromium, DockerfileContentChromium
 	default: // "" or any unknown type defaults to standard
-		return GoVersion, DockerfileChecksum, DockerfileContent
+		return ImageVersion, DockerfileChecksum, DockerfileContent
 	}
 }

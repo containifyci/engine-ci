@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/iam v1.5.3
 	github.com/containers/buildah v1.42.1
 	github.com/containers/podman/v5 v5.7.0
-	github.com/containifyci/engine-ci/protos2 v0.20.1
+	github.com/containifyci/engine-ci/protos2 v0.21.0
 	github.com/containifyci/go-self-update v0.2.4
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0

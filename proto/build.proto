@@ -15,6 +15,10 @@ enum BuildType {
     Maven = 1;
     Python = 2;
     Generic = 3;
+    NodeJS = 4;
+    Typescript = 5;
+    Zig = 6;
+    Rust = 7;
 }
 
 enum RuntimeType {
