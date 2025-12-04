@@ -218,7 +218,7 @@ func (c *ZigContainer) Prod() error {
 	}
 
 	// Copy built binaries from zig-out/bin to /app/bin
-	zigOutBin := filepath.Join(c.Folder, "zig-out", "bin")
+	zigOutBin := filepath.Join("zig-out", "bin")
 	err = c.CopyDirectoryTo(zigOutBin+"/", "/app/bin")
 	if err != nil {
 		slog.Error("Failed to copy directory to container", "error", err)
