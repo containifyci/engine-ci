@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/containifyci/engine-ci/pkg/cri/types"
 )
 
 type BuildScript struct {
@@ -15,11 +17,12 @@ type BuildScript struct {
 	CacheDir    string
 	Optimize    string
 	Target      string
+	Platforms   []*types.PlatformSpec
 	Verbose     bool
 	HasBuildZon bool
 }
 
-func NewBuildScript(folder string, optimize string, target string, verbose bool, cacheDir string) *BuildScript {
+func NewBuildScript(folder string, optimize string, target string, verbose bool, cacheDir string, platform []*types.PlatformSpec) *BuildScript {
 	if folder == "" {
 		folder = "."
 	}
@@ -35,6 +38,7 @@ func NewBuildScript(folder string, optimize string, target string, verbose bool,
 		Folder:      folder,
 		Optimize:    optimize,
 		Target:      target,
+		Platforms:   platform,
 		Verbose:     verbose,
 		CacheDir:    cacheDir,
 		HasBuildZon: hasBuildZon,
@@ -87,7 +91,7 @@ func zigBuildCmds(bs *BuildScript) string {
 	var cmds []string
 
 	// Build the zig build command
-	buildCmd := "zig build --summary all"
+	buildCmd := "zig build --color off --summary all"
 
 	if bs.Optimize != "" {
 		buildCmd += fmt.Sprintf(" -Doptimize=%s", bs.Optimize)
@@ -105,7 +109,7 @@ func zigBuildCmds(bs *BuildScript) string {
 
 	testCmd := "zig test "
 	if bs.Folder != "" && bs.Folder != "." {
-		testCmd += fmt.Sprintf("%s/*", bs.Folder)
+		testCmd += fmt.Sprintf("%s/*.zig", bs.Folder)
 	} else {
 		testCmd += "*"
 	}
@@ -114,6 +118,12 @@ func zigBuildCmds(bs *BuildScript) string {
 		testCmd += " 2>&1 | cat"
 	}
 	cmds = append(cmds, testCmd)
+
+	e2etestCmd := "zig build test --summary all"
+	if bs.Target != "" {
+		e2etestCmd += fmt.Sprintf(" -Dtarget=%s", bs.Target)
+	}
+	cmds = append(cmds, e2etestCmd)
 
 	return strings.Join(cmds, "\n")
 }

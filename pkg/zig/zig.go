@@ -24,16 +24,16 @@ const (
 )
 
 type ZigContainer struct {
-	Platform types.Platform
 	*container.Container
-	App      string
-	File     string
-	Folder   string
-	Image    string
-	ImageTag string
-	Secret   map[string]string
-	Optimize string
-	Target   string
+	Secret    map[string]string
+	App       string
+	File      string
+	Folder    string
+	Image     string
+	ImageTag  string
+	Optimize  string
+	Target    string
+	Platforms []*types.PlatformSpec
 }
 
 // Matches implements the Build interface - runs when buildtype is Zig
@@ -55,6 +55,14 @@ func New() build.BuildStepv2 {
 }
 
 func new(build container.Build) *ZigContainer {
+	platforms := []*types.PlatformSpec{build.Platform.Container}
+
+	target := build.Custom.String("target")
+
+	if !build.Platform.Same() {
+		slog.Debug("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
+		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")}
+	}
 	return &ZigContainer{
 		App:       build.App,
 		Container: container.New(build),
@@ -62,10 +70,10 @@ func new(build container.Build) *ZigContainer {
 		Folder:    build.Folder,
 		File:      build.File,
 		ImageTag:  build.ImageTag,
-		Platform:  build.Platform,
+		Platforms: platforms,
 		Secret:    build.Secret,
 		Optimize:  build.Custom.String("optimize"),
-		Target:    build.Custom.String("target"),
+		Target:    target,
 	}
 }
 
@@ -173,7 +181,7 @@ func (c *ZigContainer) Build() (string, error) {
 }
 
 func (c *ZigContainer) BuildScript() *BuildScript {
-	return NewBuildScript(c.Folder, c.Optimize, c.Target, c.Verbose, CacheLocation)
+	return NewBuildScript(c.Folder, c.Optimize, c.Target, c.Verbose, CacheLocation, c.Platforms)
 }
 
 func NewProd() build.BuildStepv2 {
