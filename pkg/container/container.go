@@ -712,12 +712,16 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 		return nil
 	}
 
-	err = c.PullByPlatform(platforms[0], image)
-	if err != nil {
-		slog.Warn("Failed to pull intermediate image. Has to build now then", "error", err, "image", image, "platform", platforms[0])
+	var pullErr []error
+	for _, platform := range platforms {
+		err := c.PullByPlatform(platform, image)
+		if err != nil {
+			slog.Warn("Failed to pull intermediate image. Has to build now then", "error", err, "image", image, "platform", platform)
+			pullErr = append(pullErr, err)
+		}
 	}
 
-	if err == nil {
+	if len(pullErr) == 0 {
 		slog.Info("Image successfully pulled", "image", image, "platforms", platforms)
 		return nil
 	}
