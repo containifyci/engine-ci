@@ -64,27 +64,35 @@ func main() {
 	}
 	opts2.Image = ""
 
+	opts3 := build.NewGoServiceBuild("engine-ci-debiancgo")
+	opts3.File = "main.go"
+	opts3.Properties = map[string]*build.ListValue{
+		"tags": build.NewList("containers_image_openpgp"),
+		"from": build.NewList("debiancgo"),
+	}
+	opts3.Image = ""
+
 	build.BuildGroups(
 		&protos2.BuildArgsGroup{
 			Args: []*protos2.BuildArgs{pr2, client},
 		},
 		&protos2.BuildArgsGroup{
-			Args: []*protos2.BuildArgs{opts1, custom, opts2},
+			Args: []*protos2.BuildArgs{opts1, custom, opts2, opts3},
 		},
 	)
 }
 
 func DockerFile() *protos2.ContainerFile {
 	return &protos2.ContainerFile{
-		Name: "golang-1.25-4-alpine",
-		Content: `FROM golang:1.25.4-alpine
+		Name: "golang-1.25-5-alpine",
+		Content: `FROM golang:1.25.5-alpine
 
 RUN apk --no-cache add git openssh-client && \
   rm -rf /var/cache/apk/*
 
 RUN go install github.com/wadey/gocovmerge@latest && \
   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.4.0 && \
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2 && \
   go clean -cache && \
   go clean -modcache
 WORKDIR /app`,
