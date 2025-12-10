@@ -5,21 +5,21 @@ package alpine
 // Default Dockerfile (Dockerfile_go)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "1.25.4-alpine"
+	ImageVersion = "1.25.5-alpine"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "51f34b1f5932ba1d41959a8d758e361df447a36c0c41510f5f64afc5490711e4"
+	DockerfileChecksum = "38d35a6851ab16c2ea72037817a2919df420e41bae709298f6048172b075571b"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM golang:1.25.4-alpine
+var DockerfileContent = `FROM golang:1.25.5-alpine
 
 RUN apk --no-cache add git openssh-client && \
   rm -rf /var/cache/apk/*
 
 RUN go install github.com/wadey/gocovmerge@latest && \
   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.4.0 && \
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2 && \
   go clean -cache && \
   go clean -modcache
 `
@@ -27,21 +27,21 @@ RUN go install github.com/wadey/gocovmerge@latest && \
 // chromium variant (Dockerfile_chromium_go)
 const (
 	// ImageVersionChromium is the golang version extracted from the Dockerfile
-	ImageVersionChromium = "1.25.4-alpine"
+	ImageVersionChromium = "1.25.5-alpine"
 
 	// DockerfileChecksumChromium is the checksum of the Dockerfile content
-	DockerfileChecksumChromium = "2aee11334f096b1d85c658dfee273bc52f6bc627ca2446775212fec501f0d298"
+	DockerfileChecksumChromium = "4f0ae68a61cb5c3a25dc350ac244a9d9452199f86063b2131e53e1a67cf62c04"
 )
 
 // DockerfileContentChromium contains the embedded Dockerfile content
-var DockerfileContentChromium = `FROM golang:1.25.4-alpine
+var DockerfileContentChromium = `FROM golang:1.25.5-alpine
 
 RUN apk --no-cache add git openssh-client chromium && \
   rm -rf /var/cache/apk/*
 
 RUN go install github.com/wadey/gocovmerge@latest && \
   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.4.0 && \
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2 && \
   go clean -cache && \
   go clean -modcache
 `
