@@ -1,9 +1,9 @@
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
 github.com/bufbuild/protocompile v0.14.1/go.mod h1:ppVdAIhbr2H8asPk6k4pY7t9zB1OU5DoEw9xY/FUi1c=
-github.com/containifyci/engine-ci/client v0.23.0 h1:t6higmE4HQOZTjAXPSndMe5HYMUS38kuOSAkDkZDujs=
-github.com/containifyci/engine-ci/client v0.23.0/go.mod h1:yocwOK1T7vp3J6qFNl1ZK8TyaNTlADeLlrD5ok+I9lI=
-github.com/containifyci/engine-ci/protos2 v0.21.0 h1:RE7rlp2DL1gskDO7L+tjBZNFrcIwlSDI1fx61Zm+khM=
-github.com/containifyci/engine-ci/protos2 v0.21.0/go.mod h1:KmRvSjptuzkWoq32b/zm/LtNe0SVJ4rABUwu6g+7UoA=
+github.com/containifyci/engine-ci/client v0.23.1 h1:9sYoRG8Gsx8/vxu71Yp4d8j8zCwfhkYDMjMMuwjm2vE=
+github.com/containifyci/engine-ci/client v0.23.1/go.mod h1:gP9B4DDvVURLZbR4H6SEu2NPXKwnv05F5yt2jQmOorg=
+github.com/containifyci/engine-ci/protos2 v0.21.1 h1:QiHKd/AWCRy+ELBAUsg03HC/bYOGnK41OJ5SGygM584=
+github.com/containifyci/engine-ci/protos2 v0.21.1/go.mod h1:KCg0/8wQghrA0feQQCJITglJde4I3D4jsrNluDbTPWk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
@@ -78,8 +78,8 @@ google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 h1:
 google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8/go.mod h1:7i2o+ce6H/6BluujYR+kqX3GKH+dChPTQU19wjRPiGk=
 google.golang.org/grpc v1.77.0 h1:wVVY6/8cGA6vvffn+wWK5ToddbgdU3d8MNENr4evgXM=
 google.golang.org/grpc v1.77.0/go.mod h1:z0BY1iVj0q8E1uSQCjL9cppRj+gnZjzDnzV0dHhrNig=
-google.golang.org/protobuf v1.36.10 h1:AYd7cD/uASjIL6Q9LiTjz8JLcrh/88q5UObnmY3aOOE=
-google.golang.org/protobuf v1.36.10/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
+google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
+google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
