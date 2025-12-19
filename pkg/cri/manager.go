@@ -49,11 +49,11 @@ type ContainerManager interface {
 
 var (
 	lazyValue ContainerManager
+	err       error
 	once      sync.Once
 )
 
 func InitContainerRuntime() (ContainerManager, error) {
-	var err error
 	once.Do(func() {
 		lazyValue, err = getRuntime()
 	})

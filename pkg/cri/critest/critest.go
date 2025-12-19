@@ -100,6 +100,9 @@ func (m *MockContainerManager) GetImage(id string) *MockImageLifecycle {
 
 func (m *MockContainerManager) CreateContainer(ctx context.Context, opts *types.ContainerConfig, authBase64 string) (string, error) {
 	id := randString(6)
+	if opts.Platform == nil {
+		opts.Platform = types.GetPlatformSpec()
+	}
 	m.Containers[id] = &MockContainerLifecycle{ID: id, Opts: opts, State: "created"}
 	return id, nil
 }

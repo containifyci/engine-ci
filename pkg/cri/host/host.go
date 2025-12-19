@@ -58,6 +58,10 @@ func (d *HostManager) CreateContainer(ctx context.Context, opts *types.Container
 		opts: opts,
 	}
 
+	if opts.Platform == nil {
+		opts.Platform = types.GetPlatformSpec()
+	}
+
 	return id, nil
 }
 
@@ -85,14 +89,36 @@ func (d *HostManager) StartContainer(ctx context.Context, id string) error {
 		commands[1] = fmt.Sprintf("/tmp/%s/script.sh", id)
 	}
 
+	wrkDir := ""
+	if c.opts.Volumes != nil {
+		for _, vol := range c.opts.Volumes {
+			if vol.Type == "bind" && vol.Target == "/src" {
+				wrkDir = vol.Source
+			}
+		}
+	}
+
+	if wrkDir != "" {
+		err := os.Mkdir(wrkDir+"/src", 0o755)
+		if err != nil {
+			slog.Error("Failed to create working directory", "dir", wrkDir, "error", err)
+			os.Exit(1)
+		}
+	}
+
+	for i, cmd := range commands[1:] {
+		commands[i+1] = strings.ReplaceAll(cmd, "/src", wrkDir+"/src")
+	}
+
 	cmd := exec.Command(commands[0], commands[1:]...)
 	stdout := NewWriterToReadCloser()
+	cmd.Dir = wrkDir
 	cmd.Stdout = stdout
 	cmd.Stderr = stdout
 	c.stdout = stdout
 
 	// Start the command asynchronously
-	slog.Info("Running command", "command", commands)
+	slog.Info("Running command", "command", commands, "working_dir", cmd.Dir)
 	if err := cmd.Start(); err != nil {
 		slog.Error("Failed to start command", "command", commands, "error", err)
 		return err

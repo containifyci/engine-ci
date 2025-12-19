@@ -71,15 +71,15 @@ func NewPodmanManager() (*PodmanManager, error) {
 		return nil, fmt.Errorf("podman not found in PATH: %w", err)
 	}
 
-	output, err := exec.Command("podman", "version", "-f", "{{.Version}}").Output()
+	output, err := exec.Command("podman", "-v").Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get podman version: %w", err)
 	}
 
 	var podmanSocket string
 
-	if strings.HasPrefix(strings.TrimSpace(string(output)), "3.") ||
-		strings.HasPrefix(strings.TrimSpace(string(output)), "4.") {
+	if strings.HasPrefix(strings.TrimSpace(string(output)), "podman version 3.") ||
+		strings.HasPrefix(strings.TrimSpace(string(output)), "podman version 4.") {
 		cmd, err := exec.Command("podman", "info", "-f", "{{ .Host.RemoteSocket.Path }}").Output()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get podman socket info: %w", err)

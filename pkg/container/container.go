@@ -94,6 +94,16 @@ func GetEnv(key string) string {
 	return u.GetEnv(key, string(BuildEnv))
 }
 
+func NewWithManager(manager cri.ContainerManager) *Container {
+	_client := func() cri.ContainerManager {
+		return manager
+	}
+	ctx := context.Background()
+	build := &Build{}
+	logger.NewLogAggregator("")
+	return &Container{t: t{client: _client, ctx: ctx}, Build: build.Defaults()}
+}
+
 func New(build Build) *Container {
 	_client := func() cri.ContainerManager {
 		client, err := cri.InitContainerRuntime()
