@@ -57,4 +57,4 @@ jobs:
           tag_name: ${{ inputs.tag == '' && steps.semver.outputs.next || inputs.tag }}
           semver_prefix: ${{ inputs.module }}/v
         env:
-          GITHUB_TOKEN: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN  }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN  }}
