@@ -43,8 +43,9 @@ func Matches(build container.Build) bool {
 	return build.BuildType == container.Maven
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.Maven,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Run()
@@ -52,6 +53,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  Images,
 		Name_:     "maven",
+		Alias_:    "build",
 		Async_:    false,
 	}
 }
@@ -200,7 +202,7 @@ func (c *MavenContainer) Build() error {
 	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to build container: %w", err)
 	}
 
 	return err
@@ -211,14 +213,16 @@ func (c *MavenContainer) BuildScript() string {
 	return Script(NewBuildScript(c.Verbose))
 }
 
-func NewProd() build.BuildStepv2 {
+func NewProd() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.Maven,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Prod()
 		},
 		ImagesFn: build.StepperImages(ProdImage),
 		Name_:    "maven-prod",
+		Alias_:   "push",
 		Async_:   false,
 	}
 }

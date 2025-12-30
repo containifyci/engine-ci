@@ -41,8 +41,9 @@ func Matches(build container.Build) bool {
 	return build.BuildType == container.Zig
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.Zig,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Run()
@@ -50,6 +51,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  Images,
 		Name_:     "zig",
+		Alias_:    "build",
 		Async_:    false,
 	}
 }
@@ -157,7 +159,7 @@ func (c *ZigContainer) Build() (string, error) {
 	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
-		os.Exit(1)
+		return "", fmt.Errorf("failed to build container: %w", err)
 	}
 
 	if c.Image == "" {
@@ -184,14 +186,16 @@ func (c *ZigContainer) BuildScript() *BuildScript {
 	return NewBuildScript(c.Folder, c.Optimize, c.Target, c.Verbose, CacheLocation, c.Platforms)
 }
 
-func NewProd() build.BuildStepv2 {
+func NewProd() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.Zig,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Prod()
 		},
 		ImagesFn:  Images,
 		Name_:     "zig-prod",
+		Alias_:    "push",
 		MatchedFn: Matches,
 		Async_:    false,
 	}

@@ -8,23 +8,10 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
-	"github.com/containifyci/engine-ci/pkg/copier"
-	"github.com/containifyci/engine-ci/pkg/dummy"
-	"github.com/containifyci/engine-ci/pkg/gcloud"
-	"github.com/containifyci/engine-ci/pkg/github"
-	"github.com/containifyci/engine-ci/pkg/golang"
-	"github.com/containifyci/engine-ci/pkg/goreleaser"
 	"github.com/containifyci/engine-ci/pkg/kv"
 	"github.com/containifyci/engine-ci/pkg/logger"
-	"github.com/containifyci/engine-ci/pkg/maven"
 	"github.com/containifyci/engine-ci/pkg/network"
-	"github.com/containifyci/engine-ci/pkg/protobuf"
-	"github.com/containifyci/engine-ci/pkg/pulumi"
-	"github.com/containifyci/engine-ci/pkg/python"
-	"github.com/containifyci/engine-ci/pkg/sonarcloud"
 	"github.com/containifyci/engine-ci/pkg/svc"
-	"github.com/containifyci/engine-ci/pkg/trivy"
-	"github.com/containifyci/engine-ci/pkg/zig"
 
 	"github.com/spf13/cobra"
 )
@@ -75,12 +62,6 @@ func init() {
 }
 
 func Init(arg *container.Build) *container.Build {
-	// var arg *container.Build
-	// if len(args) <= 0 {
-	// 	arg = buildArgs
-	// } else {
-	// arg = args[0]
-	// }
 	bld := container.NewBuild(arg)
 
 	logOpts := slog.HandlerOptions{
@@ -103,91 +84,22 @@ func Init(arg *container.Build) *container.Build {
 		git = svc.SetUnknowGitInfo()
 	}
 	slog.Info("Starting build", "build", bld, "git", git)
-	container.InitRuntime(arg)
 	return arg
 }
 
-func (c *Command) Pre() (*container.Build, *build.BuildSteps) {
-	a, bs := Pre(c.buildArgs, c.buildSteps)
-	return a, bs
+func (c *Command) Pre() *container.Build {
+	a := Pre(c.buildArgs)
+	return a
 }
 
-func Pre(arg *container.Build, bs *build.BuildSteps) (*container.Build, *build.BuildSteps) {
+func Pre(arg *container.Build) *container.Build {
 	slog.Info("Pre build", "args", arg)
 	a := Init(arg)
-
-	if bs == nil {
-		bs = build.NewBuildSteps()
-	}
-	// buildSteps := build.NewBuildSteps()
-	// slog.Info("Build steps", "buildSteps", buildSteps)
-	// slog.Info("Build steps", "buildSteps Check", buildSteps == nil)
-	// if buildSteps == nil {
-	// 	buildSteps = build.NewBuildSteps()
-	// }
-	// bs := build.NewBuildSteps()
-
-	if bs.IsNotInit() {
-		slog.Info("Registering all build steps by category", "build", *a)
-
-		// Helper function to add step and log error
-		addStep := func(category build.BuildCategory, step build.BuildStepv2) {
-			var err error
-			if step.IsAsync() {
-				err = bs.AddAsyncToCategory(category, step)
-			} else {
-				err = bs.AddToCategory(category, step)
-			}
-			if err != nil {
-				slog.Error("Failed to add build step", "step", step.Name(), "category", category, "error", err)
-			}
-		}
-
-		// Auth: Authentication & credentials
-		addStep(build.Auth, gcloud.New())
-
-		// PreBuild: Setup, protobuf, dependencies
-		addStep(build.PreBuild, copier.New())
-		addStep(build.PreBuild, protobuf.New())
-
-		// Build: Language-specific compilation
-		addStep(build.Build, golang.New())       // Alpine variant
-		addStep(build.Build, golang.NewDebian()) // Debian variant
-		addStep(build.Build, golang.NewCGO())    // CGO variant
-		addStep(build.Build, maven.New())        // Maven
-		addStep(build.Build, python.New())       // Python
-		addStep(build.Build, zig.New())          // Zig
-
-		// PostBuild: Production artifacts, packaging
-		addStep(build.PostBuild, golang.NewProd())       // Alpine prod
-		addStep(build.PostBuild, golang.NewProdDebian()) // Debian prod
-		addStep(build.PostBuild, maven.NewProd())        // Maven prod
-		addStep(build.PostBuild, python.NewProd())       // Python prod
-		addStep(build.PostBuild, zig.NewProd())          // Zig prod
-
-		// Quality: Linting, testing, security scanning
-		addStep(build.Quality, golang.NewLinter()) // Golang linter (async)
-		addStep(build.Quality, sonarcloud.New())   // SonarCloud (async)
-		addStep(build.Quality, trivy.New())        // Trivy
-
-		// Apply: Infrastructure changes
-		addStep(build.Apply, pulumi.New()) // Pulumi
-
-		// Publish: Publishing, releases, notifications
-		addStep(build.Publish, goreleaser.New()) // Goreleaser
-		addStep(build.Publish, github.New())     // GitHub (async)
-
-		addStep(build.Publish, dummy.New()) // Goreleaser
-
-		bs.Init()
-	}
-
-	bs.PrintSteps()
-	return a, bs
+	return a
 }
 
 type Command struct {
-	targets    map[string]func() error
+	targets    map[string]func() ([]string, container.BuildLoop, error)
 	buildArgs  *container.Build
 	buildSteps *build.BuildSteps
 }
@@ -195,18 +107,18 @@ type Command struct {
 func NewCommand(_buildArgs container.Build, _buildSteps *build.BuildSteps) *Command {
 	_buildArgs.Defaults()
 	return &Command{
-		targets:    map[string]func() error{},
+		targets:    map[string]func() ([]string, container.BuildLoop, error){},
 		buildArgs:  &_buildArgs,
 		buildSteps: _buildSteps,
 	}
 }
 
-func (c *Command) AddTarget(name string, fnc func() error) {
+func (c *Command) AddTarget(name string, fnc func() ([]string, container.BuildLoop, error)) {
 	if _, ok := c.targets[name]; ok {
 		slog.Info("Skip Overwriting target", "target", name)
 		return
 	}
-	c.targets[name] = func() error {
+	c.targets[name] = func() ([]string, container.BuildLoop, error) {
 		slog.Info("Running custom target", "target", name)
 		return fnc()
 	}
@@ -226,112 +138,56 @@ func Start() (func(), network.Address, error) {
 	}, addr, nil
 }
 
-func (c *Command) Run(addr network.Address, target string, arg *container.Build) error {
+func (c *Command) Run(addr network.Address, target string, arg *container.Build) ([]string, container.BuildLoop, error) {
 	if arg.Custom == nil {
 		arg.Custom = make(map[string][]string)
 	}
+	arg.Custom["CONTAINIFYCI_EXTERNAL_HOST"] = []string{fmt.Sprintf("%s:%d", addr.Host, addr.Port)}
 	arg.Custom["CONTAINIFYCI_HOST"] = []string{fmt.Sprintf("%s:%d", addr.ForContainerDefault(arg), addr.Port)}
 	arg.Secret = map[string]string{"CONTAINIFYCI_AUTH": addr.Secret}
-	_, bs := Pre(arg, c.buildSteps)
-	switch arg.BuildType {
-	case container.GoLang:
-		c.AddTarget("lint", func() error {
-			return bs.Run(arg, "golangci-lint")
-		})
-		c.AddTarget("build", func() error {
-			return bs.Run(arg, "golang")
-		})
-		c.AddTarget("push", func() error {
-			return bs.Run(arg, "golang-prod")
-		})
-		c.AddTarget("protobuf", func() error {
-			return bs.Run(arg, "protobuf")
-		})
-		c.AddTarget("release", func() error {
-			return bs.Run(arg, "gorelease")
-		})
-		c.AddTarget("pulumi", func() error {
-			return bs.Run(arg, "pulumi")
-		})
-	case container.Maven:
-		c.AddTarget("build", func() error {
-			return bs.Run(arg, "maven")
-		})
-		c.AddTarget("push", func() error {
-			return bs.Run(arg, "maven-prod")
-		})
-	case container.Python:
-		c.AddTarget("build", func() error {
-			return bs.Run(arg, "python")
-		})
-		c.AddTarget("push", func() error {
-			return bs.Run(arg, "python-prod")
-		})
-		c.AddTarget("release", func() error {
-			return bs.Run(arg, "dummy")
-		})
-	case container.Zig:
-		c.AddTarget("build", func() error {
-			return bs.Run(arg, "zig")
-		})
-		c.AddTarget("push", func() error {
-			return bs.Run(arg, "zig-prod")
-		})
+	_ = Pre(arg)
+	for _, b := range c.buildSteps.Steps {
+		if b.Build().BuildType() == nil || *b.Build().BuildType() == arg.BuildType {
+			slog.Info("Register Step", "step", b.Build().Name(), "buildtype", b.Build().BuildType(), "argtype", arg.BuildType)
+			c.AddTarget(b.Build().Alias(), func() ([]string, container.BuildLoop, error) {
+				return c.buildSteps.Run(arg, b.Build().Name())
+			})
+		}
 	}
-	c.AddTarget("all", func() error {
-		return bs.Run(arg)
+	c.AddTarget("all", func() ([]string, container.BuildLoop, error) {
+		return c.buildSteps.Run(arg)
 	})
-	c.AddTarget("sonar", func() error {
-		return bs.Run(arg, "sonarcloud")
+	c.AddTarget("github_actions", func() ([]string, container.BuildLoop, error) {
+		return []string{}, container.BuildContinue, RunGithubAction()
 	})
-	c.AddTarget("trivy", func() error {
-		return bs.Run(arg, "trivy")
+	c.AddTarget("docker_load", func() ([]string, container.BuildLoop, error) {
+		return []string{}, container.BuildContinue, LoadCache()
 	})
-	c.AddTarget("gcloud_oidc", func() error {
-		return bs.Run(arg, "gcloud_oidc")
+	c.AddTarget("docker_save", func() ([]string, container.BuildLoop, error) {
+		return []string{}, container.BuildContinue, SaveCache()
 	})
-	c.AddTarget("github", func() error {
-		return bs.Run(arg, "github")
-	})
-	c.AddTarget("github_actions", func() error {
-		return RunGithubAction()
-	})
-	c.AddTarget("docker_load", func() error {
-		return LoadCache()
-	})
-	c.AddTarget("docker_save", func() error {
-		return SaveCache()
-	})
-	c.AddTarget("list", func() error {
+	c.AddTarget("list", func() ([]string, container.BuildLoop, error) {
 		keys := []string{}
 		for k := range c.targets {
 			keys = append(keys, k)
 		}
 		slices.Sort(keys)
 		slog.Info("Available targets", "targets", strings.Join(keys, " "))
-		return nil
+		return []string{}, container.BuildContinue, nil
 	})
 
 	if fnc, ok := c.targets[target]; ok {
-		if err := fnc(); err != nil {
+		ids, loop, err := fnc()
+		if err != nil {
 			slog.Error("Failed to run command", "error", err)
-			return err
+			return ids, container.BuildContinue, err
 		}
-		return nil
+		return ids, loop, nil
 	}
 	keys := []string{}
 	for k := range c.targets {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
-	return fmt.Errorf("unknown target: %s (available: %s)", target, strings.Join(keys, " "))
+	return []string{}, container.BuildStop, fmt.Errorf("unknown target: %s (available: %s)", target, strings.Join(keys, " "))
 }
-
-// func (c *Command) Main(arg container.Build) {
-// 	if len(os.Args) < 2 {
-// 		fmt.Print("Usage: containifyci <command>\n")
-// 		fmt.Print("Available commands: all, lint, build, push, sonar, protobuf\n")
-// 		os.Exit(1)
-// 	}
-// 	c.Run(os.Args[1], buildArgs)
-// }

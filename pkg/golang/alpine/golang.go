@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
@@ -43,15 +42,22 @@ type GoContainer struct {
 	Tags           []string
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.GoLang,
 		RunFn: func(build container.Build) error {
+			container := new(build)
+			_, err := container.Run()
+			return err
+		},
+		RunFnV3: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
 		MatchedFn: Matches,
 		ImagesFn:  GoImages,
 		Name_:     "golang",
+		Alias_:    "build",
 		Async_:    false,
 	}
 }
@@ -105,18 +111,25 @@ func (c *GoContainer) Pull() error {
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
-func NewLinter() build.BuildStepv2 {
+func NewLinter() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.GoLang,
 		RunFn: func(build container.Build) error {
+			container := new(build)
+			_, err := container.Lint()
+			return err
+		},
+		RunFnV3: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Lint()
 		},
 		MatchedFn: Matches,
 		Name_:     "golangci-lint",
+		Alias_:    "lint",
 		Async_:    true, // Linter runs async
 	}
 }
-func (c *GoContainer) Lint() error {
+func (c *GoContainer) Lint() (string, error) {
 	image := GoImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
@@ -187,11 +200,12 @@ func (c *GoContainer) Lint() error {
 	if err != nil {
 		slog.Error("Failed to wait for container: %s", "error", err)
 		// GIVE time to receive all logs
-		time.Sleep(5 * time.Second)
-		os.Exit(1)
+		// time.Sleep(5 * time.Second)
+		// os.Exit(1)
+		return c.ID, err
 	}
 
-	return err
+	return c.ID, err
 }
 
 func dockerFileVersion(dockerFile []byte) string {
@@ -332,7 +346,7 @@ func (c *GoContainer) Build() error {
 	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to build container: %w", err)
 	}
 
 	return err
@@ -362,13 +376,15 @@ func Matches(build container.Build) bool {
 	return true
 }
 
-func NewProd() build.BuildStepv2 {
+func NewProd() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.GoLang,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Prod()
 		},
 		Name_:     "golang-prod",
+		Alias_:    "push",
 		ImagesFn:  build.StepperImages("alpine"),
 		Async_:    false,
 		MatchedFn: Matches,
@@ -459,24 +475,24 @@ func (c *GoContainer) Prod() error {
 	return err
 }
 
-func (c *GoContainer) Run() error {
+func (c *GoContainer) Run() (string, error) {
 	err := c.Pull()
 	if err != nil {
 		slog.Error("Failed to pull base images: %s", "error", err)
-		return err
+		return c.ID, err
 	}
 
 	err = c.BuildGoImage()
 	if err != nil {
 		slog.Error("Failed to build go image: %s", "error", err)
-		return err
+		return c.ID, err
 	}
 
 	err = c.Build()
 	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
-		return err
+		return c.ID, err
 	}
-	return nil
+	return c.ID, nil
 }

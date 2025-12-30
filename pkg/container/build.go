@@ -25,6 +25,7 @@ const (
 	Typescript BuildType = "Typescript"
 	Zig        BuildType = "Zig"
 	Rust       BuildType = "Rust"
+	AI         BuildType = "AI"
 
 	Generic BuildType = "Generic"
 )
@@ -42,11 +43,11 @@ func (e *BuildType) String() string {
 // Set must have pointer receiver so it doesn't change the value of a copy
 func (e *BuildType) Set(v string) error {
 	switch v {
-	case string(GoLang), string(Maven), string(Python), string(Generic), string(NodeJS), string(Typescript), string(Zig), string(Rust):
+	case string(GoLang), string(Maven), string(Python), string(Generic), string(NodeJS), string(Typescript), string(Zig), string(Rust), string(AI):
 		*e = BuildType(v)
 		return nil
 	default:
-		return errors.New(`must be one of go, maven, python, zig, generic`)
+		return errors.New(`must be one of go, maven, python, zig, ai, generic`)
 	}
 }
 
@@ -59,7 +60,9 @@ type Custom map[string][]string
 
 func (c Custom) String(key string) string {
 	if v, ok := c[key]; ok {
-		return v[0]
+		if len(v) > 0 {
+			return strings.Join(v, "\n")
+		}
 	}
 	return ""
 }
@@ -79,13 +82,17 @@ func (c Custom) Bool(key string, value bool) bool {
 }
 
 func (c Custom) UInt(key string) uint {
+	return uint(c.Int(key))
+}
+
+func (c Custom) Int(key string) int {
 	if v, ok := c[key]; ok {
 		i, err := strconv.Atoi(v[0])
 		if err != nil {
 			slog.Warn("Error converting string to int", "key", key, "value", v[0], "error", err)
 			return 0
 		}
-		return uint(i)
+		return i
 	}
 	return 0
 }
@@ -93,6 +100,13 @@ func (c Custom) UInt(key string) uint {
 type Leader interface {
 	Leader(id string, fnc func() error)
 }
+
+type BuildLoop string
+
+const (
+	BuildStop     BuildLoop = "stop"
+	BuildContinue BuildLoop = "continue"
+)
 
 // TODO: add target container platform
 // Build struct optimized for memory alignment and cache performance
@@ -105,8 +119,9 @@ type Build struct {
 	Secret             map[string]string
 	ContainifyRegistry string
 	Runtime            utils.RuntimeType
-	Image              string `json:"image"`
-	ImageTag           string `json:"image_tag"`
+	RuntimeClient      func() cri.ContainerManager `json:"-"`
+	Image              string                      `json:"image"`
+	ImageTag           string                      `json:"image_tag"`
 	File               string
 	Env                EnvType
 	Folder             string
@@ -219,14 +234,23 @@ func NewPythonServiceBuild(appName string) Build {
 }
 
 func NewBuild(build *Build) *Build {
-	// _build = build
 	if build.Runtime == "" {
-		InitRuntime(build)
+		initRuntime(build)
+	}
+	if build.RuntimeClient == nil {
+		build.RuntimeClient = func() cri.ContainerManager {
+			runtime, err := cri.InitContainerRuntime()
+			if err != nil {
+				slog.Error("Failed to initialize container runtime", "error", err)
+				os.Exit(1)
+			}
+			return runtime
+		}
 	}
 	return build
 }
 
-func InitRuntime(build *Build) *Build {
+func initRuntime(build *Build) *Build {
 	build.Runtime = cri.DetectContainerRuntime()
 	return build
 }

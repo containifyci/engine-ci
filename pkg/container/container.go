@@ -407,7 +407,7 @@ func (c *Container) ensureImagesExists(ctx context.Context, cli cri.ContainerMan
 				return err
 			}
 			if info.Platform.String() != platform {
-				slog.Warn("Image found locally but with different platform", "image", imageName, "platform", info.Platform.String())
+				slog.Warn("Image found locally but with different platform", "image", imageName, "image_platform", info.Platform.String(), "platform", platform)
 				slog.Warn("Pulling from registry...", "image", imageName)
 				out, err := cli.PullImage(ctx, imageName, c.registryAuthBase64(imageName), platform)
 				if err != nil {
@@ -422,7 +422,7 @@ func (c *Container) ensureImagesExists(ctx context.Context, cli cri.ContainerMan
 				}
 				return nil
 			}
-			slog.Info("Image found locally.\n", "image", imageName, "platform", info.Platform.String())
+			slog.Debug("Image found locally.\n", "image", imageName, "platform", info.Platform.String())
 		}
 	}
 	return nil
@@ -702,7 +702,8 @@ func (c *Container) BuildingContainer(opts types.ContainerConfig) error {
 	err = c.Wait()
 	if err != nil {
 		slog.Error("Failed to wait for container", "error", err, "name", c.Name, "id", c.ID, "image", c.Image)
-		os.Exit(1)
+		// os.Exit(1)
+		return err
 	}
 	return err
 }

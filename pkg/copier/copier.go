@@ -25,7 +25,7 @@ type CopierContainer struct {
 	TemplateData []string
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
 		RunFn: func(build container.Build) error {
 			copierContainer := new(build)
@@ -34,6 +34,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  CopierImages,
 		Name_:     "copier",
+		Alias_:    "copier",
 		Async_:    false,
 	}
 }

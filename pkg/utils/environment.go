@@ -18,6 +18,7 @@ func GetEnvWithDefault(key string, def func() string) string {
 }
 
 func Getenv(key string, envType string) string {
+	slog.Debug("get env", "key", key, "envtype", envType)
 	switch envType {
 	case "local":
 		return os.Getenv(key + "_LOCAL")

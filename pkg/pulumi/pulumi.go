@@ -38,7 +38,7 @@ func Matches(build container.Build) bool {
 
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
 		RunFn: func(build container.Build) error {
 			container := new(build)
@@ -47,6 +47,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  build.StepperImages(IMAGE),
 		Name_:     "pulumi",
+		Alias_:    "pulumi",
 		Async_:    false,
 	}
 }

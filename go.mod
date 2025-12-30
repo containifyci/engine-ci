@@ -1,12 +1,16 @@
 module github.com/containifyci/engine-ci
 
-go 1.25.0
+go 1.25.5
+
+// replace github.com/containifyci/engine-ci/protos2 => ./protos2
+
+// replace github.com/containifyci/engine-ci/client => ./client
 
 require (
 	cloud.google.com/go/iam v1.5.3
 	github.com/containers/buildah v1.42.2
 	github.com/containers/podman/v5 v5.7.0
-	github.com/containifyci/engine-ci/protos2 v0.21.0
+	github.com/containifyci/engine-ci/protos2 v0.22.0
 	github.com/containifyci/go-self-update v0.2.4
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
@@ -23,6 +27,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.podman.io/common v0.66.1
 	golang.org/x/oauth2 v0.33.0
+	golang.org/x/term v0.37.0
 	google.golang.org/api v0.257.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -144,13 +149,12 @@ require (
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251022142026-3a174f9686a8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
 	google.golang.org/grpc v1.77.0 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 	tags.cncf.io/container-device-interface v1.0.1 // indirect
