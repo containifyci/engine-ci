@@ -1,11 +1,12 @@
 module github.com/containifyci/engine-ci/client
 
-go 1.24.2
+go 1.25.5
 
 require (
 	github.com/containifyci/engine-ci/protos2 v0.22.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.7.0
+	github.com/stretchr/testify v1.11.1
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 )
