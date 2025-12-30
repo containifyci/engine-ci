@@ -66,10 +66,10 @@ func createContainer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := cmd.NewCommand(buildArgs, nil)
-	c.AddTarget("all", func() error {
+	c.AddTarget("all", func() ([]string, container.BuildLoop, error) {
 		fmt.Println("Running build")
 		// cmd.RunBuild(nil, nil)
-		return nil
+		return nil, container.BuildContinue, nil
 	})
 	// addr := Start()
 

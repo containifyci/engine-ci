@@ -36,7 +36,7 @@ func Matches(build container.Build) bool {
 	return true // SonarCloud analysis runs for all builds
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
 		RunFn: func(build container.Build) error {
 			container := new(build)
@@ -45,6 +45,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  build.StepperImages(IMAGE),
 		Name_:     "sonarcloud",
+		Alias_:    "sonar",
 		Async_:    true,
 	}
 }

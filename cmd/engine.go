@@ -10,10 +10,27 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containifyci/engine-ci/pkg/ai/claude"
 	"github.com/containifyci/engine-ci/pkg/autodiscovery"
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/copier"
+	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
+	"github.com/containifyci/engine-ci/pkg/dummy"
+	"github.com/containifyci/engine-ci/pkg/gcloud"
+	"github.com/containifyci/engine-ci/pkg/github"
+	"github.com/containifyci/engine-ci/pkg/golang"
+	"github.com/containifyci/engine-ci/pkg/goreleaser"
+	"github.com/containifyci/engine-ci/pkg/maven"
+	"github.com/containifyci/engine-ci/pkg/network"
+	"github.com/containifyci/engine-ci/pkg/protobuf"
+	"github.com/containifyci/engine-ci/pkg/pulumi"
+	"github.com/containifyci/engine-ci/pkg/python"
+	"github.com/containifyci/engine-ci/pkg/sonarcloud"
+	"github.com/containifyci/engine-ci/pkg/trivy"
+	"github.com/containifyci/engine-ci/pkg/utils"
+	"github.com/containifyci/engine-ci/pkg/zig"
 	"github.com/containifyci/engine-ci/protos2"
 	"github.com/spf13/cobra"
 
@@ -23,7 +40,7 @@ import (
 
 // TODO (tight coupling buildsteps and build paramater) we have to uncouple the BuildSteps initialization from the build parameters.
 // Otherwise we have to initialize the BuildSteps for every build new which is not optimal.
-var buildSteps *build.BuildSteps
+var buildSteps *build.BuildSteps = build.NewBuildSteps()
 
 // buildCmd represents the build command
 var engineCmd = &cobra.Command{
@@ -70,39 +87,74 @@ func Engine(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	defer fnc()
-	arg := GetBuild(false)
-	wg := sync.WaitGroup{}
-	for _, a := range arg {
-		for _, b := range a.Builds {
-			wg.Add(1)
-			go func(b *container.Build) {
-				time.Sleep(1 * time.Second)
-				defer wg.Done()
-				b.Leader = &leader
-				_buildSteps := buildSteps
-				slog.Info("Starting build", "build", b, "steps", _buildSteps.String())
-				if _buildSteps == nil {
-					_buildSteps = build.NewBuildSteps()
-				}
-				// slog.Info("Starting build2", "build", b, "steps", _buildSteps.String())
-				c := NewCommand(*b, _buildSteps)
-				err := c.Run(addr, RootArgs.Target, b)
-				if err != nil {
-					slog.Error("Executing command", "error", err, "command", c)
-					os.Exit(1)
-				}
-			}(b)
+
+	InitBuildSteps()
+
+	groups := GetBuild(false)
+	aiConfig := detectAILoopConfig(groups)
+
+	// Execute build iterations (1 for normal mode, N for AI agent mode)
+	for i := 0; i < aiConfig.getMaxIterations(); i++ {
+		//TODO: caturing of container ids should be done in the lower level like in the cntainer manager itself maybe.
+		idStore := utils.IDStore{}
+		for _, group := range groups {
+			executeBuildGroup(group, &leader, &idStore, addr, aiConfig)
 		}
-		slog.Info("Waiting for all builds to complete")
-		wg.Wait()
 	}
 	slog.Info("Finish waiting for all builds to complete")
-
 	return nil
 }
 
-func GetBuild(auto bool) container.BuildGroups {
+// executeBuild executes a single build with proper context and error handling.
+// It handles leader assignment, AI context injection, command execution, and result tracking.
+// This function is designed to be called from a goroutine.
+func executeBuild(b *container.Build, leader *LeaderElection, idStore *utils.IDStore, addr network.Address, aiConfig AIConfig) {
+	time.Sleep(1 * time.Second)
+	b.Leader = leader
+	slog.Info("Starting build", "build", b, "steps", buildSteps.String())
 
+	// Inject AI context if this is an AI agent build
+	if aiConfig.Enabled && b.BuildType == container.AI && b.Custom.Bool("agent_mode", false) {
+		b.Custom["ai_context"] = idStore.Get()
+	}
+
+	c := NewCommand(*b, buildSteps)
+	ids, loop, err := c.Run(addr, RootArgs.Target, b)
+	slog.Info("Build completed", "app", b.App, "ids", ids)
+
+	if err != nil {
+		slog.Error("Executing command", "error", err, "command", c)
+		if !aiConfig.Enabled {
+			os.Exit(1)
+		}
+	}
+
+	if loop == container.BuildStop {
+		slog.Info("Build requested to stop further builds", "app", b.App)
+		os.Exit(0)
+	}
+
+	idStore.Add(ids...)
+}
+
+// executeBuildGroup executes all builds in a group in parallel using goroutines.
+// It spawns a goroutine for each build and waits for all to complete before returning.
+func executeBuildGroup(group *container.BuildGroup, leader *LeaderElection, idStore *utils.IDStore, addr network.Address, aiConfig AIConfig) {
+	wg := sync.WaitGroup{}
+
+	for _, b := range group.Builds {
+		wg.Add(1)
+		go func(b *container.Build) {
+			defer wg.Done()
+			executeBuild(b, leader, idStore, addr, aiConfig)
+		}(b)
+	}
+
+	slog.Info("Waiting for all builds to complete")
+	wg.Wait()
+}
+
+func GetBuild(auto bool) container.BuildGroups {
 	if auto {
 		// Use auto-discovery to detect Go projects
 		projects, err := autodiscovery.DiscoverProjects(".")
@@ -171,7 +223,6 @@ func GetBuild(auto bool) container.BuildGroups {
 
 	groups := container.BuildGroups{}
 
-	// args := []*container.Build{}
 	for _, group := range opts {
 		g := &container.BuildGroup{}
 
@@ -186,6 +237,7 @@ func GetBuild(auto bool) container.BuildGroups {
 				Registry:       opt.Registry,
 				Registries:     opt.Registries,
 				Repository:     opt.Repository,
+				Runtime:        cri.DetectContainerRuntime(),
 				File:           opt.File,
 				Folder:         opt.Folder,
 				SourcePackages: opt.SourcePackages,
@@ -215,6 +267,7 @@ func GetBuild(auto bool) container.BuildGroups {
 			arg.Defaults()
 			// args = append(args, &arg)
 			g.Builds = append(g.Builds, &arg)
+			slog.Info("Build Arg", "arg", arg)
 		}
 		groups = append(groups, g)
 	}
@@ -260,11 +313,130 @@ func CallPlugin(logger hclog.Logger, plugin interface{}) []*protos2.BuildArgsGro
 // GetDefaultBuildSteps returns the current BuildSteps instance with all default build steps.
 // This allows engines to extend the default pipeline instead of replacing it completely.
 func GetDefaultBuildSteps(arg *container.Build) *build.BuildSteps {
-	if buildSteps == nil {
-		buildSteps = build.NewBuildSteps()
-	}
 	if buildSteps.IsNotInit() {
-		_, buildSteps = Pre(arg, buildSteps)
+		InitBuildSteps()
 	}
 	return buildSteps
+}
+
+// AI Loop constants
+const (
+	AITerminationSignal  = "AI_DONE"
+	DefaultMaxIterations = 5
+)
+
+// AIConfig holds AI agent loop configuration and provides methods for loop control.
+// It encapsulates all AI-specific settings including the build configuration,
+// maximum iterations, and whether agent mode is enabled.
+type AIConfig struct {
+	Build         *container.Build
+	MaxIterations int
+	Enabled       bool
+}
+
+// newAIConfig creates a new AIConfig with default values
+func newAIConfig() AIConfig {
+	return AIConfig{
+		Enabled:       false,
+		MaxIterations: 1,
+		Build:         nil,
+	}
+}
+
+// getMaxIterations returns the number of iterations to execute.
+// For AI mode, returns the configured MaxIterations.
+// For normal mode, returns 1 (single execution).
+func (c AIConfig) getMaxIterations() int {
+	if c.Enabled {
+		return c.MaxIterations
+	}
+	return 1
+}
+
+// detectAILoopConfig scans build groups for AI agent mode configuration.
+// It checks if any build has agent_mode enabled and returns an AIConfig with:
+// - Enabled: true if AI agent mode is detected and Claude API key is available
+// - MaxIterations: from build config or DefaultMaxIterations if not specified
+// - Build: reference to the AI build configuration
+func detectAILoopConfig(groups container.BuildGroups) AIConfig {
+	config := newAIConfig()
+
+	for _, group := range groups {
+		for _, b := range group.Builds {
+			if b.BuildType == container.AI && b.Custom.Bool("agent_mode", false) {
+				claudeKey := utils.GetValue(b.Custom.String("claude_api_key"), "build")
+				if claudeKey != "" {
+					config.Enabled = true
+					config.Build = b
+					maxIter := b.Custom.Int("max_iterations")
+					if maxIter > 0 {
+						config.MaxIterations = maxIter
+					} else {
+						config.MaxIterations = DefaultMaxIterations
+					}
+					slog.Info("AI agent mode detected",
+						"max_iterations", config.MaxIterations,
+						"app", b.App)
+					return config
+				}
+			}
+		}
+	}
+	return config
+}
+
+func InitBuildSteps() {
+	if buildSteps.IsNotInit() {
+		slog.Info("Registering all build steps by category")
+
+		// Helper function to add step and log error
+		addStep := func(category build.BuildCategory, step build.BuildStepv3) {
+			var err error
+			if step.IsAsync() {
+				err = buildSteps.AddAsyncToCategory(category, step)
+			} else {
+				err = buildSteps.AddToCategory(category, step)
+			}
+			if err != nil {
+				slog.Error("Failed to add build step", "step", step.Name(), "category", category, "error", err)
+			}
+		}
+
+		// Auth: Authentication & credentials
+		addStep(build.Auth, gcloud.New())
+
+		// PreBuild: Setup, protobuf, dependencies
+		addStep(build.PreBuild, claude.New()) // Claude AI
+		addStep(build.PreBuild, copier.New())
+		addStep(build.PreBuild, protobuf.New())
+
+		// Build: Language-specific compilation
+		addStep(build.Build, golang.New())       // Alpine variant
+		addStep(build.Build, golang.NewDebian()) // Debian variant
+		addStep(build.Build, golang.NewCGO())    // CGO variant
+		addStep(build.Build, maven.New())        // Maven
+		addStep(build.Build, python.New())       // Python
+		addStep(build.Build, zig.New())          // Zig
+
+		// PostBuild: Production artifacts, packaging
+		addStep(build.PostBuild, golang.NewProd())       // Alpine prod
+		addStep(build.PostBuild, golang.NewProdDebian()) // Debian prod
+		addStep(build.PostBuild, maven.NewProd())        // Maven prod
+		addStep(build.PostBuild, python.NewProd())       // Python prod
+		addStep(build.PostBuild, zig.NewProd())          // Zig prod
+
+		// Quality: Linting, testing, security scanning
+		addStep(build.Quality, golang.NewLinter()) // Golang linter (async)
+		addStep(build.Quality, sonarcloud.New())   // SonarCloud (async)
+		addStep(build.Quality, trivy.New())        // Trivy
+
+		// Apply: Infrastructure changes
+		addStep(build.Apply, pulumi.New()) // Pulumi
+
+		// Publish: Publishing, releases, notifications
+		addStep(build.Publish, goreleaser.New()) // Goreleaser
+		addStep(build.Publish, github.New())     // GitHub (async)
+
+		addStep(build.Publish, dummy.New()) // Goreleaser
+	}
 }

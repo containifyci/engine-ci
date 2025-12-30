@@ -24,17 +24,17 @@ type TrivyContainer struct {
 
 func Matches(build container.Build) bool {
 	if build.Env == container.LocalEnv {
-		slog.Warn("trivy: Image not set, skip trivy scan")
+		slog.Debug("trivy: Image not set, skip trivy scan")
 		return false
 	}
 	if build.Image == "" {
-		slog.Warn("trivy: Image not set, skip trivy scan")
+		slog.Debug("trivy: Image not set, skip trivy scan")
 		return false
 	}
 	return true
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
 		RunFn: func(build container.Build) error {
 			container := new(build)
@@ -43,6 +43,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  build.StepperImages(IMAGE),
 		Name_:     "trivy",
+		Alias_:    "trivy",
 		Async_:    false,
 	}
 }
@@ -173,11 +174,11 @@ func (c *TrivyContainer) Pull() error {
 
 func (c *TrivyContainer) Run() error {
 	if c.GetBuild().Env == container.LocalEnv {
-		slog.Warn("trivy: Image not set, skip trivy scan")
+		slog.Debug("trivy: Image not set, skip trivy scan")
 		return nil
 	}
 	if c.GetBuild().Image == "" {
-		slog.Warn("trivy: Image not set, skip trivy scan")
+		slog.Debug("trivy: Image not set, skip trivy scan")
 		return nil
 	}
 	err := c.Pull()

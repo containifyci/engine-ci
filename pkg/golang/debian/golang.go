@@ -51,8 +51,9 @@ func Matches(build container.Build) bool {
 	return false
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.GoLang,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Run()
@@ -60,6 +61,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  Images,
 		Name_:     "golang",
+		Alias_:    "build",
 		Async_:    false,
 	}
 }
@@ -175,7 +177,7 @@ func (c *GoContainer) Build() error {
 	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to build container: %w", err)
 	}
 
 	return err
@@ -192,14 +194,16 @@ func (c *GoContainer) BuildScript() string {
 	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, generateMode, c.Platforms...).String()
 }
 
-func NewProd() build.BuildStepv2 {
+func NewProd() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.GoLang,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Prod()
 		},
 		MatchedFn: Matches,
 		Name_:     "golang-prod",
+		Alias_:    "push",
 		// images: []string{"alpine"},
 	}
 }

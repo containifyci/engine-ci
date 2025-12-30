@@ -1,13 +1,15 @@
 package build
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"sync"
 
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/utils"
 )
 
 // BuildCategory represents different phases of the build pipeline
@@ -24,14 +26,20 @@ const (
 )
 
 type BuildContext struct {
-	build    BuildStepv2
+	build    BuildStepv3
 	category BuildCategory
 	async    bool
+}
+
+func (bc *BuildContext) Build() BuildStepv3 {
+	return bc.build
 }
 
 type MatchesFunc func(build container.Build) bool
 
 type BuildStepv2 interface {
+	Alias() string
+	BuildType() *container.BuildType
 	Name() string
 	Images(build container.Build) []string
 	IsAsync() bool
@@ -39,14 +47,20 @@ type BuildStepv2 interface {
 	RunWithBuild(build container.Build) error
 }
 
+type BuildStepv3 interface {
+	BuildStepv2
+	RunWithBuildV3(build container.Build) (string, error)
+}
+
 type RunFuncv2 func(container.Build) error
+type RunFuncv3 func(container.Build) (string, error)
 
 type BuildSteps struct {
 	Steps []*BuildContext
 	init  bool
 }
 
-func ToBuildContexts(steps ...BuildStepv2) []*BuildContext {
+func ToBuildContexts(steps ...BuildStepv3) []*BuildContext {
 	contexts := make([]*BuildContext, len(steps))
 	for i, step := range steps {
 		contexts[i] = &BuildContext{
@@ -58,7 +72,7 @@ func ToBuildContexts(steps ...BuildStepv2) []*BuildContext {
 	return contexts
 }
 
-func NewBuildSteps(steps ...BuildStepv2) *BuildSteps {
+func NewBuildSteps(steps ...BuildStepv3) *BuildSteps {
 	return &BuildSteps{
 		init:  len(steps) > 0,
 		Steps: ToBuildContexts(steps...),
@@ -67,32 +81,32 @@ func NewBuildSteps(steps ...BuildStepv2) *BuildSteps {
 
 func (bs *BuildSteps) IsNotInit() bool { return !bs.init }
 func (bs *BuildSteps) Init()           { bs.init = true }
-func (bs *BuildSteps) Add(step BuildStepv2) {
+func (bs *BuildSteps) Add(step BuildStepv3) {
 	bs.Steps = append(bs.Steps, &BuildContext{build: step, category: Build, async: false}) // Default to Build category
 }
-func (bs *BuildSteps) AddAsync(step BuildStepv2) {
+func (bs *BuildSteps) AddAsync(step BuildStepv3) {
 	bs.Steps = append(bs.Steps, &BuildContext{build: step, category: Build, async: true}) // Default to Build category
 }
 
 // Hook-based insertion methods
-func (bs *BuildSteps) AddBefore(stepName string, step BuildStepv2) error {
+func (bs *BuildSteps) AddBefore(stepName string, step BuildStepv3) error {
 	return bs.insertRelativeToStep(stepName, step, false, true)
 }
 
-func (bs *BuildSteps) AddAfter(stepName string, step BuildStepv2) error {
+func (bs *BuildSteps) AddAfter(stepName string, step BuildStepv3) error {
 	return bs.insertRelativeToStep(stepName, step, false, false)
 }
 
-func (bs *BuildSteps) AddAsyncBefore(stepName string, step BuildStepv2) error {
+func (bs *BuildSteps) AddAsyncBefore(stepName string, step BuildStepv3) error {
 	return bs.insertRelativeToStep(stepName, step, true, true)
 }
 
-func (bs *BuildSteps) AddAsyncAfter(stepName string, step BuildStepv2) error {
+func (bs *BuildSteps) AddAsyncAfter(stepName string, step BuildStepv3) error {
 	return bs.insertRelativeToStep(stepName, step, true, false)
 }
 
 // Replace existing step by name
-func (bs *BuildSteps) Replace(stepName string, step BuildStepv2) error {
+func (bs *BuildSteps) Replace(stepName string, step BuildStepv3) error {
 	for i, bctx := range bs.Steps {
 		if bctx.build.Name() == stepName {
 			// Preserve the existing category and use the step's async setting
@@ -104,7 +118,7 @@ func (bs *BuildSteps) Replace(stepName string, step BuildStepv2) error {
 }
 
 // Helper method for relative insertion
-func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStepv2, async bool, before bool) error {
+func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStepv3, async bool, before bool) error {
 	for i, bctx := range bs.Steps {
 		if bctx.build.Name() == stepName {
 			// Use the same category as the reference step
@@ -123,16 +137,16 @@ func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStepv2, as
 }
 
 // Category-based addition methods
-func (bs *BuildSteps) AddToCategory(category BuildCategory, step BuildStepv2) error {
+func (bs *BuildSteps) AddToCategory(category BuildCategory, step BuildStepv3) error {
 	return bs.insertAtCategoryEnd(category, step, false)
 }
 
-func (bs *BuildSteps) AddAsyncToCategory(category BuildCategory, step BuildStepv2) error {
+func (bs *BuildSteps) AddAsyncToCategory(category BuildCategory, step BuildStepv3) error {
 	return bs.insertAtCategoryEnd(category, step, true)
 }
 
 // Helper method to find category boundaries and insert at the end of a category
-func (bs *BuildSteps) insertAtCategoryEnd(category BuildCategory, step BuildStepv2, async bool) error {
+func (bs *BuildSteps) insertAtCategoryEnd(category BuildCategory, step BuildStepv3, async bool) error {
 	// Define category order for proper insertion
 	categoryOrder := []BuildCategory{Auth, PreBuild, Build, PostBuild, Quality, Apply, Publish}
 
@@ -232,13 +246,13 @@ func (bs *BuildSteps) PrintSteps() {
 	slog.Info("Build step", "steps", bs.String())
 }
 
-func (bs *BuildSteps) Run(arg *container.Build, step ...string) error {
+func (bs *BuildSteps) Run(arg *container.Build, step ...string) ([]string, container.BuildLoop, error) {
 	return bs.runAllMatchingBuilds(arg, step)
 }
 
-func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) error {
+func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) ([]string, container.BuildLoop, error) {
 	var wg sync.WaitGroup
-
+	ids := utils.IDStore{}
 	for i, buildCtx := range bs.Steps {
 		if !buildCtx.build.Matches(*arg) {
 			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
@@ -254,13 +268,14 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 		if buildCtx.build.IsAsync() {
 			// Start async step immediately, don't wait
 			wg.Add(1)
-			go func(build BuildStepv2, arg container.Build) {
+			go func(build BuildStepv3, arg container.Build) {
 				defer wg.Done()
 				slog.Debug("Starting async step", "step", build.Name())
-
-				if err := build.RunWithBuild(arg); err != nil {
-					slog.Error("Failed to run build step: %s", "error", err)
-					os.Exit(1)
+				id, err := build.RunWithBuildV3(arg)
+				ids.Add(id)
+				if err != nil {
+					slog.Error("Failed to run build step.", "error", err)
+					// os.Exit(1)
 				}
 
 				slog.Debug("Completed async step", "step", build.Name())
@@ -269,12 +284,40 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 		}
 		// Execute sync step and wait for completion
 		slog.Debug("Executing sync step", "step", buildCtx.build.Name(), "index", i)
-		if err := buildCtx.build.RunWithBuild(*arg); err != nil {
+		buildType := buildCtx.build.BuildType()
+		if buildType != nil && *buildType == container.AI {
+			slog.Info("AI build step detected - ensure proper handling", "step", buildCtx.build.Name(), "ids", ids.Get())
+			//TODO use Container Manager to get container logs
+			aiCtx, err := GetLog(arg, arg.Custom.Strings("ai_context")...)
+			if err != nil {
+				slog.Error("Failed to get AI context logs", "error", err)
+			} else {
+				arg.Custom["ai_context"] = []string{aiCtx}
+			}
+		}
+		id, err := buildCtx.build.RunWithBuildV3(*arg)
+		ids.Add(id)
+		if err != nil {
 			slog.Error("Failed to run build step: %s", "error", err)
-			return err
+			return ids.Get(), container.BuildContinue, err
+		}
+		if buildType != nil && *buildType == container.AI {
+			// Check for finish signal from AI
+			finishSignal := arg.Custom.String("ai_done_word")
+			if finishSignal != "" {
+				logs, err := GetLog(arg, id)
+				if err != nil {
+					slog.Error("Failed to get container logs", "error", err)
+					return ids.Get(), container.BuildStop, err
+				}
+				slog.Info("Checking AI output for finish signal", "signal", finishSignal)
+				if strings.Contains(logs, finishSignal) {
+					slog.Info("Finish signal detected in AI output - stopping further build steps", "signal", finishSignal)
+					return ids.Get(), container.BuildStop, nil
+				}
+			}
 		}
 		slog.Debug("Completed sync step", "step", buildCtx.build.Name(), "index", i)
-
 	}
 
 	// Wait for all async steps to complete
@@ -282,7 +325,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 	wg.Wait()
 
 	slog.Info("All build steps completed successfully")
-	return nil
+	return ids.Get(), container.BuildContinue, nil
 }
 
 func (bs *BuildSteps) Images(groups container.BuildGroups) []string {
@@ -313,4 +356,26 @@ func uniqueStrings(input []string) []string {
 		}
 	}
 	return result
+}
+
+func GetLog(arg *container.Build, ids ...string) (string, error) {
+	s := []string{}
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		r, err := arg.RuntimeClient().ContainerLogs(context.TODO(), id, true, true, false)
+		if err != nil {
+			slog.Error("Failed to get container logs", "error", err)
+			return "", err
+		}
+		defer r.Close()
+		data, err := io.ReadAll(r)
+		if err != nil {
+			slog.Error("Failed to read container logs", "error", err)
+			return "", err
+		}
+		s = append(s, string(data))
+	}
+	return strings.Join(s, "\n"), nil
 }

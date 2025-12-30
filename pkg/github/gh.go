@@ -32,7 +32,7 @@ func Matches(build container.Build) bool {
 	return true // GitHub integration runs for all builds
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
 		RunFn: func(build container.Build) error {
 			container := new(build)
@@ -41,6 +41,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  Images,
 		Name_:     "github",
+		Alias_:    "github",
 		Async_:    true,
 	}
 }

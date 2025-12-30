@@ -55,9 +55,10 @@ func init() {
 }
 
 func SaveCache() error {
+	InitBuildSteps()
 	args := GetBuild(false) // Use plugin system for cache operations
-	_, bs := Pre(args[0].Builds[0], nil)
-	images := bs.Images(args)
+	// _, bs := Pre(args[0].Builds[0])
+	images := buildSteps.Images(args)
 	if len(images) == 0 {
 		return nil
 	}
@@ -95,10 +96,11 @@ docker save -o ~/image-cache/%s.tar %s
 }
 
 func LoadCache() error {
+	InitBuildSteps()
 	args := GetBuild(false) // Use plugin system for cache operations
-	arg, bs := Pre(args[0].Builds[0], nil)
-
-	images := bs.Images(args)
+	//TODO: possible nil pointer dereference
+	arg := args[0].Builds[0]
+	images := buildSteps.Images(args)
 	if len(images) == 0 {
 		return nil
 	}
@@ -129,6 +131,9 @@ set -x
 podman load -i ~/image-cache/%s.tar
 `, info.Image)
 			runCommand(&wg, errs, "sh", []string{"-c", cmd}...)
+		} else {
+			slog.Warn("Unsupported runtime for cache load", "runtime", arg.Runtime)
+			wg.Done()
 		}
 	}
 

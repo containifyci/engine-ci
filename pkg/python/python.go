@@ -43,8 +43,9 @@ func Matches(build container.Build) bool {
 	return build.BuildType == container.Python
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.Python,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Run()
@@ -52,6 +53,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  Images,
 		Name_:     "python",
+		Alias_:    "build",
 		Async_:    false,
 	}
 }
@@ -183,7 +185,7 @@ func (c *PythonContainer) Build() (string, error) {
 	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
-		os.Exit(1)
+		return "", fmt.Errorf("failed to build container: %w", err)
 	}
 
 	if c.Image == "" {
@@ -194,7 +196,7 @@ func (c *PythonContainer) Build() (string, error) {
 	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"python\", \"/src/main.py\"]") /*, "USER worker")*/
 	if err != nil {
 		slog.Error("Failed to commit container: %s", "error", err)
-		os.Exit(1)
+		return "", fmt.Errorf("failed to commit container: %w", err)
 	}
 
 	return imageId, err
@@ -222,14 +224,16 @@ func (c *PythonContainer) BuildScript() *BuildScript {
 	return NewBuildScript(c.Folder, c.Verbose, c.PrivateIndex, cmds, installCmds)
 }
 
-func NewProd() build.BuildStepv2 {
+func NewProd() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.Python,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Prod()
 		},
 		ImagesFn:  Images,
 		Name_:     "python-prod",
+		Alias_:    "push",
 		MatchedFn: Matches,
 		Async_:    false,
 	}

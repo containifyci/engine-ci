@@ -35,8 +35,9 @@ func Matches(build container.Build) bool {
 	return false
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
+		BuildType_: container.GoLang,
 		RunFn: func(build container.Build) error {
 			container := new(build)
 			return container.Run()
@@ -44,6 +45,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  build.StepperImages(IMAGE),
 		Name_:     "gorelease",
+		Alias_:    "release",
 		Async_:    false,
 	}
 }

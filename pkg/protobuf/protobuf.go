@@ -32,7 +32,7 @@ func Matches(build container.Build) bool {
 		len(build.SourceFiles) > 0
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
 		RunFn: func(build container.Build) error {
 			container := newC(build)
@@ -41,6 +41,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  Images,
 		Name_:     "protobuf",
+		Alias_:    "protobuf",
 		Async_:    false,
 	}
 }

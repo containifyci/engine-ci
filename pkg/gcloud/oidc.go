@@ -40,7 +40,7 @@ func Matches(build container.Build) bool {
 	return true
 }
 
-func New() build.BuildStepv2 {
+func New() build.BuildStepv3 {
 	return build.Stepper{
 		RunFn: func(build container.Build) error {
 			container := new(build)
@@ -49,6 +49,7 @@ func New() build.BuildStepv2 {
 		MatchedFn: Matches,
 		ImagesFn:  Images,
 		Name_:     "gcloud_oidc",
+		Alias_:    "oidc",
 		Async_:    false,
 	}
 }
