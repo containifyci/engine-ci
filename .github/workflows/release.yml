@@ -51,4 +51,4 @@ jobs:
           generateReleaseNotes: true
           makeLatest: true
           tag: ${{ steps.semver.outputs.next }}
-          token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
+          token: ${{ github.token }}
