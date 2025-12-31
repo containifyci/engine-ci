@@ -99,7 +99,7 @@ func Pre(arg *container.Build) *container.Build {
 }
 
 type Command struct {
-	targets    map[string]func() ([]string, container.BuildLoop, error)
+	targets    map[string]func() build.BuildResult
 	buildArgs  *container.Build
 	buildSteps *build.BuildSteps
 }
@@ -107,18 +107,18 @@ type Command struct {
 func NewCommand(_buildArgs container.Build, _buildSteps *build.BuildSteps) *Command {
 	_buildArgs.Defaults()
 	return &Command{
-		targets:    map[string]func() ([]string, container.BuildLoop, error){},
+		targets:    map[string]func() build.BuildResult{},
 		buildArgs:  &_buildArgs,
 		buildSteps: _buildSteps,
 	}
 }
 
-func (c *Command) AddTarget(name string, fnc func() ([]string, container.BuildLoop, error)) {
+func (c *Command) AddTarget(name string, fnc func() build.BuildResult) {
 	if _, ok := c.targets[name]; ok {
 		slog.Info("Skip Overwriting target", "target", name)
 		return
 	}
-	c.targets[name] = func() ([]string, container.BuildLoop, error) {
+	c.targets[name] = func() build.BuildResult {
 		slog.Info("Running custom target", "target", name)
 		return fnc()
 	}
@@ -138,7 +138,7 @@ func Start() (func(), network.Address, error) {
 	}, addr, nil
 }
 
-func (c *Command) Run(addr network.Address, target string, arg *container.Build) ([]string, container.BuildLoop, error) {
+func (c *Command) Run(addr network.Address, target string, arg *container.Build) build.BuildResult {
 	if arg.Custom == nil {
 		arg.Custom = make(map[string][]string)
 	}
@@ -149,45 +149,46 @@ func (c *Command) Run(addr network.Address, target string, arg *container.Build)
 	for _, b := range c.buildSteps.Steps {
 		if b.Build().BuildType() == nil || *b.Build().BuildType() == arg.BuildType {
 			slog.Info("Register Step", "step", b.Build().Name(), "buildtype", b.Build().BuildType(), "argtype", arg.BuildType)
-			c.AddTarget(b.Build().Alias(), func() ([]string, container.BuildLoop, error) {
+			c.AddTarget(b.Build().Alias(), func() build.BuildResult {
 				return c.buildSteps.Run(arg, b.Build().Name())
 			})
 		}
 	}
-	c.AddTarget("all", func() ([]string, container.BuildLoop, error) {
+	c.AddTarget("all", func() build.BuildResult {
 		return c.buildSteps.Run(arg)
 	})
-	c.AddTarget("github_actions", func() ([]string, container.BuildLoop, error) {
-		return []string{}, container.BuildContinue, RunGithubAction()
+	c.AddTarget("github_actions", func() build.BuildResult {
+		return build.BuildResult{IDs: []string{}, Loop: container.BuildContinue, Error: RunGithubAction()}
 	})
-	c.AddTarget("docker_load", func() ([]string, container.BuildLoop, error) {
-		return []string{}, container.BuildContinue, LoadCache()
+	c.AddTarget("docker_load", func() build.BuildResult {
+		return build.BuildResult{IDs: []string{}, Loop: container.BuildContinue, Error: LoadCache()}
 	})
-	c.AddTarget("docker_save", func() ([]string, container.BuildLoop, error) {
-		return []string{}, container.BuildContinue, SaveCache()
+	c.AddTarget("docker_save", func() build.BuildResult {
+		return build.BuildResult{IDs: []string{}, Loop: container.BuildContinue, Error: SaveCache()}
 	})
-	c.AddTarget("list", func() ([]string, container.BuildLoop, error) {
+	c.AddTarget("list", func() build.BuildResult {
 		keys := []string{}
 		for k := range c.targets {
 			keys = append(keys, k)
 		}
 		slices.Sort(keys)
 		slog.Info("Available targets", "targets", strings.Join(keys, " "))
-		return []string{}, container.BuildContinue, nil
+		return build.BuildResult{IDs: []string{}, Loop: container.BuildContinue, Error: nil}
 	})
 
 	if fnc, ok := c.targets[target]; ok {
-		ids, loop, err := fnc()
-		if err != nil {
-			slog.Error("Failed to run command", "error", err)
-			return ids, container.BuildContinue, err
+		result := fnc()
+		if result.Error != nil {
+			slog.Error("Failed to run command", "error", result.Error)
+			return build.BuildResult{IDs: result.IDs, Loop: container.BuildContinue, Error: result.Error}
 		}
-		return ids, loop, nil
+		return result
 	}
 	keys := []string{}
 	for k := range c.targets {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
-	return []string{}, container.BuildStop, fmt.Errorf("unknown target: %s (available: %s)", target, strings.Join(keys, " "))
+	slog.Debug("Available targets for build", "buildType", arg.BuildType, "targets", strings.Join(keys, " "))
+	return build.BuildResult{IDs: []string{}, Loop: container.BuildContinue, Error: nil}
 }

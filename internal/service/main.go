@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/client"
 
 	"github.com/containifyci/engine-ci/cmd"
+	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -66,10 +67,10 @@ func createContainer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := cmd.NewCommand(buildArgs, nil)
-	c.AddTarget("all", func() ([]string, container.BuildLoop, error) {
+	c.AddTarget("all", func() build.BuildResult {
 		fmt.Println("Running build")
 		// cmd.RunBuild(nil, nil)
-		return nil, container.BuildContinue, nil
+		return build.BuildResult{Loop: container.BuildContinue}
 	})
 	// addr := Start()
 

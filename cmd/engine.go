@@ -119,22 +119,22 @@ func executeBuild(b *container.Build, leader *LeaderElection, idStore *utils.IDS
 	}
 
 	c := NewCommand(*b, buildSteps)
-	ids, loop, err := c.Run(addr, RootArgs.Target, b)
-	slog.Info("Build completed", "app", b.App, "ids", ids)
+	result := c.Run(addr, RootArgs.Target, b)
+	slog.Info("Build completed", "app", b.App, "ids", result.IDs, "loop", result.Loop)
 
-	if err != nil {
-		slog.Error("Executing command", "error", err, "command", c)
+	if result.Error != nil {
+		slog.Error("Executing command", "error", result.Error, "command", c)
 		if !aiConfig.Enabled {
 			os.Exit(1)
 		}
 	}
 
-	if loop == container.BuildStop {
+	if result.Loop == container.BuildStop {
 		slog.Info("Build requested to stop further builds", "app", b.App)
 		os.Exit(0)
 	}
 
-	idStore.Add(ids...)
+	idStore.Add(result.IDs...)
 }
 
 // executeBuildGroup executes all builds in a group in parallel using goroutines.
