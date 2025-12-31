@@ -204,7 +204,7 @@ func NewProd() build.BuildStepv3 {
 		MatchedFn: Matches,
 		Name_:     "golang-prod",
 		Alias_:    "push",
-		// images: []string{"alpine"},
+		ImagesFn:  build.StepperImages("alpine:latest"),
 	}
 }
 
