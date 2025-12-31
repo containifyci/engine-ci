@@ -15,6 +15,12 @@ import (
 // BuildCategory represents different phases of the build pipeline
 type BuildCategory string
 
+type BuildResult struct {
+	Loop  container.BuildLoop
+	Error error
+	IDs   []string
+}
+
 const (
 	Auth      BuildCategory = "auth"      // Authentication & credentials
 	PreBuild  BuildCategory = "prebuild"  // Setup, protobuf, dependencies
@@ -246,11 +252,11 @@ func (bs *BuildSteps) PrintSteps() {
 	slog.Info("Build step", "steps", bs.String())
 }
 
-func (bs *BuildSteps) Run(arg *container.Build, step ...string) ([]string, container.BuildLoop, error) {
+func (bs *BuildSteps) Run(arg *container.Build, step ...string) BuildResult {
 	return bs.runAllMatchingBuilds(arg, step)
 }
 
-func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) ([]string, container.BuildLoop, error) {
+func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) BuildResult {
 	var wg sync.WaitGroup
 	ids := utils.IDStore{}
 	for i, buildCtx := range bs.Steps {
@@ -299,7 +305,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 		ids.Add(id)
 		if err != nil {
 			slog.Error("Failed to run build step: %s", "error", err)
-			return ids.Get(), container.BuildContinue, err
+			return BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: err}
 		}
 		if buildType != nil && *buildType == container.AI {
 			// Check for finish signal from AI
@@ -308,12 +314,12 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 				logs, err := GetLog(arg, id)
 				if err != nil {
 					slog.Error("Failed to get container logs", "error", err)
-					return ids.Get(), container.BuildStop, err
+					return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: err}
 				}
 				slog.Info("Checking AI output for finish signal", "signal", finishSignal)
 				if strings.Contains(logs, finishSignal) {
 					slog.Info("Finish signal detected in AI output - stopping further build steps", "signal", finishSignal)
-					return ids.Get(), container.BuildStop, nil
+					return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: nil}
 				}
 			}
 		}
@@ -325,7 +331,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 	wg.Wait()
 
 	slog.Info("All build steps completed successfully")
-	return ids.Get(), container.BuildContinue, nil
+	return BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: nil}
 }
 
 func (bs *BuildSteps) Images(groups container.BuildGroups) []string {
