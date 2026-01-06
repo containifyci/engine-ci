@@ -9,8 +9,8 @@ go 1.25.5
 require (
 	cloud.google.com/go/iam v1.5.3
 	github.com/containers/buildah v1.42.2
-	github.com/containers/podman/v5 v5.7.0
-	github.com/containifyci/engine-ci/protos2 v0.22.0
+	github.com/containers/podman/v5 v5.7.1
+	github.com/containifyci/engine-ci/protos2 v0.23.0
 	github.com/containifyci/go-self-update v0.2.4
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
@@ -19,16 +19,16 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.7.0
-	github.com/moby/buildkit v0.26.2
+	github.com/moby/buildkit v0.26.3
 	github.com/moby/term v0.5.2
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/opencontainers/runtime-spec v1.2.1
+	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	go.podman.io/common v0.66.1
-	golang.org/x/oauth2 v0.33.0
-	golang.org/x/term v0.37.0
-	google.golang.org/api v0.257.0
+	golang.org/x/oauth2 v0.34.0
+	golang.org/x/term v0.38.0
+	google.golang.org/api v0.258.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -144,16 +144,16 @@ require (
 	go.podman.io/image/v5 v5.38.0 // indirect
 	go.podman.io/storage v1.61.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20251022142026-3a174f9686a8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
-	google.golang.org/grpc v1.77.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251029180050-ab9386a59fda // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251213004720-97cd9d5aeac2 // indirect
+	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
@@ -165,3 +165,7 @@ require (
 // github.com/containers/image/v5 => github.com/containers/image/v5 v5.34.3
 // Use local protos2 instead of remote version
 // replace github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
+
+// Until Error: ../../../go/pkg/mod/github.com/opencontainers/runtime-tools@v0.9.1-0.20250523060157-0ea5ed0382a2/generate/generate.go:973:40: cannot use limit (variable of type int64) as *int64 value in assignment is fixed
+// pin version to working version v1.2.1
+replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
