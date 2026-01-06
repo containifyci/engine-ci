@@ -165,3 +165,7 @@ require (
 // github.com/containers/image/v5 => github.com/containers/image/v5 v5.34.3
 // Use local protos2 instead of remote version
 // replace github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
+
+// Until Error: ../../../go/pkg/mod/github.com/opencontainers/runtime-tools@v0.9.1-0.20250523060157-0ea5ed0382a2/generate/generate.go:973:40: cannot use limit (variable of type int64) as *int64 value in assignment is fixed
+// pin version to working version v1.2.1
+replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
