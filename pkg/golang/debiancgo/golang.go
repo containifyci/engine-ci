@@ -74,7 +74,7 @@ func new(build container.Build) *GoContainer {
 		Image:     build.Image,
 		ImageTag:  build.ImageTag,
 		Platforms: platforms,
-		File:      u.SrcFile(build.File),
+		File:      u.NewSrcFile(build.Folder, build.File),
 		Folder:    build.Folder,
 		Tags:      build.Custom["tags"],
 	}

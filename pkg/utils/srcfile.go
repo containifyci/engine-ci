@@ -1,6 +1,12 @@
 package utils
 
+import "path/filepath"
+
 type SrcFile string
+
+func NewSrcFile(folder, file string) SrcFile {
+	return SrcFile(filepath.Join(folder, file))
+}
 
 func (s SrcFile) IsEmpty() bool {
 	return s == ""

@@ -51,7 +51,7 @@ func main() {
 	pr2.Image = ""
 
 	client := build.NewGoServiceBuild("engine-ci-client")
-	client.File = "client/client.go"
+	client.File = "client.go"
 	client.Folder = "client"
 	client.Image = ""
 
