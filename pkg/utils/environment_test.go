@@ -152,3 +152,51 @@ func TestGetMemValue(t *testing.T) {
 	val = GetValue("mem:key2", "local")
 	assert.Equal(t, "", val)
 }
+
+func TestRunCommand(t *testing.T) {
+	tests := []struct {
+		name    string
+		cmd     string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "successful command",
+			cmd:     "echo hello",
+			want:    "hello",
+			wantErr: false,
+		},
+		{
+			name:    "command with newline trimmed",
+			cmd:     "printf 'test\\n'",
+			want:    "test",
+			wantErr: false,
+		},
+		{
+			name:    "failing command",
+			cmd:     "exit 1",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "non-existent command",
+			cmd:     "nonexistentcommand12345",
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := RunCommand(tt.cmd)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.Equal(t, tt.want, *result)
+			}
+		})
+	}
+}

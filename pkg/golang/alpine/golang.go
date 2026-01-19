@@ -78,7 +78,7 @@ func new(build container.Build) *GoContainer {
 		// FIX: linux-arm64 go build is needed when building contains on MacOS M1/M2
 		Platforms: platforms,
 		// Platforms: []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("linux/arm64")},
-		File:   u.SrcFile(build.File),
+		File:   u.NewSrcFile(build.Folder, build.File),
 		Folder: build.Folder,
 		Tags:   build.Custom["tags"],
 	}
