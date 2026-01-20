@@ -41,41 +41,6 @@ func TestSrcFile_IsEmpty(t *testing.T) {
 	}
 }
 
-func TestSrcFile_IsNotEmpty(t *testing.T) {
-	tests := []struct {
-		name string
-		s    SrcFile
-		want bool
-	}{
-		{
-			name: "empty string",
-			s:    SrcFile(""),
-			want: false,
-		},
-		{
-			name: "non-empty string",
-			s:    SrcFile("file.go"),
-			want: true,
-		},
-		{
-			name: "whitespace only",
-			s:    SrcFile(" "),
-			want: true,
-		},
-		{
-			name: "path string",
-			s:    SrcFile("/src/main.go"),
-			want: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.s.IsNotEmpty())
-		})
-	}
-}
-
 func TestSrcFile_Container(t *testing.T) {
 	tests := []struct {
 		name string
@@ -89,32 +54,37 @@ func TestSrcFile_Container(t *testing.T) {
 		},
 		{
 			name: "special case /src/main.go",
-			s:    SrcFile("/src/main.go"),
+			s:    NewSrcFile("/src", "main.go"),
 			want: "/src/main.go",
 		},
 		{
 			name: "regular file",
-			s:    SrcFile("file.go"),
+			s:    NewSrcFile("", "file.go"),
 			want: "/src/file.go",
 		},
 		{
+			name: "regular file",
+			s:    NewSrcFile("go-app", "file.go"),
+			want: "/src/go-app/file.go",
+		},
+		{
 			name: "file with path",
-			s:    SrcFile("pkg/utils/helper.go"),
+			s:    NewSrcFile("pkg/utils", "helper.go"),
 			want: "/src/pkg/utils/helper.go",
 		},
 		{
 			name: "absolute path not /src/main.go",
-			s:    SrcFile("/home/user/file.go"),
+			s:    NewSrcFile("/home/user/", "file.go"),
 			want: "/src//home/user/file.go",
 		},
 		{
 			name: "relative path with dots",
-			s:    SrcFile("../file.go"),
+			s:    NewSrcFile("..", "file.go"),
 			want: "/src/../file.go",
 		},
 		{
 			name: "file with spaces",
-			s:    SrcFile("my file.go"),
+			s:    NewSrcFile("", "my file.go"),
 			want: "/src/my file.go",
 		},
 	}

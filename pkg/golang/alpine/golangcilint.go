@@ -68,6 +68,10 @@ func (cg *customGCL) Defaults() {
 
 func (c GolangCiLint) Command(tags string, folder string) string {
 	cmd := fmt.Sprintf("golangci-lint -v run %s --timeout=5m", tags)
+	if !c.reader.FileExists(filepath.Join(folder, ".golangci.yml")) {
+		cmd = fmt.Sprintf("golangci-lint -v run %s --timeout=5m", tags)
+	}
+
 	if c.reader.FileExists(filepath.Join(folder, ".custom-gcl.yml")) {
 		cnt, err := c.reader.ReadFile(filepath.Join(folder, ".custom-gcl.yml"))
 		if err != nil {
