@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	IMAGE = "public.ecr.aws/aquasecurity/trivy:canary"
+	IMAGE = "ghcr.io/aquasecurity/trivy:canary"
 )
 
 type TrivyContainer struct {
