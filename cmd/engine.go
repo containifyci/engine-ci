@@ -40,7 +40,7 @@ import (
 
 // TODO (tight coupling buildsteps and build paramater) we have to uncouple the BuildSteps initialization from the build parameters.
 // Otherwise we have to initialize the BuildSteps for every build new which is not optimal.
-var buildSteps *build.BuildSteps = build.NewBuildSteps()
+var buildSteps *build.BuildSteps
 
 // buildCmd represents the build command
 var engineCmd = &cobra.Command{
@@ -53,6 +53,7 @@ var engineCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(engineCmd)
+	buildSteps = build.NewBuildSteps()
 }
 
 type LeaderElection struct {
@@ -438,5 +439,6 @@ func InitBuildSteps() {
 		addStep(build.Publish, github.New())     // GitHub (async)
 
 		addStep(build.Publish, dummy.New()) // Goreleaser
+		buildSteps.Init()
 	}
 }
