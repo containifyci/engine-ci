@@ -60,7 +60,7 @@ func TestAddress_ForContainer(t *testing.T) {
 				InternalHost: "http://localhost:9000",
 			},
 			env:  container.LocalEnv,
-			want: "http://localhost:9000",
+			want: "http://host.docker.internal:9000",
 		},
 		{
 			name: "Build URL",
