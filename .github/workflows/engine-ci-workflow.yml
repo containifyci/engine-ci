@@ -65,6 +65,8 @@ on:
         required: false
       NGROK_AUTH_TOKEN:
         required: false
+      CI_CLAUDE_KEY:
+        required: false
 
 env:
   CONTAINER_RUNTIME: ${{ inputs.runtime }}
@@ -77,6 +79,7 @@ env:
   GOMODCACHE: /home/runner/go/pkg/mod
   GOCACHE: /home/runner/go/pkg/mod/build-cache
   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  CI_CLAUDE_KEY: ${{ secrets.CI_CLAUDE_KEY}}
 
 jobs:
   build-go:
