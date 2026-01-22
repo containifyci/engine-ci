@@ -108,6 +108,10 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 
 	netConfig := &network.NetworkingConfig{}
 
+	if err := addHostDockerInternalIfLinuxDaemon(ctx, d.client, hostConfig); err != nil {
+		return "", err
+	}
+
 	// netConfig := &network.NetworkingConfig{
 	// 	EndpointsConfig: map[string]*network.EndpointSettings{
 	// 		"network": {
@@ -152,6 +156,20 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 	containerID := containerResp.ID
 
 	return containerID, nil
+}
+
+func addHostDockerInternalIfLinuxDaemon(ctx context.Context, cli *client.Client, hc *container.HostConfig) error {
+	// Prefer daemon OS over runtime.GOOS (because you might talk to a remote daemon)
+	info, err := cli.Info(ctx)
+	if err != nil {
+		return fmt.Errorf("docker info: %w", err)
+	}
+
+	// Docker returns "linux", "windows", etc.
+	if info.OSType == "linux" {
+		hc.ExtraHosts = append(hc.ExtraHosts, "host.docker.internal:host-gateway")
+	}
+	return nil
 }
 
 func (d *DockerManager) StartContainer(ctx context.Context, id string) error {

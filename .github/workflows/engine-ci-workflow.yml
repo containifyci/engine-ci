@@ -54,6 +54,11 @@ on:
         required: false
         default: false
         type: boolean
+      ai_enabled:
+        description: "Enable ai build steps for the build"
+        required: false
+        default: true
+        type: boolean
     secrets:
       CONTAINIFYCI_DOCKER_TOKEN:
         required: false
@@ -64,6 +69,8 @@ on:
       SONAR_TOKEN:
         required: false
       NGROK_AUTH_TOKEN:
+        required: false
+      CI_CLAUDE_KEY:
         required: false
 
 env:
@@ -185,6 +192,9 @@ jobs:
       - name: Run engine
         run: |
           ${{ env.ENGINE_COMMAND }} engine
+        env:
+          # If ai_enabled is true => secret value, else => empty string
+          CI_CLAUDE_KEY: ${{ inputs.ai_enabled && secrets.CI_CLAUDE_KEY || '' }}
 
       - name: Prepare artifact paths
         if: ${{ inputs.upload_artifacts }}

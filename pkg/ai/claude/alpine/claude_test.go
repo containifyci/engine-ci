@@ -156,6 +156,24 @@ func TestNewContainer(t *testing.T) {
 		c := newContainer(b)
 		assert.Equal(t, "/test/folder", c.Folder)
 	})
+
+	t.Run("extracts ai_role from custom fields", func(t *testing.T) {
+		b := container.Build{
+			Custom: map[string][]string{
+				"ai_role": {"docker_expert"},
+			},
+		}
+		c := newContainer(b)
+		assert.Equal(t, "docker_expert", c.Role)
+	})
+
+	t.Run("role is empty when not provided", func(t *testing.T) {
+		b := container.Build{
+			Custom: map[string][]string{},
+		}
+		c := newContainer(b)
+		assert.Empty(t, c.Role)
+	})
 }
 
 func TestDockerFile(t *testing.T) {
@@ -246,5 +264,33 @@ func TestGetDockerfileMetadata(t *testing.T) {
 	t.Run("content contains node image", func(t *testing.T) {
 		_, _, content := GetDockerfileMetadata("")
 		assert.Contains(t, content, "node")
+	})
+}
+
+func TestGetRoleTemplate(t *testing.T) {
+	t.Run("returns template for valid role", func(t *testing.T) {
+		template := getRoleTemplate("build-reviewer")
+		assert.NotEmpty(t, template)
+		assert.Contains(t, template, "Build Reviewer Role")
+	})
+
+	t.Run("returns empty for unknown role", func(t *testing.T) {
+		template := getRoleTemplate("unknown_role")
+		assert.Empty(t, template)
+	})
+
+	t.Run("returns empty for empty role", func(t *testing.T) {
+		template := getRoleTemplate("")
+		assert.Empty(t, template)
+	})
+}
+
+func TestRolesFS(t *testing.T) {
+	t.Run("all predefined role files exist", func(t *testing.T) {
+		expectedRoles := []string{"build-reviewer", "code-reviewer", "test-strategist", "code-simplifier"}
+		for _, role := range expectedRoles {
+			template := getRoleTemplate(role)
+			assert.NotEmpty(t, template, "missing or empty role file: %s.md", role)
+		}
 	})
 }

@@ -5,6 +5,7 @@ package alpine
 import (
 	"bytes"
 	"context"
+	"embed"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -22,6 +23,23 @@ import (
 	"github.com/containifyci/engine-ci/protos2"
 )
 
+//go:embed roles/*.md
+var rolesFS embed.FS
+
+// getRoleTemplate returns the role template for the given role name, or empty string if not found
+func getRoleTemplate(role string) string {
+	if role == "" {
+		return ""
+	}
+
+	content, err := rolesFS.ReadFile("roles/" + role + ".md")
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(string(content))
+}
+
 const (
 	PROJ_MOUNT = "/src"
 )
@@ -32,8 +50,9 @@ type ClaudeContainer struct {
 	Prompt    string // Main prompt for Claude
 	Context   string // Additional context (e.g., build logs from previous iteration)
 	Folder    string
-	AgentMode bool // If true, enables iterative loop behavior
-	MaxIter   int  // Maximum iterations for agent mode
+	Role      string // Role identifier (e.g., "docker_expert", "planner")
+	AgentMode bool   // If true, enables iterative loop behavior
+	MaxIter   int    // Maximum iterations for agent mode
 }
 
 // New creates a new Claude AI build step
@@ -54,15 +73,19 @@ func New() build.BuildStepv3 {
 }
 
 func newContainer(b container.Build) *ClaudeContainer {
-	maxIter := 5 // default
+	const defaultMaxIterations = 5
+
+	maxIter := defaultMaxIterations
 	if v := b.Custom.UInt("max_iterations"); v > 0 {
 		maxIter = int(v)
 	}
+
 	return &ClaudeContainer{
 		Container: container.New(b),
 		Prompt:    b.Custom.String("ai_prompt"),
 		Context:   b.Custom.String("ai_context"),
 		Folder:    b.Folder,
+		Role:      b.Custom.String("ai_role"),
 		AgentMode: b.Custom.Bool("agent_mode", false),
 		MaxIter:   maxIter,
 	}
@@ -73,11 +96,14 @@ func Matches(b container.Build) bool {
 	if b.BuildType != container.AI {
 		return false
 	}
+
 	claudeKey := u.GetValue(b.Custom.String("claude_api_key"), "build")
 	if claudeKey == "" {
 		slog.Info("Claude API key not provided, skipping Claude AI step")
+		return false
 	}
-	return claudeKey != ""
+
+	return true
 }
 
 func dockerFile(b *container.Build) (*protos2.ContainerFile, error) {
@@ -129,7 +155,6 @@ func (c *ClaudeContainer) Pull() error {
 
 // Run executes the Claude AI build step
 func (c *ClaudeContainer) Run() (string, error) {
-
 	host := c.Build.Custom.String("CONTAINIFYCI_EXTERNAL_HOST")
 	auth := c.Build.Secret["CONTAINIFYCI_AUTH"]
 	claudeKey := u.GetValue(c.GetBuild().Custom.String("claude_api_key"), "build")
@@ -151,8 +176,21 @@ func (c *ClaudeContainer) Run() (string, error) {
 
 	// 3) Prepare prompt with context
 	payload := strings.TrimSpace(c.Prompt)
+
+	// Prepend role template if specified
+	if roleTemplate := getRoleTemplate(c.Role); roleTemplate != "" {
+		payload = roleTemplate + "\n\n" + payload
+	}
+
+	stopWord := c.Build.Custom.String("ai_done_word")
+	if stopWord != "" {
+		stopInstruction := fmt.Sprintf("Also if you get the build fixed, please print the following %s to indicate that you finished. Also add this as the last entry to the claude-actions.log file.", stopWord)
+		payload = payload + "\n\n" + stopInstruction
+	}
+
+	context := ""
 	if ctx := strings.TrimSpace(c.Context); ctx != "" {
-		payload = payload + "\n\n Just edit the files no need to build the project that will be done outside of the session. \n\n---\nPrevious build context:\n" + ctx
+		context = "\n\n Just edit the files no need to build the project that will be done outside of the session. \n\n---\nPrevious build context:\n" + ctx
 	}
 
 	if payload == "" {
@@ -193,9 +231,9 @@ func (c *ClaudeContainer) Run() (string, error) {
 	opts.Script = `#!/bin/bash
 set -euo pipefail
 cat /tmp/prompt.txt
+cat /tmp/prompt.txt /tmp/context.txt > /tmp/instructions.txt
 export CLAUDE_CODE_OAUTH_TOKEN="$(curl -fsS -H "Authorization: Bearer ${CONTAINIFYCI_AUTH}" "${CONTAINIFYCI_HOST}/mem/claudecodeoauthtoken")"
-echo $CLAUDE_CODE_OAUTH_TOKEN
-claude --verbose --permission-mode acceptEdits --debug -p "$(cat /tmp/prompt.txt)"
+claude --verbose --permission-mode acceptEdits --debug -p --output-format text "$(cat /tmp/instructions.txt)" 2>&1 | tee /src/claude-output.log
 `
 	// Set command to execute the script (like BuildingContainer does)
 	opts.Cmd = []string{"sh", "/tmp/script.sh"}
@@ -214,6 +252,11 @@ claude --verbose --permission-mode acceptEdits --debug -p "$(cat /tmp/prompt.txt
 		return c.ID, fmt.Errorf("failed to copy prompt to container: %w", err)
 	}
 
+	// Copy context to container
+	if err := c.CopyContentTo(context, "/tmp/context.txt"); err != nil {
+		return c.ID, fmt.Errorf("failed to copy context to container: %w", err)
+	}
+
 	if err := c.Start(); err != nil {
 		return c.ID, fmt.Errorf("failed to start container: %w", err)
 	}
@@ -227,27 +270,26 @@ claude --verbose --permission-mode acceptEdits --debug -p "$(cat /tmp/prompt.txt
 }
 
 func setValue(host, auth, key, value string) error {
-	baseURL := fmt.Sprintf("http://%s", host)
-	url := fmt.Sprintf("%s/mem/%s", baseURL, key)
-
+	url := fmt.Sprintf("http://%s/mem/%s", host, key)
 	fmt.Printf("Store in mem %s\n", url)
 
 	req, err := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer([]byte(value)))
-	req.Header.Set("Authorization", "Bearer "+auth)
 	if err != nil {
 		fmt.Println("error create request", "error", err)
-		return err
+		return fmt.Errorf("failed to create request: %w", err)
 	}
+
+	req.Header.Set("Authorization", "Bearer "+auth)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println("error post request", "error", err)
-		return err
+		return fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to set key-value pair", "error", err, resp.Status)
+		fmt.Println("failed to set key-value pair", resp.Status)
 		return fmt.Errorf("failed to set key-value pair: %s", resp.Status)
 	}
 
