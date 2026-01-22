@@ -385,7 +385,6 @@ func GetLog(arg *container.Build, ids ...string) (string, error) {
 			slog.Error("Failed to read container logs", "error", err)
 			return "", fmt.Errorf("failed to read container logs for %s: %w", id, err)
 		}
-
 		logs = append(logs, string(data))
 	}
 

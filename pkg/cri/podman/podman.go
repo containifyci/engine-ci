@@ -297,6 +297,7 @@ func (p *PodmanManager) ContainerLogs(ctx context.Context, id string, ShowStdout
 			dataCh <- fmt.Errorf("containifyci: failed to get container logs: %v", err).Error()
 			os.Exit(1)
 		}
+		defer close(dataCh)
 	}()
 	return utils.NewChannelReadCloser(dataCh), nil
 }
