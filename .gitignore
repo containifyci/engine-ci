@@ -18,7 +18,12 @@
 .DS_Store
 
 # build
+.claude
+artifacts.txt
+claude-actions.log
+claude-output.log
 cover.out
+coverage.out
 coverage.txt
 dist/
 .scannerwork/

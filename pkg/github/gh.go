@@ -13,6 +13,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/kv"
+	"github.com/containifyci/engine-ci/pkg/network"
 	"github.com/containifyci/engine-ci/pkg/svc"
 	"github.com/containifyci/engine-ci/pkg/trivy"
 )
@@ -171,18 +172,18 @@ func (c *GithubContainer) Run() error {
 	shouldComment := c.git.IsPR() && ifTrivyFileExists()
 	shouldCommit := c.git.IsPR() && c.shouldCommit()
 
+	slog.Info("SHould commit", "PR", c.git.IsPR(), "commit", c.shouldCommit())
+
 	if !shouldComment && !shouldCommit {
 		slog.Info("Skip github step - no PR comment needed and no commit required")
 		return nil
 	}
 
-	// Build image once (shared between operations)
 	if err := c.BuildImage(); err != nil {
 		slog.Error("Failed to build github image", "error", err)
 		return err
 	}
 
-	// Operation 1: PR Comment (existing behavior)
 	if shouldComment {
 		if err := c.Comment(); err != nil {
 			slog.Error("Failed to comment on PR", "error", err)
@@ -190,7 +191,6 @@ func (c *GithubContainer) Run() error {
 		}
 	}
 
-	// Operation 2: Commit (new behavior)
 	if shouldCommit {
 		if err := c.Commit(); err != nil {
 			return fmt.Errorf("failed to commit changes: %w", err)
@@ -207,7 +207,7 @@ func (c *GithubContainer) shouldCommit() bool {
 		return false
 	}
 
-	if !hasUncommittedChanges() {
+	if !HasUncommittedChanges() {
 		slog.Info("Skip commit - no uncommitted changes")
 		return false
 	}
@@ -220,16 +220,11 @@ func (c *GithubContainer) Commit() error {
 	host := c.GetBuild().Custom.String("CONTAINIFYCI_EXTERNAL_HOST")
 	auth := c.GetBuild().Secret["CONTAINIFYCI_AUTH"]
 
-	// Get GitHub token - prefer PAT for workflow triggers
-	token := container.GetEnvs("CONTAINIFYCI_PAT_TOKEN", "CONTAINIFYCI_GITHUB_TOKEN")
-	if token == "" {
-		return fmt.Errorf("no GitHub token (either CONTAINIFYCI_PAT_TOKEN or CONTAINIFYCI_GITHUB_TOKEN) available for commit")
-	}
-
-	// Store GitHub token in KV (fetched inside container for security)
-	if err := kv.SetValue(host, auth, kvKeyGithubToken, token); err != nil {
-		return fmt.Errorf("failed to store github token: %w", err)
-	}
+	// // Get GitHub token - prefer PAT for workflow triggers
+	// token := container.GetEnvs("CONTAINIFYCI_PAT_TOKEN", "CONTAINIFYCI_GITHUB_TOKEN")
+	// if token == "" {
+	// 	return fmt.Errorf("no GitHub token (either CONTAINIFYCI_PAT_TOKEN or CONTAINIFYCI_GITHUB_TOKEN) available for commit")
+	// }
 
 	// Get commit message from KV (set by upstream step like Claude)
 	commitMsg, err := kv.GetValue(host, auth, kvKeyCommitMessage)
@@ -238,8 +233,8 @@ func (c *GithubContainer) Commit() error {
 	}
 
 	if strings.TrimSpace(commitMsg) == "" {
-		files := getChangedFiles()
-		commitMsg = generateFallbackMessage(files)
+		files := GetChangedFiles()
+		commitMsg = GenerateFallbackMessage(files)
 		slog.Info("Using fallback commit message", "message", commitMsg)
 	}
 
@@ -260,6 +255,14 @@ func (c *GithubContainer) Commit() error {
 			Target: "/src",
 		},
 	}
+
+	ssh, err := network.SSHForward(*c.GetBuild())
+	if err != nil {
+		slog.Error("Failed to forward SSH", "error", err)
+		os.Exit(1)
+	}
+
+	opts = ssh.Apply(&opts)
 
 	opts.Cmd = []string{"sh", "/tmp/commit.sh"}
 
@@ -285,7 +288,7 @@ func (c *GithubContainer) CopyCommitScript(commitMsg string) error {
 	escapedMsg := strings.ReplaceAll(commitMsg, "'", "'\"'\"'")
 
 	script := fmt.Sprintf(`#!/bin/sh
-set -xe
+set -e
 cd /src
 
 if [ -z "$(git status --porcelain)" ]; then
@@ -293,12 +296,11 @@ if [ -z "$(git status --porcelain)" ]; then
     exit 0
 fi
 
-# Fetch token from KV store (secure - not in container config)
-export GITHUB_TOKEN="$(curl -fsS -H "Authorization: Bearer ${CONTAINIFYCI_AUTH}" "${CONTAINIFYCI_HOST}/mem/%s")"
+mkdir -p ~/.ssh
+ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 git config --global user.email "bot@containifyci.io"
 git config --global user.name "containifyci"
-git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
 
 git add -A
 git commit -m '%s
@@ -315,7 +317,8 @@ func ifTrivyFileExists() bool {
 	_, err := os.Stat("trivy.json")
 	if err == nil {
 		return true
-	} else if os.IsNotExist(err) {
+	}
+	if os.IsNotExist(err) {
 		return false
 	}
 
