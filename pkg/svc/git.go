@@ -151,6 +151,22 @@ func SetUnknowGitInfo() *Git {
 	return git
 }
 
+// SetGitInfoForTest sets git info with custom values for testing purposes
+func SetGitInfoForTest(owner, repo, branch, tag string) *Git {
+	git = &Git{
+		Owner:  owner,
+		Repo:   repo,
+		Branch: branch,
+		Tag:    tag,
+	}
+	return git
+}
+
+// ResetGitInfo resets the git info to nil (for test cleanup)
+func ResetGitInfo() {
+	git = nil
+}
+
 func SetGitInfo() (*Git, error) {
 	return setGitInfo(&GitCommander{})
 }
