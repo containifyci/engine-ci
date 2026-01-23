@@ -34,7 +34,7 @@ func (a *Address) NewAddress(arg *container.Build) {
 	switch RuntimeOS {
 	case "windows":
 		internalHost = hostname(scheme, "host.docker.internal", port)
-	case "darwin":
+	case "darwin", "linux":
 		// nolint:staticcheck
 		if arg.Runtime == utils.Docker {
 			internalHost = hostname(scheme, "host.docker.internal", port)
@@ -43,8 +43,6 @@ func (a *Address) NewAddress(arg *container.Build) {
 		} else {
 			internalHost = hostname(scheme, "host.docker.internal", port)
 		}
-	case "linux":
-		internalHost = hostname(scheme, "localhost", port)
 	default:
 		internalHost = hostname(scheme, "host.docker.internal", port)
 	}

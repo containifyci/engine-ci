@@ -224,27 +224,19 @@ func (bs *BuildSteps) GetCategoryOrder() []BuildCategory {
 }
 
 func (bs *BuildSteps) String() string {
-	//TODO the for loop fails rarely looks like a race condition.
-	/*
-		panic: runtime error: index out of range [28] with length 28
-
-		goroutine 38 [running]:
-		github.com/containifyci/engine-ci/pkg/build.(*BuildSteps).String(0x106105760?)
-		        /Users/frank.ittermann@goflink.com/private/github/engine-ci/pkg/build/build.go:216 +0x1b4
-		github.com/containifyci/engine-ci/pkg/build.(*BuildSteps).PrintSteps(0x10519d8e0?)
-		        /Users/frank.ittermann@goflink.com/private/github/engine-ci/pkg/build/build.go:222 +0x1c
-	*/
 	if bs == nil || len(bs.Steps) == 0 {
 		return ""
 	}
-	names := make([]string, len(bs.Steps))
-	for i, bctx := range bs.Steps {
+
+	names := make([]string, 0, len(bs.Steps))
+	for _, bctx := range bs.Steps {
+		name := bctx.build.Name()
 		if bctx.async {
-			names[i] = fmt.Sprintf("%s(A)", bctx.build.Name())
-			continue
+			name = fmt.Sprintf("%s(A)", name)
 		}
-		names[i] = bctx.build.Name()
+		names = append(names, name)
 	}
+
 	return strings.Join(names, ", ")
 }
 
@@ -259,6 +251,7 @@ func (bs *BuildSteps) Run(arg *container.Build, step ...string) BuildResult {
 func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) BuildResult {
 	var wg sync.WaitGroup
 	ids := utils.IDStore{}
+	var buildErr error
 	for i, buildCtx := range bs.Steps {
 		if !buildCtx.build.Matches(*arg) {
 			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
@@ -281,6 +274,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 				ids.Add(id)
 				if err != nil {
 					slog.Error("Failed to run build step.", "error", err)
+					// TODO how to pass errors back from here to main thread
 					// os.Exit(1)
 				}
 
@@ -290,38 +284,45 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 		}
 		// Execute sync step and wait for completion
 		slog.Debug("Executing sync step", "step", buildCtx.build.Name(), "index", i)
+
 		buildType := buildCtx.build.BuildType()
 		if buildType != nil && *buildType == container.AI {
 			slog.Info("AI build step detected - ensure proper handling", "step", buildCtx.build.Name(), "ids", ids.Get())
-			//TODO use Container Manager to get container logs
-			aiCtx, err := GetLog(arg, arg.Custom.Strings("ai_context")...)
-			if err != nil {
+
+			// TODO: use Container Manager to get container logs
+			if aiCtx, err := GetLog(arg, arg.Custom.Strings("ai_context")...); err != nil {
 				slog.Error("Failed to get AI context logs", "error", err)
 			} else {
 				arg.Custom["ai_context"] = []string{aiCtx}
 			}
 		}
+
 		id, err := buildCtx.build.RunWithBuildV3(*arg)
 		ids.Add(id)
+
 		if err != nil {
-			slog.Error("Failed to run build step: %s", "error", err)
-			return BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: err}
+			slog.Error("Failed to run build step", "error", err)
+			buildErr = err
 		}
+
+		// Handle AI build step completion signal
 		if buildType != nil && *buildType == container.AI {
-			// Check for finish signal from AI
 			finishSignal := arg.Custom.String("ai_done_word")
 			if finishSignal != "" {
-				logs, err := GetLog(arg, id)
-				if err != nil {
-					slog.Error("Failed to get container logs", "error", err)
-					return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: err}
+				logs, logErr := GetLog(arg, id)
+				if logErr != nil {
+					slog.Error("Failed to get container logs", "error", logErr)
+					return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: logErr}
 				}
+
 				slog.Info("Checking AI output for finish signal", "signal", finishSignal)
 				if strings.Contains(logs, finishSignal) {
 					slog.Info("Finish signal detected in AI output - stopping further build steps", "signal", finishSignal)
 					return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: nil}
 				}
 			}
+		} else if buildErr != nil {
+			return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: buildErr}
 		}
 		slog.Debug("Completed sync step", "step", buildCtx.build.Name(), "index", i)
 	}
@@ -365,23 +366,27 @@ func uniqueStrings(input []string) []string {
 }
 
 func GetLog(arg *container.Build, ids ...string) (string, error) {
-	s := []string{}
+	var logs []string
+
 	for _, id := range ids {
 		if id == "" {
 			continue
 		}
+
 		r, err := arg.RuntimeClient().ContainerLogs(context.TODO(), id, true, true, false)
 		if err != nil {
 			slog.Error("Failed to get container logs", "error", err)
-			return "", err
+			return "", fmt.Errorf("failed to get container logs for %s: %w", id, err)
 		}
 		defer r.Close()
+
 		data, err := io.ReadAll(r)
 		if err != nil {
 			slog.Error("Failed to read container logs", "error", err)
-			return "", err
+			return "", fmt.Errorf("failed to read container logs for %s: %w", id, err)
 		}
-		s = append(s, string(data))
+		logs = append(logs, string(data))
 	}
-	return strings.Join(s, "\n"), nil
+
+	return strings.Join(logs, "\n"), nil
 }
