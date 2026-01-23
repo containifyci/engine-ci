@@ -1,6 +1,8 @@
 package goreleaser
 
 import (
+	_ "embed"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -14,6 +16,9 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/svc"
 )
+
+//go:embed .goreleaser.yaml
+var defaultGoreleaserConfig []byte
 
 const (
 	IMAGE = "goreleaser/goreleaser:nightly"
@@ -81,6 +86,26 @@ func (c *GoReleaserContainer) ApplyEnvs(envs []string) []string {
 	return envs
 }
 
+// hasProjectConfig checks if the project has its own goreleaser config file
+func hasProjectConfig(dir string) bool {
+	configNames := []string{".goreleaser.yaml", ".goreleaser.yml", ".goreleaser.json"}
+	for _, name := range configNames {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// writeDefaultConfig writes the embedded default config to a temp file
+func writeDefaultConfig() (string, error) {
+	configPath := "/tmp/.goreleaser-default.yaml"
+	if err := os.WriteFile(configPath, defaultGoreleaserConfig, 0644); err != nil {
+		return "", fmt.Errorf("failed to write default config: %w", err)
+	}
+	return configPath, nil
+}
+
 func (c *GoReleaserContainer) Release(env container.EnvType) error {
 	token := container.GetEnv("CONTAINIFYCI_GITHUB_TOKEN")
 	if token == "" {
@@ -131,6 +156,24 @@ func (c *GoReleaserContainer) Release(env container.EnvType) error {
 	}
 
 	opts.Cmd = []string{"release", "--skip=validate", "--verbose", "--clean"}
+
+	// Use embedded default config if project doesn't have one
+	if !hasProjectConfig(dir) {
+		slog.Info("No goreleaser config found, using embedded default")
+		hostConfigPath, err := writeDefaultConfig()
+		if err != nil {
+			return fmt.Errorf("failed to write default goreleaser config: %w", err)
+		}
+		defer os.Remove(hostConfigPath)
+
+		opts.Volumes = append(opts.Volumes, types.Volume{
+			Type:   "bind",
+			Source: hostConfigPath,
+			Target: "/tmp/.goreleaser-default.yaml",
+		})
+		opts.Cmd = append(opts.Cmd, "--config=/tmp/.goreleaser-default.yaml")
+	}
+
 	err := c.Create(opts)
 	if err != nil {
 		return err
