@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -138,4 +139,117 @@ func TestStartHttpServer(t *testing.T) {
 
 	body = w.Body.String()
 	assert.Equal(t, "bar", body, "Expected body %s, got %s", "bar", body)
+}
+
+func TestGenerateToken(t *testing.T) {
+	secret := "test-secret-key"
+	token := GenerateToken(secret)
+
+	// Token should have 3 parts separated by dots
+	parts := bytes.Split([]byte(token), []byte("."))
+	assert.Len(t, parts, 3, "Token should have 3 parts: timestamp.nonce.signature")
+
+	// Token should be valid immediately
+	assert.True(t, ValidateToken(token, secret, time.Hour), "Freshly generated token should be valid")
+}
+
+func TestValidateToken(t *testing.T) {
+	secret := "test-secret-key"
+
+	tests := []struct {
+		name   string
+		token  string
+		secret string
+		maxAge time.Duration
+		want   bool
+	}{
+		{
+			name:   "valid token",
+			token:  GenerateToken(secret),
+			secret: secret,
+			maxAge: time.Hour,
+			want:   true,
+		},
+		{
+			name:   "wrong secret",
+			token:  GenerateToken(secret),
+			secret: "wrong-secret",
+			maxAge: time.Hour,
+			want:   false,
+		},
+		{
+			name:   "malformed token - missing parts",
+			token:  "only-one-part",
+			secret: secret,
+			maxAge: time.Hour,
+			want:   false,
+		},
+		{
+			name:   "malformed token - invalid timestamp",
+			token:  "not-a-number.nonce.signature",
+			secret: secret,
+			maxAge: time.Hour,
+			want:   false,
+		},
+		{
+			name:   "tampered signature",
+			token:  fmt.Sprintf("%d.%s.%s", time.Now().Unix(), "nonce", "tampered-signature"),
+			secret: secret,
+			maxAge: time.Hour,
+			want:   false,
+		},
+		{
+			name:   "expired token",
+			token:  GenerateToken(secret),
+			secret: secret,
+			maxAge: 0, // immediate expiration
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ValidateToken(tt.token, tt.secret, tt.maxAge)
+			assert.Equal(t, tt.want, got, "ValidateToken() = %v, want %v", got, tt.want)
+		})
+	}
+}
+
+func TestAuthMiddleware_ExpiredToken(t *testing.T) {
+	secret := "test-secret"
+	token := GenerateToken(secret)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Test with zero maxAge (immediate expiration)
+	middleware := authMiddleware(secret, 0, handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	w := httptest.NewRecorder()
+
+	middleware.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "Expired token should return 401")
+}
+
+func TestAuthMiddleware_ValidToken(t *testing.T) {
+	secret := "test-secret"
+	token := GenerateToken(secret)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	middleware := authMiddleware(secret, time.Hour, handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	w := httptest.NewRecorder()
+
+	middleware.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, "Valid token should return 200")
 }
