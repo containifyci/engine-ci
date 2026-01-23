@@ -288,27 +288,45 @@ func (c *GithubContainer) CopyCommitScript(commitMsg string) error {
 	escapedMsg := strings.ReplaceAll(commitMsg, "'", "'\"'\"'")
 
 	script := fmt.Sprintf(`#!/bin/sh
-set -e
+set -xe
 cd /src
 
+
 if [ -z "$(git status --porcelain)" ]; then
-    echo "No changes to commit"
-    exit 0
+echo "No changes to commit"
+exit 0
 fi
 
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
+git config --global url.ssh://git@github.com/.insteadOf https://github.com/
+
+echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" || true
+ls -l "$SSH_AUTH_SOCK" || true
+ssh-add -l || true
+
+git config --global --get core.sshCommand || true
+git config --local  --get core.sshCommand || true
+echo "GIT_SSH_COMMAND=$GIT_SSH_COMMAND"
+
+ssh -vvv -o IdentityAgent="$SSH_AUTH_SOCK" -T git@github.com
+# ssh -vvv -T git@github.com
+
+git remote -v
 
 git config --global user.email "bot@containifyci.io"
 git config --global user.name "containifyci"
 
+
+
+export GIT_TERMINAL_PROMPT=0
 git add -A
 git commit -m '%s
 
 Co-Authored-By: containifyci <bot@containifyci.io>'
 
 git push origin HEAD
-`, kvKeyGithubToken, escapedMsg)
+`, escapedMsg)
 
 	return c.CopyContentTo(script, "/tmp/commit.sh")
 }

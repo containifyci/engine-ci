@@ -254,6 +254,21 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 	ids := utils.IDStore{}
 	var buildErr error
 	var aiBuildResult *BuildResult
+	hasAIBuild := false
+	for _, buildCtx := range bs.Steps {
+		if !buildCtx.build.Matches(*arg) {
+			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
+			continue
+		}
+
+		if step != nil && buildCtx.build.Name() != step[0] {
+			continue
+		}
+		buildType := buildCtx.build.BuildType()
+		if buildType != nil && *buildType == container.AI {
+			hasAIBuild = true
+		}
+	}
 	for i, buildCtx := range bs.Steps {
 		if !buildCtx.build.Matches(*arg) {
 			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
@@ -321,20 +336,24 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 				if strings.Contains(logs, finishSignal) {
 					slog.Info("Finish signal detected in AI output - stopping further build steps", "signal", finishSignal)
 					aiBuildResult = &BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: nil}
+				} else {
+					// start full build again
+					break
 				}
 			}
-		} else if buildErr != nil {
+		} else if !hasAIBuild && buildErr != nil {
+			slog.Info("Stop build no ai step configured", "error", buildErr)
 			return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: buildErr}
 		}
 		slog.Debug("Completed sync step", "step", buildCtx.build.Name(), "index", i)
 	}
-	if aiBuildResult != nil {
-		return *aiBuildResult
-	}
-
 	// Wait for all async steps to complete
 	slog.Debug("Waiting for all async steps to complete")
 	wg.Wait()
+
+	if aiBuildResult != nil {
+		return *aiBuildResult
+	}
 
 	slog.Info("All build steps completed successfully")
 	return BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: nil}
