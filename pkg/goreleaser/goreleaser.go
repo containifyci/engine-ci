@@ -11,6 +11,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	utils "github.com/containifyci/engine-ci/pkg/utils"
 
@@ -21,7 +22,8 @@ import (
 var defaultGoreleaserConfig []byte
 
 const (
-	IMAGE = "goreleaser/goreleaser:nightly"
+	IMAGE             = "goreleaser/goreleaser:v2.13.3"
+	defaultConfigPath = "/tmp/.goreleaser-default.yaml"
 )
 
 type GoReleaserContainer struct {
@@ -61,19 +63,33 @@ func new(build container.Build) *GoReleaserContainer {
 	}
 }
 
-func CacheFolder() string {
-	// Command to get the GOMODCACHE location
-	cmd := exec.Command("go", "env", "GOMODCACHE")
+// newWithManager creates a GoReleaserContainer with a custom container manager (for testing)
+func newWithManager(build container.Build, manager cri.ContainerManager) *GoReleaserContainer {
+	c := container.NewWithManager(manager)
+	b := build.Defaults()
+	c.Build = b
+	c.Env = b.Env
+	return &GoReleaserContainer{Container: c}
+}
 
-	// Run the command and capture its output
+// cacheFolderFn allows injection of cache folder lookup for testing
+var cacheFolderFn = defaultCacheFolder
+
+func defaultCacheFolder() (string, error) {
+	cmd := exec.Command("go", "env", "GOMODCACHE")
 	output, err := cmd.Output()
 	if err != nil {
-		slog.Error("Failed to execute command: %s", "error", err)
+		return "", fmt.Errorf("failed to get GOMODCACHE: %w", err)
+	}
+	return strings.Trim(string(output), "\n"), nil
+}
+
+func CacheFolder() string {
+	gomodcache, err := cacheFolderFn()
+	if err != nil {
+		slog.Error("Failed to execute command", "error", err)
 		os.Exit(1)
 	}
-
-	// Print the GOMODCACHE location
-	gomodcache := strings.Trim(string(output), "\n")
 	slog.Debug("GOMODCACHE location", "path", gomodcache)
 	return gomodcache
 }
@@ -99,18 +115,20 @@ func hasProjectConfig(dir string) bool {
 
 // writeDefaultConfig writes the embedded default config to a temp file
 func writeDefaultConfig() (string, error) {
-	configPath := "/tmp/.goreleaser-default.yaml"
-	if err := os.WriteFile(configPath, defaultGoreleaserConfig, 0644); err != nil {
+	if err := os.WriteFile(defaultConfigPath, defaultGoreleaserConfig, 0644); err != nil {
 		return "", fmt.Errorf("failed to write default config: %w", err)
 	}
-	return configPath, nil
+	return defaultConfigPath, nil
 }
+
+// ErrMissingToken is returned when CONTAINIFYCI_GITHUB_TOKEN is not set
+var ErrMissingToken = fmt.Errorf("missing CONTAINIFYCI_GITHUB_TOKEN")
 
 func (c *GoReleaserContainer) Release(env container.EnvType) error {
 	token := container.GetEnv("CONTAINIFYCI_GITHUB_TOKEN")
 	if token == "" {
 		slog.Warn("Skip goreleaser missing CONTAINIFYCI_GITHUB_TOKEN")
-		os.Exit(1)
+		return ErrMissingToken
 	}
 
 	opts := types.ContainerConfig{}
@@ -169,9 +187,9 @@ func (c *GoReleaserContainer) Release(env container.EnvType) error {
 		opts.Volumes = append(opts.Volumes, types.Volume{
 			Type:   "bind",
 			Source: hostConfigPath,
-			Target: "/tmp/.goreleaser-default.yaml",
+			Target: defaultConfigPath,
 		})
-		opts.Cmd = append(opts.Cmd, "--config=/tmp/.goreleaser-default.yaml")
+		opts.Cmd = append(opts.Cmd, "--config="+defaultConfigPath)
 	}
 
 	err := c.Create(opts)
@@ -201,18 +219,13 @@ func (c *GoReleaserContainer) Run() error {
 		slog.Info("Skip goreleaser because its not explicit enabled", "build", c.GetBuild())
 		return nil
 	}
-	env := c.GetBuild().Env
 
-	err := c.Pull()
-	if err != nil {
-		slog.Error("Failed to create container: %s", "error", err)
-		os.Exit(1)
+	if err := c.Pull(); err != nil {
+		return fmt.Errorf("failed to pull image: %w", err)
 	}
 
-	err = c.Release(env)
-	if err != nil {
-		slog.Error("Failed to create container: %s", "error", err)
-		os.Exit(1)
+	if err := c.Release(c.GetBuild().Env); err != nil {
+		return fmt.Errorf("failed to release: %w", err)
 	}
 	return nil
 }
