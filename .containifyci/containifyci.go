@@ -40,6 +40,7 @@ func main() {
 
 	claude := build.NewAIBuild("claude-review")
 	claude.Properties = map[string]*build.ListValue{
+		"auto_commit":    build.NewList("true"),
 		"claude_api_key": build.NewList("env:CI_CLAUDE_KEY"),
 		"ai_role":        build.NewList("build-reviewer"),
 		// "ai_prompt":      build.NewList(`Optain the build logs from the provided context and. Ensure the following quality gates no linting issues and build compilation succeed. Please write your reasoning and actions into the claude-actions.log file in the format <timestamp>: <action>.` + fmt.Sprintf("Also if you get the build fixed, please print the following %s_SUCCESSFUL_FIX_%s or %s_FAILED_FIX_%s to indicate if the fix was successful or not. Also add this as the last entry to the claude-actions.log file.", uuid, uuid, uuid, uuid)),
@@ -60,9 +61,8 @@ func main() {
 	opts1 := build.NewGoServiceBuild("engine-ci")
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
-		"auto_commit": build.NewList("true"),
-		"goreleaser":  build.NewList("true"),
-		"tags":        build.NewList("containers_image_openpgp"),
+		"goreleaser": build.NewList("true"),
+		"tags":       build.NewList("containers_image_openpgp"),
 	}
 	opts1.Image = ""
 
