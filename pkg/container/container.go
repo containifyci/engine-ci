@@ -94,6 +94,10 @@ func GetEnv(key string) string {
 	return u.GetEnv(key, string(BuildEnv))
 }
 
+func GetEnvs(key ...string) string {
+	return u.GetEnvs(key, string(BuildEnv))
+}
+
 func NewWithManager(manager cri.ContainerManager) *Container {
 	_client := func() cri.ContainerManager {
 		return manager

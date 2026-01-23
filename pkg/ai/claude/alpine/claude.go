@@ -3,12 +3,9 @@ package alpine
 //go:generate go run ../../../../tools/dockerfile-metadata/ -package alpine -output docker_metadata_gen.go -input Dockerfile_claude -variant ""
 
 import (
-	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +15,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/kv"
 	"github.com/containifyci/engine-ci/pkg/network"
 	u "github.com/containifyci/engine-ci/pkg/utils"
 	"github.com/containifyci/engine-ci/protos2"
@@ -41,7 +39,8 @@ func getRoleTemplate(role string) string {
 }
 
 const (
-	PROJ_MOUNT = "/src"
+	PROJ_MOUNT         = "/src"
+	kvKeyCommitMessage = "commit_message"
 )
 
 // ClaudeContainer represents a Claude AI build step container
@@ -159,7 +158,7 @@ func (c *ClaudeContainer) Run() (string, error) {
 	auth := c.Build.Secret["CONTAINIFYCI_AUTH"]
 	claudeKey := u.GetValue(c.GetBuild().Custom.String("claude_api_key"), "build")
 
-	err := setValue(host, auth, "claudecodeoauthtoken", claudeKey)
+	err := kv.SetValue(host, auth, "claudecodeoauthtoken", claudeKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to set claude_code_oauth_token: %w", err)
 	}
@@ -186,6 +185,19 @@ func (c *ClaudeContainer) Run() (string, error) {
 	if stopWord != "" {
 		stopInstruction := fmt.Sprintf("Also if you get the build fixed, please print the following %s to indicate that you finished. Also add this as the last entry to the claude-actions.log file.", stopWord)
 		payload = payload + "\n\n" + stopInstruction
+	}
+
+	// Add auto_commit instruction if enabled
+	autoCommit := c.Build.Custom.Bool("auto_commit", false)
+	if autoCommit {
+		commitInstruction := `
+
+When you complete your changes, write a commit message to a file called "commit-message.txt" in the project root.
+The commit message should:
+- Be a single line summary (max 72 chars) following conventional commit format (e.g., "feat(scope): description" or "fix(scope): description")
+- Accurately describe what changes were made
+- Not include any additional body text or footers`
+		payload = payload + commitInstruction
 	}
 
 	context := ""
@@ -266,32 +278,22 @@ claude --verbose --permission-mode acceptEdits --debug -p --output-format text "
 		return c.ID, fmt.Errorf("container execution failed: %w", err)
 	}
 
+	// Store commit message in KV if auto_commit is enabled
+	if autoCommit {
+		commitMsgPath := filepath.Join(dir, "commit-message.txt")
+		if msg, err := os.ReadFile(commitMsgPath); err == nil {
+			trimmedMsg := strings.TrimSpace(string(msg))
+			if trimmedMsg != "" {
+				if err := kv.SetValue(host, auth, kvKeyCommitMessage, trimmedMsg); err != nil {
+					slog.Warn("Failed to store commit message in KV", "error", err)
+				} else {
+					slog.Info("Stored commit message in KV", "message", trimmedMsg)
+				}
+			}
+		} else {
+			slog.Info("No commit-message.txt file found", "path", commitMsgPath)
+		}
+	}
+
 	return c.ID, nil
-}
-
-func setValue(host, auth, key, value string) error {
-	url := fmt.Sprintf("http://%s/mem/%s", host, key)
-	fmt.Printf("Store in mem %s\n", url)
-
-	req, err := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer([]byte(value)))
-	if err != nil {
-		fmt.Println("error create request", "error", err)
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+auth)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Println("error post request", "error", err)
-		return fmt.Errorf("failed to execute request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to set key-value pair", resp.Status)
-		return fmt.Errorf("failed to set key-value pair: %s", resp.Status)
-	}
-
-	return nil
 }
