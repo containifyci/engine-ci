@@ -407,7 +407,6 @@ func InitBuildSteps() {
 		addStep(build.Auth, gcloud.New())
 
 		// PreBuild: Setup, protobuf, dependencies
-		addStep(build.PreBuild, claude.New()) // Claude AI
 		addStep(build.PreBuild, copier.New())
 		addStep(build.PreBuild, protobuf.New())
 
@@ -433,6 +432,8 @@ func InitBuildSteps() {
 
 		// Apply: Infrastructure changes
 		addStep(build.Apply, pulumi.New()) // Pulumi
+
+		addStep(build.PrePublish, claude.New()) // Claude AI
 
 		// Publish: Publishing, releases, notifications
 		addStep(build.Publish, goreleaser.New()) // Goreleaser

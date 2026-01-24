@@ -22,9 +22,7 @@ func Getenv(key string, envType string) string {
 	switch envType {
 	case "local":
 		return os.Getenv(key + "_LOCAL")
-	case "build":
-		return os.Getenv(key)
-	case "production":
+	case "build", "production":
 		return os.Getenv(key)
 	}
 	return ""
