@@ -191,6 +191,7 @@ jobs:
 
       - name: Run engine
         run: |
+          go generate ./...
           ${{ env.ENGINE_COMMAND }} engine
         env:
           # If ai_enabled is true => secret value, else => empty string

@@ -81,6 +81,9 @@ This eliminates runtime parsing overhead and catches Dockerfile syntax errors at
 - [ ] **Goreleaser Signed Apple Builds**: Add signing for Apple builds (high priority).
 - [ ] **Add Go Quality Build Steps**: Add extra Go quality build steps to post test coverage and other reports to the Pull Request similar to the trivy report. [go-coverage-report](github.com/fgrosse/go-coverage-report/) (low priority).
 
+
+### Internal Improvements:
+- [ ] **Ci/Cd Pipeline Improvements**: As part of DependaBot PR's that update DockerFiles the new Dockerfile should be built and push as part of CI/CD. This means the go generate action has to run before go run is executed in CI/CD. 
 ## Contribution
 
 We welcome contributions from the community! If you're interested in contributing to **engine-ci**, please create a fork and open a pull request with your changes.
