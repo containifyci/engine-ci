@@ -5,14 +5,14 @@ package alpine
 // Default Dockerfile (Dockerfile_go)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "1.25.5-alpine"
+	ImageVersion = "1.25.6-alpine"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "38d35a6851ab16c2ea72037817a2919df420e41bae709298f6048172b075571b"
+	DockerfileChecksum = "8d1f854b0abe9cd45ef83b70b5e6bde01502497e6b80c61c1f66c0b82feffcee"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM golang:1.25.5-alpine
+var DockerfileContent = `FROM golang:1.25.6-alpine
 
 RUN apk --no-cache add git openssh-client && \
   rm -rf /var/cache/apk/*
@@ -27,14 +27,14 @@ RUN go install github.com/wadey/gocovmerge@latest && \
 // chromium variant (Dockerfile_chromium_go)
 const (
 	// ImageVersionChromium is the golang version extracted from the Dockerfile
-	ImageVersionChromium = "1.25.5-alpine"
+	ImageVersionChromium = "1.25.6-alpine"
 
 	// DockerfileChecksumChromium is the checksum of the Dockerfile content
-	DockerfileChecksumChromium = "4f0ae68a61cb5c3a25dc350ac244a9d9452199f86063b2131e53e1a67cf62c04"
+	DockerfileChecksumChromium = "f903d0074c6789754fa0c33b34d70740d0ce55ebb0e1fc9f82fb7d69e07cf379"
 )
 
 // DockerfileContentChromium contains the embedded Dockerfile content
-var DockerfileContentChromium = `FROM golang:1.25.5-alpine
+var DockerfileContentChromium = `FROM golang:1.25.6-alpine
 
 RUN apk --no-cache add git openssh-client chromium && \
   rm -rf /var/cache/apk/*
