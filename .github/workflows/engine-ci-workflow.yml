@@ -189,10 +189,12 @@ jobs:
         run: |
           ${{ env.ENGINE_COMMAND }} cache load
 
+      - name: Generate code for engine-ci
+        if: ${{ !inputs.install_binary }}
+        run: go generate ./...
+
       - name: Run engine
-        run: |
-          go generate ./...
-          ${{ env.ENGINE_COMMAND }} engine
+        run: ${{ env.ENGINE_COMMAND }} engine
         env:
           # If ai_enabled is true => secret value, else => empty string
           CI_CLAUDE_KEY: ${{ inputs.ai_enabled && secrets.CI_CLAUDE_KEY || '' }}
