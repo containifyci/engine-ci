@@ -4,7 +4,7 @@ package rust
 
 // Default Dockerfile (Dockerfile.rust)
 const (
-	// ImageVersion is the golang version extracted from the Dockerfile
+	// ImageVersion is the Rust version extracted from the Dockerfile
 	ImageVersion = "1.83-alpine"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content

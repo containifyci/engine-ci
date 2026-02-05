@@ -23,4 +23,5 @@ coverage.txt
 dist/
 .scannerwork/
 engine-ci-*
-trivy.json/main
+trivy.json
+/main
