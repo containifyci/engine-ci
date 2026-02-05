@@ -1,0 +1,11 @@
+FROM --platform=$TARGETPLATFORM rust:1.83-alpine
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+# Install basic build dependencies
+RUN apk add --no-cache musl-dev
+
+WORKDIR /app
+
+# Verify Rust installation
+RUN rustc --version && cargo --version
