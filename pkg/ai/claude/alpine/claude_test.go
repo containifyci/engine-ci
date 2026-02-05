@@ -5,6 +5,7 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/kv"
 	"github.com/containifyci/engine-ci/protos2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -224,12 +225,12 @@ func TestDockerFile(t *testing.T) {
 
 func TestSetValue(t *testing.T) {
 	t.Run("handles empty host", func(t *testing.T) {
-		err := setValue("", "auth", "key", "value")
+		err := kv.SetValue("", "auth", "key", "value")
 		assert.Error(t, err)
 	})
 
 	t.Run("handles empty auth", func(t *testing.T) {
-		err := setValue("host", "", "key", "value")
+		err := kv.SetValue("host", "", "key", "value")
 		// Will fail due to network but won't panic
 		assert.Error(t, err)
 	})
