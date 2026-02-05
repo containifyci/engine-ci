@@ -27,6 +27,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/protobuf"
 	"github.com/containifyci/engine-ci/pkg/pulumi"
 	"github.com/containifyci/engine-ci/pkg/python"
+	"github.com/containifyci/engine-ci/pkg/rust"
 	"github.com/containifyci/engine-ci/pkg/sonarcloud"
 	"github.com/containifyci/engine-ci/pkg/trivy"
 	"github.com/containifyci/engine-ci/pkg/utils"
@@ -417,6 +418,7 @@ func InitBuildSteps() {
 		addStep(build.Build, golang.NewCGO())    // CGO variant
 		addStep(build.Build, maven.New())        // Maven
 		addStep(build.Build, python.New())       // Python
+		addStep(build.Build, rust.New())         // Rust
 		addStep(build.Build, zig.New())          // Zig
 
 		// PostBuild: Production artifacts, packaging
@@ -424,6 +426,7 @@ func InitBuildSteps() {
 		addStep(build.PostBuild, golang.NewProdDebian()) // Debian prod
 		addStep(build.PostBuild, maven.NewProd())        // Maven prod
 		addStep(build.PostBuild, python.NewProd())       // Python prod
+		addStep(build.PostBuild, rust.NewProd())         // Rust prod
 		addStep(build.PostBuild, zig.NewProd())          // Zig prod
 
 		// Quality: Linting, testing, security scanning
