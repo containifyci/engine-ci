@@ -8,7 +8,7 @@ const (
 	ImageVersion = "1.25.5"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "016a5fd7f041991f3e64cf35e5cac534c3c456bba2a1fcd5fd45b1864fc4674d"
+	DockerfileChecksum = "eabc87602ff508b223d297c8fa7a1b3b685fbfca30196c47d6ad53f7790c9650"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
@@ -39,10 +39,21 @@ RUN apt-get update && \
 #   go clean -cache && \
 #   go clean -modcache
 
+ARG TARGETARCH
+RUN ZIG_VERSION=0.15.2 && \
+    case "$(dpkg --print-architecture)" in \
+      arm64) ZIG_ARCH=aarch64 ;; \
+      amd64) ZIG_ARCH=x86_64 ;; \
+    esac && \
+    echo curl -L "https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz" && \
+    curl -L "https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz" | \
+    tar -xJ -C /usr/local && \
+    ln -s "/usr/local/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}/zig" /usr/local/bin/zig
+
 ENV CGO_ENABLED=1
 ENV OPENSSL_DIR=/usr/include/openssl
 ENV CGO_CFLAGS="-I/usr/include/openssl"
-ENV CGO_LDFLAGS="-L/usr/lib/aarch64-linux-gnu -lssl -lcrypto"
+ENV CGO_LDFLAGS="-lssl -lcrypto"
 `
 
 // GetDockerfileMetadata returns the metadata for the specified variant type.

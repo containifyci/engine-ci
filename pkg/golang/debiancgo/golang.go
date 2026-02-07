@@ -68,6 +68,10 @@ func New() build.BuildStepv3 {
 
 func new(build container.Build) *GoContainer {
 	platforms := []*types.PlatformSpec{build.Platform.Container}
+	if !build.Platform.Same() {
+		slog.Debug("Different platform detected", "host", build.Platform.Host, "container", build.Platform.Container)
+		platforms = []*types.PlatformSpec{types.ParsePlatform("darwin/arm64"), types.ParsePlatform("darwin/amd64"), types.ParsePlatform("linux/arm64")}
+	}
 	return &GoContainer{
 		App:       build.App,
 		Container: container.New(build),
@@ -188,7 +192,7 @@ func (c *GoContainer) BuildScript() string {
 	if generateMode == "" {
 		generateMode = "auto"
 	}
-	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, generateMode, platforms...).String()
+	return buildscript.NewCGOBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, generateMode, platforms...).String()
 }
 
 func (c *GoContainer) Run() error {

@@ -226,6 +226,10 @@ func NewProd() build.BuildStepv3 {
 }
 
 func (c *RustContainer) Prod() error {
+	if c.Image == "" {
+		slog.Info("Skip No image specified to push")
+		return nil
+	}
 	opts := types.ContainerConfig{}
 	opts.Image = BaseImage
 	opts.Env = []string{}

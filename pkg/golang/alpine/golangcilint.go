@@ -67,9 +67,9 @@ func (cg *customGCL) Defaults() {
 }
 
 func (c GolangCiLint) Command(tags string, folder string) string {
-	cmd := fmt.Sprintf("golangci-lint -v run %s --timeout=5m", tags)
+	cmd := fmt.Sprintf("golangci-lint -v run --fix %s --timeout=5m", tags)
 	if !c.reader.FileExists(filepath.Join(folder, ".golangci.yml")) {
-		cmd = fmt.Sprintf("golangci-lint -v run %s --timeout=5m", tags)
+		cmd = fmt.Sprintf("golangci-lint -v run --fix %s --timeout=5m", tags)
 	}
 
 	if c.reader.FileExists(filepath.Join(folder, ".custom-gcl.yml")) {
@@ -88,7 +88,7 @@ func (c GolangCiLint) Command(tags string, folder string) string {
 
 		cmd = fmt.Sprintf(
 			`golangci-lint custom
-%s/%s run %s`, cGCL.Destination, cGCL.Name, tags)
+%s/%s run --fix %s`, cGCL.Destination, cGCL.Name, tags)
 	}
 	return cmd
 }

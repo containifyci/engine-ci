@@ -4,20 +4,20 @@ package rust
 
 // Default Dockerfile (Dockerfile.rust)
 const (
-	// ImageVersion is the Rust version extracted from the Dockerfile
-	ImageVersion = "1.83-alpine"
+	// ImageVersion is the golang version extracted from the Dockerfile
+	ImageVersion = "1.93-alpine"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "94f403cbf07af2000a192624e73e52d5ff1ec512411e3706a3fe2f19f1ad33df"
+	DockerfileChecksum = "ed2f4c38f3362e3187c5d1ed26dbed0a9b401010a76279b70d99713c9964b5a7"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM --platform=$TARGETPLATFORM rust:1.83-alpine
+var DockerfileContent = `FROM --platform=$TARGETPLATFORM rust:1.93-alpine
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
-# Install basic build dependencies
-RUN apk add --no-cache musl-dev
+# Install basic build dependencies (openssl-dev + pkgconfig for reqwest/TLS)
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
 
 WORKDIR /app
 

@@ -14,8 +14,8 @@ func TestNewBuildScript(t *testing.T) {
 		profile  string
 		target   string
 		features []string
+		want     []string
 		verbose  bool
-		want     []string // expected strings in output
 	}{
 		{
 			name:     "basic build",
