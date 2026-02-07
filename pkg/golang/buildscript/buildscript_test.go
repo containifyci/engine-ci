@@ -185,6 +185,63 @@ func TestGoGenerateAutoDetectionSkipsHiddenDirs(t *testing.T) {
 	assert.False(t, bs.ShouldGenerate, "ShouldGenerate should be false when //go:generate is only in hidden directories")
 }
 
+func TestCGOCrossCompileScript(t *testing.T) {
+	bs := NewCGOBuildScript("myapp", "/src/main.go", ".", nil, false, true, CoverageMode("text"), "disabled",
+		types.ParsePlatform("darwin/arm64"),
+		types.ParsePlatform("darwin/amd64"),
+		types.ParsePlatform("linux/arm64"),
+	)
+
+	expected := `#!/bin/sh
+set -xe
+mkdir -p ~/.ssh
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+git config --global url."ssh://git@github.com/.insteadOf" "https://github.com/"
+cd .
+env CGO_ENABLED=1 CC="zig cc -target aarch64-macos" CXX="zig c++ -target aarch64-macos" CGO_LDFLAGS="" CGO_CFLAGS="" GOFLAGS="-ldflags=-w" GOOS=darwin GOARCH=arm64 go build -o /src/myapp-darwin-arm64 /src/main.go
+env CGO_ENABLED=1 CC="zig cc -target x86_64-macos" CXX="zig c++ -target x86_64-macos" CGO_LDFLAGS="" CGO_CFLAGS="" GOFLAGS="-ldflags=-w" GOOS=darwin GOARCH=amd64 go build -o /src/myapp-darwin-amd64 /src/main.go
+env GOOS=linux GOARCH=arm64 go build -o /src/myapp-linux-arm64 /src/main.go
+go test -timeout 120s ./...
+`
+	script := bs.String()
+	assert.Equal(t, expected, script)
+	assert.Equal(t, []string{"myapp-darwin-arm64", "myapp-darwin-amd64", "myapp-linux-arm64"}, bs.Artifacts)
+	assert.True(t, bs.CGOCrossCompile)
+}
+
+func TestCGOCrossCompileLinuxOnly(t *testing.T) {
+	bs := NewCGOBuildScript("myapp", "/src/main.go", ".", nil, false, true, CoverageMode("text"), "disabled",
+		types.ParsePlatform("linux/amd64"),
+		types.ParsePlatform("linux/arm64"),
+	)
+
+	script := bs.String()
+	// Linux targets should NOT have Zig CC even with CGOCrossCompile enabled
+	assert.NotContains(t, script, "zig cc")
+	assert.Contains(t, script, "env GOOS=linux GOARCH=amd64 go build")
+	assert.Contains(t, script, "env GOOS=linux GOARCH=arm64 go build")
+}
+
+func TestZigTarget(t *testing.T) {
+	tests := []struct {
+		name   string
+		goos   string
+		goarch string
+		want   string
+	}{
+		{name: "darwin/arm64", goos: "darwin", goarch: "arm64", want: "aarch64-macos"},
+		{name: "darwin/amd64", goos: "darwin", goarch: "amd64", want: "x86_64-macos"},
+		{name: "linux/arm64", goos: "linux", goarch: "arm64", want: "aarch64-linux-gnu"},
+		{name: "linux/amd64", goos: "linux", goarch: "amd64", want: "x86_64-linux-gnu"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := zigTarget(tt.goos, tt.goarch)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestGoGenerateInvalidModeDefaultsToAuto(t *testing.T) {
 	// Create temp directory with go file WITHOUT //go:generate
 	tmpDir := t.TempDir()

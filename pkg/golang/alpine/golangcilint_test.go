@@ -14,7 +14,7 @@ func TestCopyLintScript(t *testing.T) {
 set -x
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
-golangci-lint -v run --build-tags build_tag --timeout=5m`, script)
+golangci-lint -v run --fix --build-tags build_tag --timeout=5m`, script)
 }
 
 func TestCopyLintScriptGCL(t *testing.T) {
@@ -37,7 +37,7 @@ set -x
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 golangci-lint custom
-build/custom-gcl run --build-tags build_tag`, script)
+build/custom-gcl run --fix --build-tags build_tag`, script)
 }
 
 // test utilities

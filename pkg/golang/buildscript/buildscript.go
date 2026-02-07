@@ -92,18 +92,19 @@ func detectGoGenerate(folder string) bool {
 }
 
 type BuildScript struct {
-	AppName        string
-	MainFile       string
-	Folder         string
-	Output         string
-	CoverageMode   CoverageMode
-	FileName       string
-	Tags           []string
-	Platforms      []*types.PlatformSpec
-	Artifacts      []string
-	Verbose        bool
-	NoCoverage     bool
-	ShouldGenerate bool
+	AppName         string
+	MainFile        string
+	Folder          string
+	Output          string
+	CoverageMode    CoverageMode
+	FileName        string
+	Tags            []string
+	Platforms       []*types.PlatformSpec
+	Artifacts       []string
+	Verbose         bool
+	NoCoverage      bool
+	ShouldGenerate  bool
+	CGOCrossCompile bool
 }
 
 func NewBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, coverageMode CoverageMode, generateMode string, platforms ...*types.PlatformSpec) *BuildScript {
@@ -139,6 +140,18 @@ func NewBuildScript(appName, mainfile string, folder string, tags []string, verb
 		ShouldGenerate: shouldGenerate,
 	}
 	return script
+}
+
+func NewCGOBuildScript(appName, mainfile string, folder string, tags []string, verbose bool, nocoverage bool, coverageMode CoverageMode, generateMode string, platforms ...*types.PlatformSpec) *BuildScript {
+	script := NewBuildScript(appName, mainfile, folder, tags, verbose, nocoverage, coverageMode, generateMode, platforms...)
+	script.CGOCrossCompile = true
+	return script
+}
+
+func zigTarget(goos, goarch string) string {
+	archMap := map[string]string{"arm64": "aarch64", "amd64": "x86_64"}
+	osMap := map[string]string{"darwin": "macos", "linux": "linux-gnu"}
+	return archMap[goarch] + "-" + osMap[goos]
 }
 
 func shouldGenerate(generateMode string, folder string) bool {
@@ -208,10 +221,19 @@ func renderTestCommand(bs *BuildScript, m map[string]interface{}) string {
 }
 
 func (bs *BuildScript) renderCompileCommand(m map[string]interface{}) string {
+	goos, _ := m["os"].(string)
+	goarch, _ := m["arch"].(string)
+
+	envPrefix := "env"
+	if bs.CGOCrossCompile && goos == "darwin" {
+		target := zigTarget(goos, goarch)
+		envPrefix = fmt.Sprintf(`env CGO_ENABLED=1 CC="zig cc -target %s" CXX="zig c++ -target %s" CGO_LDFLAGS="" CGO_CFLAGS="" GOFLAGS="-ldflags=-w"`, target, target)
+	}
+
 	t := template.Must(template.New("").
 		Parse(trim(`
-env GOOS={{.os}} GOARCH={{ .arch }} go build {{- .tags }} {{- .verbose }} %s {{.mainfile}}
-`, bs.Output)))
+%s GOOS={{.os}} GOARCH={{ .arch }} go build {{- .tags }} {{- .verbose }} %s {{.mainfile}}
+`, envPrefix, bs.Output)))
 	buf := new(bytes.Buffer)
 	err := t.Execute(buf, m)
 	if err != nil {

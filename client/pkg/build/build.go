@@ -88,3 +88,13 @@ func NewPythonLibraryBuild(appName string) *BuildArgs {
 	lib.Image = ""
 	return lib
 }
+
+func NewRustServiceBuild(appName string) *BuildArgs {
+	return NewServiceBuild(appName, protos2.BuildType_Rust)
+}
+
+func NewRustLibraryBuild(appName string) *BuildArgs {
+	lib := NewRustServiceBuild(appName)
+	lib.Image = ""
+	return lib
+}

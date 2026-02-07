@@ -1,0 +1,11 @@
+FROM --platform=$TARGETPLATFORM rust:1.93-alpine
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+# Install basic build dependencies (openssl-dev + pkgconfig for reqwest/TLS)
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
+
+WORKDIR /app
+
+# Verify Rust installation
+RUN rustc --version && cargo --version
