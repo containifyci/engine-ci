@@ -22,13 +22,14 @@ type BuildResult struct {
 }
 
 const (
-	Auth      BuildCategory = "auth"      // Authentication & credentials
-	PreBuild  BuildCategory = "prebuild"  // Setup, protobuf, dependencies
-	Build     BuildCategory = "build"     // Language-specific compilation
-	PostBuild BuildCategory = "postbuild" // Production artifacts, packaging
-	Quality   BuildCategory = "quality"   // Linting, testing, security scanning
-	Apply     BuildCategory = "apply"     // Infrastructure changes
-	Publish   BuildCategory = "publish"   // Publishing, releases, notifications
+	Auth       BuildCategory = "auth"       // Authentication & credentials
+	PreBuild   BuildCategory = "prebuild"   // Setup, protobuf, dependencies
+	Build      BuildCategory = "build"      // Language-specific compilation
+	PostBuild  BuildCategory = "postbuild"  // Production artifacts, packaging
+	Quality    BuildCategory = "quality"    // Linting, testing, security scanning
+	Apply      BuildCategory = "apply"      // Infrastructure changes
+	Publish    BuildCategory = "publish"    // Publishing, releases, notifications
+	PrePublish BuildCategory = "prepublish" // Publishing, releases, notifications
 )
 
 type BuildContext struct {
@@ -154,7 +155,7 @@ func (bs *BuildSteps) AddAsyncToCategory(category BuildCategory, step BuildStepv
 // Helper method to find category boundaries and insert at the end of a category
 func (bs *BuildSteps) insertAtCategoryEnd(category BuildCategory, step BuildStepv3, async bool) error {
 	// Define category order for proper insertion
-	categoryOrder := []BuildCategory{Auth, PreBuild, Build, PostBuild, Quality, Apply, Publish}
+	categoryOrder := []BuildCategory{Auth, PreBuild, Build, PostBuild, Quality, Apply, PrePublish, Publish}
 
 	// Find the target category index
 	targetIndex := -1
@@ -252,6 +253,22 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 	var wg sync.WaitGroup
 	ids := utils.IDStore{}
 	var buildErr error
+	var aiBuildResult *BuildResult
+	hasAIBuild := false
+	for _, buildCtx := range bs.Steps {
+		if !buildCtx.build.Matches(*arg) {
+			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
+			continue
+		}
+
+		if step != nil && buildCtx.build.Name() != step[0] {
+			continue
+		}
+		buildType := buildCtx.build.BuildType()
+		if buildType != nil && *buildType == container.AI {
+			hasAIBuild = true
+		}
+	}
 	for i, buildCtx := range bs.Steps {
 		if !buildCtx.build.Matches(*arg) {
 			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
@@ -318,18 +335,29 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 				slog.Info("Checking AI output for finish signal", "signal", finishSignal)
 				if strings.Contains(logs, finishSignal) {
 					slog.Info("Finish signal detected in AI output - stopping further build steps", "signal", finishSignal)
-					return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: nil}
+					if buildErr == nil {
+						aiBuildResult = &BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: nil}
+					} else {
+						aiBuildResult = &BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: nil}
+					}
+				} else {
+					// start full build again
+					break
 				}
 			}
-		} else if buildErr != nil {
+		} else if !hasAIBuild && buildErr != nil {
+			slog.Info("Stop build no ai step configured", "error", buildErr)
 			return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: buildErr}
 		}
 		slog.Debug("Completed sync step", "step", buildCtx.build.Name(), "index", i)
 	}
-
 	// Wait for all async steps to complete
 	slog.Debug("Waiting for all async steps to complete")
 	wg.Wait()
+
+	if aiBuildResult != nil {
+		return *aiBuildResult
+	}
 
 	slog.Info("All build steps completed successfully")
 	return BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: nil}

@@ -96,6 +96,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
 
       - name: Set COMMIT_SHA environment variable
         run: echo "COMMIT_SHA=$(if [ '${{ github.event_name }}' == 'pull_request' ]; then echo '${{ github.event.pull_request.head.sha }}'; else echo '${{ github.sha }}'; fi)" >> $GITHUB_ENV

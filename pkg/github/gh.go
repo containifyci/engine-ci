@@ -6,13 +6,21 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/kv"
+	"github.com/containifyci/engine-ci/pkg/network"
 	"github.com/containifyci/engine-ci/pkg/svc"
 	"github.com/containifyci/engine-ci/pkg/trivy"
+)
+
+const (
+	kvKeyGithubToken   = "github_token"
+	kvKeyCommitMessage = "commit_message"
 )
 
 //go:embed Dockerfile*
@@ -161,35 +169,172 @@ func (c *GithubContainer) Pull() error {
 }
 
 func (c *GithubContainer) Run() error {
-	if c.git.IsNotPR() {
-		slog.Info("Skip github PR comment because PR number is not set")
+	shouldComment := c.git.IsPR() && ifTrivyFileExists()
+	shouldCommit := c.git.IsPR() && c.shouldCommit()
+
+	slog.Info("SHould commit", "PR", c.git.IsPR(), "commit", c.shouldCommit())
+
+	if !shouldComment && !shouldCommit {
+		slog.Info("Skip github step - no PR comment needed and no commit required")
 		return nil
 	}
 
-	if !ifTrivyFileExists() {
-		slog.Info("Skip github PR comment because trivy.json file does not exist")
-		return nil
-	}
-
-	err := c.BuildImage()
-	if err != nil {
-		slog.Error("Failed to build go image: %s", "error", err)
+	if err := c.BuildImage(); err != nil {
+		slog.Error("Failed to build github image", "error", err)
 		return err
 	}
 
-	err = c.Comment()
+	if shouldComment {
+		if err := c.Comment(); err != nil {
+			slog.Error("Failed to comment on PR", "error", err)
+			// Continue to commit even if comment fails
+		}
+	}
+
+	if shouldCommit {
+		if err := c.Commit(); err != nil {
+			return fmt.Errorf("failed to commit changes: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// shouldCommit returns true if auto_commit is enabled and there are uncommitted changes
+func (c *GithubContainer) shouldCommit() bool {
+	autoCommit := c.GetBuild().Custom.Bool("auto_commit", false)
+	if !autoCommit {
+		return false
+	}
+
+	if !HasUncommittedChanges() {
+		slog.Info("Skip commit - no uncommitted changes")
+		return false
+	}
+
+	return true
+}
+
+// Commit creates a git commit with changes and pushes to the remote
+func (c *GithubContainer) Commit() error {
+	host := c.GetBuild().Custom.String("CONTAINIFYCI_EXTERNAL_HOST")
+	auth := c.GetBuild().Secret["CONTAINIFYCI_AUTH"]
+
+	// // Get GitHub token - prefer PAT for workflow triggers
+	// token := container.GetEnvs("CONTAINIFYCI_PAT_TOKEN", "CONTAINIFYCI_GITHUB_TOKEN")
+	// if token == "" {
+	// 	return fmt.Errorf("no GitHub token (either CONTAINIFYCI_PAT_TOKEN or CONTAINIFYCI_GITHUB_TOKEN) available for commit")
+	// }
+
+	// Get commit message from KV (set by upstream step like Claude)
+	commitMsg, err := kv.GetValue(host, auth, kvKeyCommitMessage)
 	if err != nil {
-		slog.Error("Failed to create container: %s", "error", err)
+		slog.Warn("Failed to get commit message from KV", "error", err)
+	}
+
+	if strings.TrimSpace(commitMsg) == "" {
+		files := GetChangedFiles()
+		commitMsg = GenerateFallbackMessage(files)
+		slog.Info("Using fallback commit message", "message", commitMsg)
+	}
+
+	opts := types.ContainerConfig{}
+	opts.Image = Image(*c.GetBuild())
+
+	// Only pass host/auth for KV access - NO tokens in Env for security
+	opts.Env = []string{
+		"CONTAINIFYCI_HOST=http://" + host,
+		"CONTAINIFYCI_AUTH=" + auth,
+	}
+
+	dir, _ := filepath.Abs(".")
+	opts.Volumes = []types.Volume{
+		{
+			Type:   "bind",
+			Source: dir,
+			Target: "/src",
+		},
+	}
+
+	ssh, err := network.SSHForward(*c.GetBuild())
+	if err != nil {
+		slog.Error("Failed to forward SSH", "error", err)
 		os.Exit(1)
 	}
-	return nil
+
+	opts = ssh.Apply(&opts)
+
+	opts.Cmd = []string{"sh", "/tmp/commit.sh"}
+
+	if err := c.Create(opts); err != nil {
+		return fmt.Errorf("failed to create container: %w", err)
+	}
+
+	// Copy commit script to container
+	if err := c.CopyCommitScript(commitMsg); err != nil {
+		return fmt.Errorf("failed to copy commit script: %w", err)
+	}
+
+	if err := c.Start(); err != nil {
+		return fmt.Errorf("failed to start container: %w", err)
+	}
+
+	return c.Wait()
+}
+
+// CopyCommitScript copies the commit script to the container
+func (c *GithubContainer) CopyCommitScript(commitMsg string) error {
+	// Escape single quotes in commit message
+	escapedMsg := strings.ReplaceAll(commitMsg, "'", "'\"'\"'")
+
+	script := fmt.Sprintf(`#!/bin/sh
+set -xe
+cd /src
+
+
+if [ -z "$(git status --porcelain)" ]; then
+echo "No changes to commit"
+exit 0
+fi
+
+mkdir -p ~/.ssh
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+git config --global url.ssh://git@github.com/.insteadOf https://github.com/
+
+echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" || true
+ls -l "$SSH_AUTH_SOCK" || true
+ssh-add -l || true
+
+git config --global --get core.sshCommand || true
+git config --local  --get core.sshCommand || true
+echo "GIT_SSH_COMMAND=$GIT_SSH_COMMAND"
+
+# ssh -vvv -o IdentityAgent="$SSH_AUTH_SOCK" -T git@github.com
+# ssh -vvv -T git@github.com
+
+git remote -v
+
+git config --global user.email "bot@containifyci.io"
+git config --global user.name "containifyci"
+
+export GIT_TERMINAL_PROMPT=0
+git add -A
+git commit -m '%s
+
+Co-Authored-By: containifyci <bot@containifyci.io>'
+
+git push
+`, escapedMsg)
+
+	return c.CopyContentTo(script, "/tmp/commit.sh")
 }
 
 func ifTrivyFileExists() bool {
 	_, err := os.Stat("trivy.json")
 	if err == nil {
 		return true
-	} else if os.IsNotExist(err) {
+	}
+	if os.IsNotExist(err) {
 		return false
 	}
 
