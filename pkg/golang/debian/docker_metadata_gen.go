@@ -5,14 +5,14 @@ package debian
 // Default Dockerfile (Dockerfilego)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "1.25.5"
+	ImageVersion = "1.25.7"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "6771d28b2de472298ffdd193ee421254d2bb9aa3bf90a63f9ce21393728fa834"
+	DockerfileChecksum = "5efeca03de5903f041b4773ca7e7badc89456e6576ff4229b3c1a727efea2d81"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM golang:1.25.5
+var DockerfileContent = `FROM golang:1.25.7
 
 # libbtrfs-dev is needed by podman go module
 RUN apt-get update && \
