@@ -20,6 +20,7 @@
 # build
 .claude
 artifacts.txt
+changed.txt
 claude-actions.log
 claude-output.log
 commit-message.txt
@@ -29,4 +30,5 @@ coverage.txt
 dist/
 .scannerwork/
 engine-ci-*
+main
 trivy.json
