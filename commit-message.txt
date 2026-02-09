@@ -1,1 +1,1 @@
-chore(build): verify successful build state
+fix(github): remove impossible nil check in commit script generation

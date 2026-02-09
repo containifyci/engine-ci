@@ -323,13 +323,9 @@ git commit -m '%s
 
 Co-Authored-By: containifyci <bot@containifyci.io>'
 
-git push origin HEAD
+git push
 `, escapedMsg)
 
-	var err error
-	if err != nil {
-		return err
-	}
 	return c.CopyContentTo(script, "/tmp/commit.sh")
 }
 

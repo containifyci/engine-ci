@@ -335,7 +335,11 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 				slog.Info("Checking AI output for finish signal", "signal", finishSignal)
 				if strings.Contains(logs, finishSignal) {
 					slog.Info("Finish signal detected in AI output - stopping further build steps", "signal", finishSignal)
-					aiBuildResult = &BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: nil}
+					if buildErr == nil {
+						aiBuildResult = &BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: nil}
+					} else {
+						aiBuildResult = &BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: nil}
+					}
 				} else {
 					// start full build again
 					break
