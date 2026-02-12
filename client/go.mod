@@ -3,7 +3,7 @@ module github.com/containifyci/engine-ci/client
 go 1.25.5
 
 require (
-	github.com/containifyci/engine-ci/protos2 v0.23.0
+	github.com/containifyci/engine-ci/protos2 v0.23.1
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.7.0
 	github.com/stretchr/testify v1.11.1
