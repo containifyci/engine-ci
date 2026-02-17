@@ -65,6 +65,7 @@ func main() {
 		"tags":       build.NewList("containers_image_openpgp"),
 	}
 	opts1.Image = ""
+	opts1.Registries = registryAuth()
 
 	custom := build.NewGoServiceBuild("engine-ci-custom")
 	custom.File = "main.go"
@@ -75,6 +76,7 @@ func main() {
 	custom.ContainerFiles = map[string]*protos2.ContainerFile{
 		"build": DockerFile(),
 	}
+	custom.Registries = registryAuth()
 	// opts1.Verbose = true
 
 	opts2 := build.NewGoServiceBuild("engine-ci-debian")
@@ -84,6 +86,7 @@ func main() {
 		"from": build.NewList("debian"),
 	}
 	opts2.Image = ""
+	opts2.Registries = registryAuth()
 
 	opts3 := build.NewGoServiceBuild("engine-ci-debiancgo")
 	opts3.File = "main.go"
@@ -92,6 +95,7 @@ func main() {
 		"from": build.NewList("debiancgo"),
 	}
 	opts3.Image = ""
+	opts3.Registries = registryAuth()
 
 	build.BuildGroups(
 		&protos2.BuildArgsGroup{
