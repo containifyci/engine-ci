@@ -65,6 +65,7 @@ func main() {
 		"tags":       build.NewList("containers_image_openpgp"),
 	}
 	opts1.Image = ""
+	opts1.Registries = registryAuth()
 
 	custom := build.NewGoServiceBuild("engine-ci-custom")
 	custom.File = "main.go"
@@ -75,6 +76,7 @@ func main() {
 	custom.ContainerFiles = map[string]*protos2.ContainerFile{
 		"build": DockerFile(),
 	}
+	custom.Registries = registryAuth()
 	// opts1.Verbose = true
 
 	opts2 := build.NewGoServiceBuild("engine-ci-debian")
@@ -84,6 +86,7 @@ func main() {
 		"from": build.NewList("debian"),
 	}
 	opts2.Image = ""
+	opts2.Registries = registryAuth()
 
 	opts3 := build.NewGoServiceBuild("engine-ci-debiancgo")
 	opts3.File = "main.go"
@@ -92,6 +95,7 @@ func main() {
 		"from": build.NewList("debiancgo"),
 	}
 	opts3.Image = ""
+	opts3.Registries = registryAuth()
 
 	build.BuildGroups(
 		&protos2.BuildArgsGroup{
@@ -108,15 +112,15 @@ func main() {
 
 func DockerFile() *protos2.ContainerFile {
 	return &protos2.ContainerFile{
-		Name: "golang-1.25-5-alpine-custom",
-		Content: `FROM golang:1.25.5-alpine
+		Name: "golang-1.25-7-alpine-custom",
+		Content: `FROM golang:1.25.7-alpine
 
 RUN apk --no-cache add git openssh-client && \
   rm -rf /var/cache/apk/*
 
 RUN go install github.com/wadey/gocovmerge@latest && \
   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2 && \
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0 && \
   go clean -cache && \
   go clean -modcache
 WORKDIR /app`,
