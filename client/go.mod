@@ -3,7 +3,7 @@ module github.com/containifyci/engine-ci/client
 go 1.25.5
 
 require (
-	github.com/containifyci/engine-ci/protos2 v0.23.1
+	github.com/containifyci/engine-ci/protos2 v0.23.2
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.7.0
 	github.com/stretchr/testify v1.11.1
@@ -24,5 +24,5 @@ require (
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251213004720-97cd9d5aeac2 // indirect
-	google.golang.org/grpc v1.78.0 // indirect
+	google.golang.org/grpc v1.79.1 // indirect
 )
