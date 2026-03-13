@@ -36,7 +36,6 @@ require (
 	cloud.google.com/go/auth v0.18.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	cyphar.com/go-pathrs v0.2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
@@ -166,6 +165,16 @@ require (
 // Use local protos2 instead of remote version
 // replace github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
 
-// Until Error: ../../../go/pkg/mod/github.com/opencontainers/runtime-tools@v0.9.1-0.20250523060157-0ea5ed0382a2/generate/generate.go:973:40: cannot use limit (variable of type int64) as *int64 value in assignment is fixed
-// pin version to working version v1.2.1
+// github.com/cyphar/filepath-securejoin v0.6.0 removed the deprecated OpenInRoot and Reopen
+// wrappers (these were moved to the pathrs-lite package within the same module in v0.5.0),
+// but go.podman.io/storage@v1.62.0 still uses them.
+// Pin to v0.5.2 which still has those wrappers until storage is updated.
+replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.2
+
+// podman v5.8.0 (and its transitive deps) use LinuxPids.Limit as int64 (not *int64),
+// but runtime-spec v1.3.0 changed that field to *int64. Pin to v1.2.1 until podman is updated.
 replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
+
+// runtime-tools v0.9.1-0.20251114084447 uses &limit (*int64) for LinuxPids.Limit which requires
+// runtime-spec v1.3.0, but we're pinned to v1.2.1 (int64). Pin to old version that uses int64.
+replace github.com/opencontainers/runtime-tools => github.com/opencontainers/runtime-tools v0.9.1-0.20250523060157-0ea5ed0382a2
