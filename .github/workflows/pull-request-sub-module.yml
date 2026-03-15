@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup SSH agent for retrieving (private) Github dependencies
-        uses: webfactory/ssh-agent@v0.9.1
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.CONTAINIFYCI_CI_SSH_PRIVATE_KEY }}
 
