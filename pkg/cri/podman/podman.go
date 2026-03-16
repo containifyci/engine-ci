@@ -666,7 +666,7 @@ func (p *PodmanManager) BuildImage(ctx context.Context, dockerfile []byte, image
 		// TODO set platform
 		// Platforms: ,
 		Log: func(format string, args ...interface{}) {
-			buf.WriteString(fmt.Sprintf(format, args...))
+			fmt.Fprintf(&buf, format, args)
 		},
 	}
 
@@ -737,7 +737,7 @@ func (p *PodmanManager) BuildMultiArchImage(ctx context.Context, dockerfile []by
 
 	opts := buildahDefine.BuildOptions{
 		Log: func(format string, args ...interface{}) {
-			buf.WriteString(fmt.Sprintf(format, args...))
+			fmt.Fprintf(&buf, format, args)
 		},
 		PullPolicy:       buildahDefine.PullAlways,
 		Out:              os.Stdout,
