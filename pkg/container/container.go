@@ -688,7 +688,7 @@ func (c *Container) BuildingContainer(opts types.ContainerConfig) error {
 		buf.WriteString("#!/bin/sh\nset +xe\n")
 		for _, secret := range secrets {
 			v := u.GetEnv(secret, "build")
-			buf.WriteString(fmt.Sprintf("export %s=%s\n", secret, v))
+			fmt.Fprintf(&buf, "export %s=%s\n", secret, v)
 		}
 		err = c.CopyContentTo(buf.String(), "/tmp/secrets.sh")
 		if err != nil {
