@@ -40,6 +40,11 @@ message ContainerFile {
     string Content = 2;
 }
 
+message Secret {
+    string Key = 1;
+    string Value = 2;
+}
+
 message BuildArgs {
     string Application = 1;
     EnvType Environment = 2;
@@ -60,6 +65,7 @@ message BuildArgs {
     string ContainifyRegistry = 17;
     map<string, ContainerRegistry> Registries = 18;
     map<string, ContainerFile> ContainerFiles = 19;
+    map<string, Secret> Secrets = 20;
 }
 
 message Empty {
