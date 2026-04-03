@@ -65,7 +65,7 @@ message BuildArgs {
     string ContainifyRegistry = 17;
     map<string, ContainerRegistry> Registries = 18;
     map<string, ContainerFile> ContainerFiles = 19;
-    map<string, Secret> Secrets = 20;
+    repeated Secret Secrets = 20;
 }
 
 message Empty {
