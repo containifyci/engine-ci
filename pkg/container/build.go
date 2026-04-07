@@ -138,27 +138,6 @@ type Build struct {
 	defaults           bool
 }
 
-type BuildSecrets map[string]*BuildSecret
-
-func (b BuildSecrets) Get(key string) *BuildSecret {
-	v, ok := b[key]
-	if ok {
-		return v
-	}
-	return nil
-}
-
-type BuildSecret struct {
-	Value *EnvValue
-	Key   string
-}
-
-func NewBuildSecret(secret *protos2.Secret) *BuildSecret {
-	return &BuildSecret{
-		Key:   secret.Key,
-		Value: NewEnvValue(secret.Value),
-	}
-}
 
 type BuildGroup struct {
 	Builds []*Build
