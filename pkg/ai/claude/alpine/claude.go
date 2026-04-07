@@ -54,10 +54,10 @@ type ClaudeContainer struct {
 }
 
 // New creates a new Claude AI build step
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.AI,
-		RunFnV3: func(b container.Build) (string, error) {
+		RunFn: func(b container.Build) (string, error) {
 			c := newContainer(b)
 			slog.Info("Claude build", "custom", b.Custom)
 			return c.Run()
@@ -160,7 +160,7 @@ func (c *ClaudeContainer) Run() (string, error) {
 	auth := c.Build.Secret["CONTAINIFYCI_AUTH"]
 	claudeKey := c.Build.Secrets.Get("claude_api_key")
 	if claudeKey == nil {
-		panic(fmt.Errorf("Claude API Key not provided!"))
+		panic(fmt.Errorf("Claude API Key not provided"))
 	}
 
 	slog.Info("Claude Api Ket Secret found", "key", claudeKey.Key, "value", claudeKey.Value)

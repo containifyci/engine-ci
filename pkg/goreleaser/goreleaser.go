@@ -42,10 +42,10 @@ func Matches(build container.Build) bool {
 	return false
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.GoLang,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -209,23 +209,23 @@ func (c *GoReleaserContainer) Pull() error {
 	return c.Container.Pull(IMAGE)
 }
 
-func (c *GoReleaserContainer) Run() error {
+func (c *GoReleaserContainer) Run() (string, error) {
 	slog.Info("Run gorelease")
 	if svc.GitInfo().IsNotTag() {
 		slog.Info("Skipping goreleaser for non tag branch")
-		return nil
+		return "", nil
 	}
 	if !c.GetBuild().Custom.Bool("goreleaser", false) {
 		slog.Info("Skip goreleaser because its not explicit enabled", "build", c.GetBuild())
-		return nil
+		return "", nil
 	}
 
 	if err := c.Pull(); err != nil {
-		return fmt.Errorf("failed to pull image: %w", err)
+		return "", fmt.Errorf("failed to pull image: %w", err)
 	}
 
 	if err := c.Release(c.GetBuild().Env); err != nil {
-		return fmt.Errorf("failed to release: %w", err)
+		return c.ID, fmt.Errorf("failed to release: %w", err)
 	}
-	return nil
+	return c.ID, nil
 }

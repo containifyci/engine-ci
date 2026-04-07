@@ -7,26 +7,26 @@ import (
 	"github.com/containifyci/engine-ci/pkg/golang/debiancgo"
 )
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return alpine.New()
 }
 
-func NewDebian() build.BuildStepv3 {
+func NewDebian() build.BuildStep {
 	return debian.New()
 }
 
-func NewProdDebian() build.BuildStepv3 {
+func NewProdDebian() build.BuildStep {
 	return debian.NewProd()
 }
 
-func NewCGO() build.BuildStepv3 {
+func NewCGO() build.BuildStep {
 	return debiancgo.New()
 }
 
-func NewProd() build.BuildStepv3 {
+func NewProd() build.BuildStep {
 	return alpine.NewProd()
 }
 
-func NewLinter() build.BuildStepv3 {
+func NewLinter() build.BuildStep {
 	return alpine.NewLinter()
 }

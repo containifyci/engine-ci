@@ -93,6 +93,7 @@ func Engine(cmd *cobra.Command, _ []string) error {
 
 	groups := GetBuild(false)
 	aiConfig := detectAILoopConfig(groups)
+	buildSteps.HasAI = aiConfig.HasAI
 
 	// Execute build iterations (1 for normal mode, N for AI agent mode)
 	for i := 0; i < aiConfig.getMaxIterations(); i++ {
@@ -343,6 +344,7 @@ type AIConfig struct {
 	Build         *container.Build
 	MaxIterations int
 	Enabled       bool
+	HasAI         bool
 }
 
 // newAIConfig creates a new AIConfig with default values
@@ -351,6 +353,7 @@ func newAIConfig() AIConfig {
 		Enabled:       false,
 		MaxIterations: 1,
 		Build:         nil,
+		HasAI:         false,
 	}
 }
 
@@ -375,8 +378,11 @@ func detectAILoopConfig(groups container.BuildGroups) AIConfig {
 	for _, group := range groups {
 		for _, b := range group.Builds {
 			if b.BuildType == container.AI && b.Custom.Bool("agent_mode", false) {
+				//TODO: how to check if the needed secrets are available
+				// maye check the b.Secrets definition if the key and values asre set propwerly ?
 				claudeKey := utils.GetValue(b.Custom.String("claude_api_key"), "build")
 				if claudeKey != "" {
+					config.HasAI = true
 					config.Enabled = true
 					config.Build = b
 					maxIter := b.Custom.Int("max_iterations")
@@ -401,7 +407,7 @@ func InitBuildSteps() {
 		slog.Info("Registering all build steps by category")
 
 		// Helper function to add step and log error
-		addStep := func(category build.BuildCategory, step build.BuildStepv3) {
+		addStep := func(category build.BuildCategory, step build.BuildStep) {
 			var err error
 			if step.IsAsync() {
 				err = buildSteps.AddAsyncToCategory(category, step)

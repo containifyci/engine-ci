@@ -42,15 +42,10 @@ type GoContainer struct {
 	Tags           []string
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.GoLang,
-		RunFn: func(build container.Build) error {
-			container := new(build)
-			_, err := container.Run()
-			return err
-		},
-		RunFnV3: func(build container.Build) (string, error) {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -111,15 +106,10 @@ func (c *GoContainer) Pull() error {
 	return c.Container.Pull(imageTag, "alpine:latest")
 }
 
-func NewLinter() build.BuildStepv3 {
+func NewLinter() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.GoLang,
-		RunFn: func(build container.Build) error {
-			container := new(build)
-			_, err := container.Lint()
-			return err
-		},
-		RunFnV3: func(build container.Build) (string, error) {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Lint()
 		},
@@ -376,10 +366,10 @@ func Matches(build container.Build) bool {
 	return true
 }
 
-func NewProd() build.BuildStepv3 {
+func NewProd() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.GoLang,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Prod()
 		},
@@ -391,14 +381,14 @@ func NewProd() build.BuildStepv3 {
 	}
 }
 
-func (c *GoContainer) Prod() error {
+func (c *GoContainer) Prod() (string, error) {
 	if c.GetBuild().Env == container.LocalEnv {
 		slog.Info("Skip building prod image in local environment")
-		return nil
+		return "", nil
 	}
 	if c.Image == "" {
 		slog.Info("Skip No image specified to push")
-		return nil
+		return "", nil
 	}
 	imageTag := "alpine"
 
@@ -462,7 +452,7 @@ func (c *GoContainer) Prod() error {
 	push := c.GetBuild().Custom.Bool("push", true)
 	if !push {
 		slog.Info("Skip pushing image")
-		return nil
+		return c.ID, nil
 	}
 
 	imageUri := utils.ImageURI(c.GetBuild().Registry, c.Image, c.ImageTag)
@@ -472,7 +462,7 @@ func (c *GoContainer) Prod() error {
 		os.Exit(1)
 	}
 
-	return err
+	return c.ID, err
 }
 
 func (c *GoContainer) Run() (string, error) {

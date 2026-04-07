@@ -149,8 +149,8 @@ func (b BuildSecrets) Get(key string) *BuildSecret {
 }
 
 type BuildSecret struct {
-	Key   string
 	Value *EnvValue
+	Key   string
 }
 
 func NewBuildSecret(secret *protos2.Secret) *BuildSecret {

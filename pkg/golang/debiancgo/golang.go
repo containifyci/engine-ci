@@ -51,10 +51,10 @@ func Matches(build container.Build) bool {
 	return false
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.GoLang,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -191,24 +191,24 @@ func (c *GoContainer) BuildScript() string {
 	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, generateMode, platforms...).String()
 }
 
-func (c *GoContainer) Run() error {
+func (c *GoContainer) Run() (string, error) {
 	err := c.Pull()
 	if err != nil {
 		slog.Error("Failed to pull base images: %s", "error", err)
-		return err
+		return c.ID, err
 	}
 
 	err = c.BuildGoImage()
 	if err != nil {
 		slog.Error("Failed to build go image: %s", "error", err)
-		return err
+		return c.ID, err
 	}
 
 	err = c.Build()
 	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
-		return err
+		return c.ID, err
 	}
-	return nil
+	return c.ID, nil
 }

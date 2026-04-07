@@ -11,12 +11,12 @@ func Matches(build container.Build) bool {
 	return true
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.Generic,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			slog.Debug("Dummy build step executed", "build", build)
-			return nil
+			return "", nil
 		},
 		MatchedFn: Matches,
 		Name_:     "dummy",

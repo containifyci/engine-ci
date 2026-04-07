@@ -43,10 +43,10 @@ func Matches(build container.Build) bool {
 	return build.BuildType == container.Python
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.Python,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -139,7 +139,7 @@ func (c *PythonContainer) Address() *network.Address {
 	return &network.Address{Host: "localhost"}
 }
 
-func (c *PythonContainer) Build() (string, error) {
+func (c *PythonContainer) Build() (string, string, error) {
 	imageTag := PythonImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
@@ -185,21 +185,21 @@ func (c *PythonContainer) Build() (string, error) {
 	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
-		return "", fmt.Errorf("failed to build container: %w", err)
+		return "", "", fmt.Errorf("failed to build container: %w", err)
 	}
 
 	if c.Image == "" {
 		slog.Debug("No image name provided, skipping commit")
-		return "", nil
+		return "", "", nil
 	}
 
 	imageId, err := c.Commit(fmt.Sprintf("%s:%s", c.Image, c.ImageTag), "Created from container", "CMD [\"python\", \"/src/main.py\"]") /*, "USER worker")*/
 	if err != nil {
 		slog.Error("Failed to commit container: %s", "error", err)
-		return "", fmt.Errorf("failed to commit container: %w", err)
+		return c.ID, "", fmt.Errorf("failed to commit container: %w", err)
 	}
 
-	return imageId, err
+	return c.ID, imageId, err
 }
 
 func (c *PythonContainer) BuildScript() *BuildScript {
@@ -224,10 +224,10 @@ func (c *PythonContainer) BuildScript() *BuildScript {
 	return NewBuildScript(c.Folder, c.Verbose, c.PrivateIndex, cmds, installCmds)
 }
 
-func NewProd() build.BuildStepv3 {
+func NewProd() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.Python,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Prod()
 		},
@@ -239,7 +239,7 @@ func NewProd() build.BuildStepv3 {
 	}
 }
 
-func (c *PythonContainer) Prod() error {
+func (c *PythonContainer) Prod() (string, error) {
 	opts := types.ContainerConfig{}
 	// opts.Image = fmt.Sprintf("%s:%s", c.Image, c.ImageTag)
 	opts.Image = BaseImage
@@ -311,38 +311,38 @@ func (c *PythonContainer) Prod() error {
 		os.Exit(1)
 	}
 
-	return err
+	return c.ID, err
 }
 
-func (c *PythonContainer) Run() error {
+func (c *PythonContainer) Run() (string, error) {
 	err := c.Pull()
 	if err != nil {
 		slog.Error("Failed to pull base images: %s", "error", err)
-		return err
+		return "", err
 	}
 
 	err = c.BuildPythonImage()
 	if err != nil {
 		slog.Error("Failed to build go image: %s", "error", err)
-		return err
+		return "", err
 	}
 
-	imageID, err := c.Build()
+	id, imageID, err := c.Build()
 	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
-		return err
+		return id, err
 	}
 
 	if c.Image == "" {
 		slog.Debug("No image name provided, skipping tagging")
-		return nil
+		return id, nil
 	}
 
 	err = c.Tag(imageID, fmt.Sprintf("%s:%s", c.Image, c.ImageTag))
 	if err != nil {
 		slog.Error("Failed to tag image: %s", "error", err)
-		return err
+		return id, err
 	}
-	return nil
+	return id, nil
 }

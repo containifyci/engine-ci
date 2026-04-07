@@ -15,7 +15,7 @@ func TestNew(t *testing.T) {
 	t.Run("returns valid BuildStepv3", func(t *testing.T) {
 		step := New()
 		require.NotNil(t, step)
-		assert.Implements(t, (*build.BuildStepv3)(nil), step)
+		assert.Implements(t, (*build.BuildStep)(nil), step)
 	})
 
 	t.Run("has correct name and alias", func(t *testing.T) {

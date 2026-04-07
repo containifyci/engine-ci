@@ -38,9 +38,9 @@ func Matches(build container.Build) bool {
 
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -224,15 +224,15 @@ func (c *PulumiContainer) Pull() error {
 	return c.Container.Pull(IMAGE)
 }
 
-func (c *PulumiContainer) Run() error {
+func (c *PulumiContainer) Run() (string, error) {
 	if v, ok := c.GetBuild().Custom["pulumi"]; ok {
 		if v[0] != "true" {
 			slog.Debug("Skip pulumi")
-			return nil
+			return "", nil
 		}
 	} else {
 		slog.Debug("Skip pulumi")
-		return nil
+		return "", nil
 	}
 	slog.Info("Run pulumi")
 	env := c.GetBuild().Env
@@ -246,7 +246,7 @@ func (c *PulumiContainer) Run() error {
 	err = c.BuildPulumiImage()
 	if err != nil {
 		slog.Error("Failed to build go image: %s", "error", err)
-		return err
+		return "", err
 	}
 
 	err = c.Release(env)
@@ -254,5 +254,5 @@ func (c *PulumiContainer) Run() error {
 		slog.Error("Failed to create container: %s", "error", err)
 		os.Exit(1)
 	}
-	return nil
+	return c.ID, nil
 }

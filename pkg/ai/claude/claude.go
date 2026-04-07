@@ -6,6 +6,6 @@ import (
 )
 
 // New creates a new Claude AI build step
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return alpine.New()
 }

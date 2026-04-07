@@ -41,10 +41,10 @@ func Matches(build container.Build) bool {
 	return build.BuildType == container.Zig
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.Zig,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -119,7 +119,7 @@ func (c *ZigContainer) Address() *network.Address {
 	return &network.Address{Host: "localhost"}
 }
 
-func (c *ZigContainer) Build() (string, error) {
+func (c *ZigContainer) Build() (string, string, error) {
 	imageTag := ZigImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
@@ -159,12 +159,12 @@ func (c *ZigContainer) Build() (string, error) {
 	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
-		return "", fmt.Errorf("failed to build container: %w", err)
+		return c.ID, "", fmt.Errorf("failed to build container: %w", err)
 	}
 
 	if c.Image == "" {
 		slog.Debug("No image name provided, skipping commit")
-		return "", nil
+		return c.ID, "", nil
 	}
 
 	// Determine the CMD based on the app name or default binary
@@ -179,17 +179,17 @@ func (c *ZigContainer) Build() (string, error) {
 		os.Exit(1)
 	}
 
-	return imageId, err
+	return c.ID, imageId, err
 }
 
 func (c *ZigContainer) BuildScript() *BuildScript {
 	return NewBuildScript(c.Folder, c.Optimize, c.Target, c.Verbose, CacheLocation, c.Platforms)
 }
 
-func NewProd() build.BuildStepv3 {
+func NewProd() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.Zig,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Prod()
 		},
@@ -201,7 +201,7 @@ func NewProd() build.BuildStepv3 {
 	}
 }
 
-func (c *ZigContainer) Prod() error {
+func (c *ZigContainer) Prod() (string, error) {
 	opts := types.ContainerConfig{}
 	opts.Image = BaseImage
 	opts.Env = []string{}
@@ -267,38 +267,38 @@ func (c *ZigContainer) Prod() error {
 		os.Exit(1)
 	}
 
-	return err
+	return c.ID, err
 }
 
-func (c *ZigContainer) Run() error {
+func (c *ZigContainer) Run() (string, error) {
 	err := c.Pull()
 	if err != nil {
 		slog.Error("Failed to pull base images", "error", err)
-		return err
+		return "", err
 	}
 
 	err = c.BuildZigImage()
 	if err != nil {
 		slog.Error("Failed to build Zig image", "error", err)
-		return err
+		return "", err
 	}
 
-	imageID, err := c.Build()
+	id, imageID, err := c.Build()
 	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container", "error", err)
-		return err
+		return id, err
 	}
 
 	if c.Image == "" {
 		slog.Debug("No image name provided, skipping tagging")
-		return nil
+		return id, nil
 	}
 
 	err = c.Tag(imageID, fmt.Sprintf("%s:%s", c.Image, c.ImageTag))
 	if err != nil {
 		slog.Error("Failed to tag image", "error", err)
-		return err
+		return id, err
 	}
-	return nil
+	return id, nil
 }

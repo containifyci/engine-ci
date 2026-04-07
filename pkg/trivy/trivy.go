@@ -34,9 +34,9 @@ func Matches(build container.Build) bool {
 	return true
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -172,14 +172,14 @@ func (c *TrivyContainer) Pull() error {
 	return c.Container.Pull(IMAGE)
 }
 
-func (c *TrivyContainer) Run() error {
+func (c *TrivyContainer) Run() (string, error) {
 	if c.GetBuild().Env == container.LocalEnv {
 		slog.Debug("trivy: Image not set, skip trivy scan")
-		return nil
+		return "", nil
 	}
 	if c.GetBuild().Image == "" {
 		slog.Debug("trivy: Image not set, skip trivy scan")
-		return nil
+		return "", nil
 	}
 	err := c.Pull()
 	if err != nil {
@@ -192,5 +192,5 @@ func (c *TrivyContainer) Run() error {
 		slog.Error("Failed to create container: %s", "error", err)
 		os.Exit(1)
 	}
-	return nil
+	return c.ID, nil
 }

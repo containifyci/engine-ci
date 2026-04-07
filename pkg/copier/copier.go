@@ -25,11 +25,11 @@ type CopierContainer struct {
 	TemplateData []string
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			copierContainer := new(build)
-			return copierContainer.Run()
+			return copierContainer.ID, copierContainer.Run()
 		},
 		MatchedFn: Matches,
 		ImagesFn:  CopierImages,

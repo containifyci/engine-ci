@@ -13,8 +13,9 @@ func TestDummyBuildStep(t *testing.T) {
 	assert.Equal(t, "dummy", step.Name())
 	assert.True(t, step.Matches(container.Build{}))
 	assert.False(t, step.IsAsync())
-	err := step.RunWithBuild(container.Build{
+	res, err := step.RunWithBuild(container.Build{
 		Image: "dummy-image",
 	})
 	assert.NoError(t, err)
+	assert.Equal(t, "", res)
 }
