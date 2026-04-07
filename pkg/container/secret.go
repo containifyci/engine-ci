@@ -1,6 +1,7 @@
 package container
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/containifyci/engine-ci/pkg/utils"
@@ -21,16 +22,17 @@ func (b BuildSecrets) Add(secret *protos2.Secret) {
 	b[secret.Key] = NewBuildSecret(secret)
 }
 
-func (b BuildSecrets) Available() bool {
+func (b BuildSecrets) Available() (bool, []string) {
 	if len(b) == 0 {
-		return false
+		return false, []string{}
 	}
+	required := []string{}
 	for _, s := range b {
 		if s.Value.Get() == "" {
-			return false
+			required = append(required, fmt.Sprintf("%s=%s", s.Key, s.Value.value))
 		}
 	}
-	return true
+	return len(required) == 0, required
 }
 
 type BuildSecret struct {

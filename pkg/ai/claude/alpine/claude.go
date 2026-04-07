@@ -91,18 +91,13 @@ func newContainer(b container.Build) *ClaudeContainer {
 
 // Matches returns true if this step should run for the given build
 func Matches(b container.Build) bool {
-	claudeKey := b.Secrets.Get("claude_api_key")
-	if claudeKey == nil {
-		slog.Debug("No Claude API key not provided, skipping Claude AI step")
+	available, required := b.Secrets.Available()
+	if !available {
+		slog.Debug("Claude API key not provided, skipping Claude AI step", "missing", required)
 		return false
 	}
 
-	if claudeKey.Value.Get() == "" {
-		slog.Info("Claude API key is empty, skipping Claude AI step")
-		return false
-	}
-
-	slog.Info("Claude Api Ket Secret found", "key", claudeKey.Key, "value", claudeKey.Value.String())
+	// slog.Info("Claude Api Ket Secret found", "key", claudeKey.Key, "value", claudeKey.Value.String())
 
 	return true
 }

@@ -66,7 +66,9 @@ func TestAvailable(t *testing.T) {
 		Key:   "k",
 		Value: "env:test_env",
 	})
-	assert.True(t, bs.Available())
+	available, required := bs.Available()
+	assert.True(t, available)
+	assert.Empty(t, required)
 
 	res := bs.Get("k").Value.Get()
 	assert.Equal(t, "test_env_value", res)
@@ -79,10 +81,14 @@ func TestUnAvailable(t *testing.T) {
 		Key:   "k",
 		Value: "env:test_env",
 	})
-	assert.False(t, bs.Available())
+	available, required := bs.Available()
+	assert.False(t, available)
+	assert.Equal(t, []string{"k=env:test_env"}, required)
 }
 
 func TestUnAvailableNoSecretDefined(t *testing.T) {
 	bs := make(BuildSecrets, 0)
-	assert.False(t, bs.Available())
+	available, required := bs.Available()
+	assert.False(t, available)
+	assert.Empty(t, required)
 }
