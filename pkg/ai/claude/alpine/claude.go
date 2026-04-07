@@ -17,7 +17,6 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/kv"
 	"github.com/containifyci/engine-ci/pkg/network"
-	u "github.com/containifyci/engine-ci/pkg/utils"
 	"github.com/containifyci/engine-ci/protos2"
 )
 
@@ -92,15 +91,18 @@ func newContainer(b container.Build) *ClaudeContainer {
 
 // Matches returns true if this step should run for the given build
 func Matches(b container.Build) bool {
-	if b.BuildType != container.AI {
+	claudeKey := b.Secrets.Get("claude_api_key")
+	if claudeKey == nil {
+		slog.Debug("No Claude API key not provided, skipping Claude AI step")
 		return false
 	}
 
-	claudeKey := u.GetValue(b.Custom.String("claude_api_key"), "build")
-	if claudeKey == "" {
-		slog.Info("Claude API key not provided, skipping Claude AI step")
+	if claudeKey.Value.Get() == "" {
+		slog.Info("Claude API key is empty, skipping Claude AI step")
 		return false
 	}
+
+	slog.Info("Claude Api Ket Secret found", "key", claudeKey.Key, "value", claudeKey.Value.String())
 
 	return true
 }
@@ -156,9 +158,14 @@ func (c *ClaudeContainer) Pull() error {
 func (c *ClaudeContainer) Run() (string, error) {
 	host := c.Build.Custom.String("CONTAINIFYCI_EXTERNAL_HOST")
 	auth := c.Build.Secret["CONTAINIFYCI_AUTH"]
-	claudeKey := u.GetValue(c.GetBuild().Custom.String("claude_api_key"), "build")
+	claudeKey := c.Build.Secrets.Get("claude_api_key")
+	if claudeKey == nil {
+		panic(fmt.Errorf("Claude API Key not provided!"))
+	}
 
-	err := kv.SetValue(host, auth, "claudecodeoauthtoken", claudeKey)
+	slog.Info("Claude Api Ket Secret found", "key", claudeKey.Key, "value", claudeKey.Value)
+
+	err := kv.SetValue(host, auth, "claudecodeoauthtoken", claudeKey.Value.Get())
 	if err != nil {
 		return "", fmt.Errorf("failed to set claude_code_oauth_token: %w", err)
 	}

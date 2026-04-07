@@ -117,6 +117,7 @@ type Build struct {
 	Registries         map[string]*protos2.ContainerRegistry
 	ContainerFiles     map[string]*protos2.ContainerFile
 	Secret             map[string]string
+	Secrets            BuildSecrets
 	ContainifyRegistry string
 	Runtime            utils.RuntimeType
 	RuntimeClient      func() cri.ContainerManager `json:"-"`
@@ -135,6 +136,28 @@ type Build struct {
 	SourceFiles        []string
 	Verbose            bool
 	defaults           bool
+}
+
+type BuildSecrets map[string]*BuildSecret
+
+func (b BuildSecrets) Get(key string) *BuildSecret {
+	v, ok := b[key]
+	if ok {
+		return v
+	}
+	return nil
+}
+
+type BuildSecret struct {
+	Key   string
+	Value *EnvValue
+}
+
+func NewBuildSecret(secret *protos2.Secret) *BuildSecret {
+	return &BuildSecret{
+		Key:   secret.Key,
+		Value: NewEnvValue(secret.Value),
+	}
 }
 
 type BuildGroup struct {
@@ -296,6 +319,10 @@ func (b *Build) Defaults() *Build {
 		b.Platform = *types.GetPlatformSpec()
 	}
 	b.defaults = true
+
+	if b.Secrets == nil {
+		b.Secrets = make(map[string]*BuildSecret, 0)
+	}
 	return b
 }
 
