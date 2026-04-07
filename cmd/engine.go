@@ -143,6 +143,8 @@ func executeBuild(b *container.Build, leader *LeaderElection, idStore *utils.IDS
 func executeBuildGroup(group *container.BuildGroup, leader *LeaderElection, idStore *utils.IDStore, addr network.Address, aiConfig AIConfig) {
 	wg := sync.WaitGroup{}
 
+	//TODO: check if ai build is specified and if then also if it matches.
+	//TODO: in general check if we can plan the build step here because we have the whole build groups available.
 	for _, b := range group.Builds {
 		wg.Add(1)
 		go func(b *container.Build) {
@@ -264,6 +266,14 @@ func GetBuild(auto bool) container.BuildGroups {
 
 				platform.Container = types.GetContainerPlatform(platform.Host)
 				arg.Platform = platform
+			}
+
+			if len(opt.Secrets) > 0 {
+				m := make(map[string]*container.BuildSecret, len(opt.Secrets))
+				for _, s := range opt.Secrets {
+					m[s.Key] = container.NewBuildSecret(s)
+				}
+				arg.Secrets = m
 			}
 			arg.Defaults()
 			// args = append(args, &arg)

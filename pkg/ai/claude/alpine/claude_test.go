@@ -42,8 +42,11 @@ func TestMatches(t *testing.T) {
 		t.Setenv("claude-test-key", "claude-123")
 		b := container.Build{
 			BuildType: container.AI,
-			Custom: map[string][]string{
-				"claude_api_key": {"claude-test-key"},
+			Secrets: container.BuildSecrets{
+				"claude_api_key": container.NewBuildSecret(&protos2.Secret{
+					Key:   "claude_api_key",
+					Value: "env:claude-test-key",
+				}),
 			},
 		}
 		assert.True(t, Matches(b))

@@ -255,16 +255,17 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 	var buildErr error
 	var aiBuildResult *BuildResult
 	hasAIBuild := false
+
 	for _, buildCtx := range bs.Steps {
+
 		if !buildCtx.build.Matches(*arg) {
-			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
+			slog.Debug("Build step does not match config", "step", buildCtx.build.Name())
 			continue
 		}
 
-		if step != nil && buildCtx.build.Name() != step[0] {
-			continue
-		}
 		buildType := buildCtx.build.BuildType()
+		slog.Debug("AI Build step detection", "step", buildCtx.build.Name(), "typ", buildType)
+
 		if buildType != nil && *buildType == container.AI {
 			hasAIBuild = true
 		}

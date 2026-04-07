@@ -40,14 +40,17 @@ func main() {
 
 	claude := build.NewAIBuild("claude-review")
 	claude.Properties = map[string]*build.ListValue{
-		"auto_commit":    build.NewList("true"),
-		"claude_api_key": build.NewList("env:CI_CLAUDE_KEY"),
-		"ai_role":        build.NewList("build-reviewer"),
+		"auto_commit": build.NewList("true"),
+		"ai_role":     build.NewList("build-reviewer"),
 		// "ai_prompt":      build.NewList(`Optain the build logs from the provided context and. Ensure the following quality gates no linting issues and build compilation succeed. Please write your reasoning and actions into the claude-actions.log file in the format <timestamp>: <action>.` + fmt.Sprintf("Also if you get the build fixed, please print the following %s_SUCCESSFUL_FIX_%s or %s_FAILED_FIX_%s to indicate if the fix was successful or not. Also add this as the last entry to the claude-actions.log file.", uuid, uuid, uuid, uuid)),
 		"ai_done_word":   build.NewList(fmt.Sprintf("%s_SUCCESSFUL_FIX_%s", uuid, uuid)),
 		"agent_mode":     build.NewList("true"),
 		"max_iterations": build.NewList("2"),
 	}
+	claude.Secrets = []*protos2.Secret{{
+		Key:   "claude_api_key",
+		Value: "env:CI_CLAUDE_KEY",
+	}}
 
 	pr2 := build.NewGoServiceBuild("engine-ci-protos2")
 	pr2.Folder = "protos2"
