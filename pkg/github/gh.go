@@ -40,9 +40,9 @@ func Matches(build container.Build) bool {
 	return true // GitHub integration runs for all builds
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -168,7 +168,7 @@ func (c *GithubContainer) Pull() error {
 	return c.Container.Pull(IMAGE)
 }
 
-func (c *GithubContainer) Run() error {
+func (c *GithubContainer) Run() (string, error) {
 	shouldComment := c.git.IsPR() && ifTrivyFileExists()
 	shouldCommit := c.git.IsPR() && c.shouldCommit()
 
@@ -176,12 +176,12 @@ func (c *GithubContainer) Run() error {
 
 	if !shouldComment && !shouldCommit {
 		slog.Info("Skip github step - no PR comment needed and no commit required")
-		return nil
+		return "", nil
 	}
 
 	if err := c.BuildImage(); err != nil {
 		slog.Error("Failed to build github image", "error", err)
-		return err
+		return "", err
 	}
 
 	if shouldComment {
@@ -192,12 +192,12 @@ func (c *GithubContainer) Run() error {
 	}
 
 	if shouldCommit {
-		if err := c.Commit(); err != nil {
-			return fmt.Errorf("failed to commit changes: %w", err)
+		if id, err := c.Commit(); err != nil {
+			return id, fmt.Errorf("failed to commit changes: %w", err)
 		}
 	}
 
-	return nil
+	return c.ID, nil
 }
 
 // shouldCommit returns true if auto_commit is enabled and there are uncommitted changes
@@ -216,7 +216,7 @@ func (c *GithubContainer) shouldCommit() bool {
 }
 
 // Commit creates a git commit with changes and pushes to the remote
-func (c *GithubContainer) Commit() error {
+func (c *GithubContainer) Commit() (string, error) {
 	host := c.GetBuild().Custom.String("CONTAINIFYCI_EXTERNAL_HOST")
 	auth := c.GetBuild().Secret["CONTAINIFYCI_AUTH"]
 
@@ -267,19 +267,19 @@ func (c *GithubContainer) Commit() error {
 	opts.Cmd = []string{"sh", "/tmp/commit.sh"}
 
 	if err := c.Create(opts); err != nil {
-		return fmt.Errorf("failed to create container: %w", err)
+		return c.ID, fmt.Errorf("failed to create container: %w", err)
 	}
 
 	// Copy commit script to container
 	if err := c.CopyCommitScript(commitMsg); err != nil {
-		return fmt.Errorf("failed to copy commit script: %w", err)
+		return c.ID, fmt.Errorf("failed to copy commit script: %w", err)
 	}
 
 	if err := c.Start(); err != nil {
-		return fmt.Errorf("failed to start container: %w", err)
+		return c.ID, fmt.Errorf("failed to start container: %w", err)
 	}
 
-	return c.Wait()
+	return c.ID, c.Wait()
 }
 
 // CopyCommitScript copies the commit script to the container

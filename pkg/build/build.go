@@ -33,41 +33,37 @@ const (
 )
 
 type BuildContext struct {
-	build    BuildStepv3
+	build    BuildStep
 	category BuildCategory
 	async    bool
 }
 
-func (bc *BuildContext) Build() BuildStepv3 {
+func (bc *BuildContext) Build() BuildStep {
 	return bc.build
 }
 
 type MatchesFunc func(build container.Build) bool
 
-type BuildStepv2 interface {
+type BuildStep interface {
 	Alias() string
 	BuildType() *container.BuildType
 	Name() string
 	Images(build container.Build) []string
 	IsAsync() bool
 	Matches(build container.Build) bool
-	RunWithBuild(build container.Build) error
+	RunWithBuild(build container.Build) (string, error)
 }
 
-type BuildStepv3 interface {
-	BuildStepv2
-	RunWithBuildV3(build container.Build) (string, error)
-}
-
-type RunFuncv2 func(container.Build) error
-type RunFuncv3 func(container.Build) (string, error)
+// type RunFuncv2 func(container.Build) error
+type RunFunc func(container.Build) (string, error)
 
 type BuildSteps struct {
 	Steps []*BuildContext
 	init  bool
+	HasAI bool
 }
 
-func ToBuildContexts(steps ...BuildStepv3) []*BuildContext {
+func ToBuildContexts(steps ...BuildStep) []*BuildContext {
 	contexts := make([]*BuildContext, len(steps))
 	for i, step := range steps {
 		contexts[i] = &BuildContext{
@@ -79,7 +75,7 @@ func ToBuildContexts(steps ...BuildStepv3) []*BuildContext {
 	return contexts
 }
 
-func NewBuildSteps(steps ...BuildStepv3) *BuildSteps {
+func NewBuildSteps(steps ...BuildStep) *BuildSteps {
 	return &BuildSteps{
 		init:  len(steps) > 0,
 		Steps: ToBuildContexts(steps...),
@@ -88,32 +84,32 @@ func NewBuildSteps(steps ...BuildStepv3) *BuildSteps {
 
 func (bs *BuildSteps) IsNotInit() bool { return !bs.init }
 func (bs *BuildSteps) Init()           { bs.init = true }
-func (bs *BuildSteps) Add(step BuildStepv3) {
+func (bs *BuildSteps) Add(step BuildStep) {
 	bs.Steps = append(bs.Steps, &BuildContext{build: step, category: Build, async: false}) // Default to Build category
 }
-func (bs *BuildSteps) AddAsync(step BuildStepv3) {
+func (bs *BuildSteps) AddAsync(step BuildStep) {
 	bs.Steps = append(bs.Steps, &BuildContext{build: step, category: Build, async: true}) // Default to Build category
 }
 
 // Hook-based insertion methods
-func (bs *BuildSteps) AddBefore(stepName string, step BuildStepv3) error {
+func (bs *BuildSteps) AddBefore(stepName string, step BuildStep) error {
 	return bs.insertRelativeToStep(stepName, step, false, true)
 }
 
-func (bs *BuildSteps) AddAfter(stepName string, step BuildStepv3) error {
+func (bs *BuildSteps) AddAfter(stepName string, step BuildStep) error {
 	return bs.insertRelativeToStep(stepName, step, false, false)
 }
 
-func (bs *BuildSteps) AddAsyncBefore(stepName string, step BuildStepv3) error {
+func (bs *BuildSteps) AddAsyncBefore(stepName string, step BuildStep) error {
 	return bs.insertRelativeToStep(stepName, step, true, true)
 }
 
-func (bs *BuildSteps) AddAsyncAfter(stepName string, step BuildStepv3) error {
+func (bs *BuildSteps) AddAsyncAfter(stepName string, step BuildStep) error {
 	return bs.insertRelativeToStep(stepName, step, true, false)
 }
 
 // Replace existing step by name
-func (bs *BuildSteps) Replace(stepName string, step BuildStepv3) error {
+func (bs *BuildSteps) Replace(stepName string, step BuildStep) error {
 	for i, bctx := range bs.Steps {
 		if bctx.build.Name() == stepName {
 			// Preserve the existing category and use the step's async setting
@@ -125,7 +121,7 @@ func (bs *BuildSteps) Replace(stepName string, step BuildStepv3) error {
 }
 
 // Helper method for relative insertion
-func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStepv3, async bool, before bool) error {
+func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStep, async bool, before bool) error {
 	for i, bctx := range bs.Steps {
 		if bctx.build.Name() == stepName {
 			// Use the same category as the reference step
@@ -144,16 +140,16 @@ func (bs *BuildSteps) insertRelativeToStep(stepName string, step BuildStepv3, as
 }
 
 // Category-based addition methods
-func (bs *BuildSteps) AddToCategory(category BuildCategory, step BuildStepv3) error {
+func (bs *BuildSteps) AddToCategory(category BuildCategory, step BuildStep) error {
 	return bs.insertAtCategoryEnd(category, step, false)
 }
 
-func (bs *BuildSteps) AddAsyncToCategory(category BuildCategory, step BuildStepv3) error {
+func (bs *BuildSteps) AddAsyncToCategory(category BuildCategory, step BuildStep) error {
 	return bs.insertAtCategoryEnd(category, step, true)
 }
 
 // Helper method to find category boundaries and insert at the end of a category
-func (bs *BuildSteps) insertAtCategoryEnd(category BuildCategory, step BuildStepv3, async bool) error {
+func (bs *BuildSteps) insertAtCategoryEnd(category BuildCategory, step BuildStep, async bool) error {
 	// Define category order for proper insertion
 	categoryOrder := []BuildCategory{Auth, PreBuild, Build, PostBuild, Quality, Apply, PrePublish, Publish}
 
@@ -254,22 +250,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 	ids := utils.IDStore{}
 	var buildErr error
 	var aiBuildResult *BuildResult
-	hasAIBuild := false
 
-	for _, buildCtx := range bs.Steps {
-
-		if !buildCtx.build.Matches(*arg) {
-			slog.Debug("Build step does not match config", "step", buildCtx.build.Name())
-			continue
-		}
-
-		buildType := buildCtx.build.BuildType()
-		slog.Debug("AI Build step detection", "step", buildCtx.build.Name(), "typ", buildType)
-
-		if buildType != nil && *buildType == container.AI {
-			hasAIBuild = true
-		}
-	}
 	for i, buildCtx := range bs.Steps {
 		if !buildCtx.build.Matches(*arg) {
 			// slog.Debug("Build step does not match config", "step", buildCtx.build.Name(), "index", i)
@@ -285,10 +266,10 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 		if buildCtx.build.IsAsync() {
 			// Start async step immediately, don't wait
 			wg.Add(1)
-			go func(build BuildStepv3, arg container.Build) {
+			go func(build BuildStep, arg container.Build) {
 				defer wg.Done()
 				slog.Debug("Starting async step", "step", build.Name())
-				id, err := build.RunWithBuildV3(arg)
+				id, err := build.RunWithBuild(arg)
 				ids.Add(id)
 				if err != nil {
 					slog.Error("Failed to run build step.", "error", err)
@@ -315,7 +296,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 			}
 		}
 
-		id, err := buildCtx.build.RunWithBuildV3(*arg)
+		id, err := buildCtx.build.RunWithBuild(*arg)
 		ids.Add(id)
 
 		if err != nil {
@@ -346,7 +327,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 					break
 				}
 			}
-		} else if !hasAIBuild && buildErr != nil {
+		} else if !bs.HasAI && buildErr != nil {
 			slog.Info("Stop build no ai step configured", "error", buildErr)
 			return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: buildErr}
 		}

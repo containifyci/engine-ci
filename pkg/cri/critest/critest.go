@@ -24,6 +24,7 @@ type MockContainerManager struct {
 	ContainerLogsEntries map[string][]string
 	Images               map[string]*MockImageLifecycle
 	Errors               map[string]error
+	ID                   string
 	ImagesLogEntries     []string
 }
 
@@ -104,6 +105,7 @@ func (m *MockContainerManager) CreateContainer(ctx context.Context, opts *types.
 		opts.Platform = types.GetPlatformSpec()
 	}
 	m.Containers[id] = &MockContainerLifecycle{ID: id, Opts: opts, State: "created"}
+	m.ID = id
 	return id, nil
 }
 

@@ -118,9 +118,10 @@ func TestRun_SkipScenarios(t *testing.T) {
 			m := mockManager(t)
 			gc := newWithManager(goreleaserBuild(tt.enabled), m)
 
-			err := gc.Run()
+			id, err := gc.Run()
 
 			assert.NoError(t, err)
+			assert.Empty(t, id)
 			assert.Empty(t, m.Containers)
 			assert.Empty(t, m.Images)
 		})
@@ -134,9 +135,10 @@ func TestRun_MissingToken(t *testing.T) {
 	m := mockManager(t)
 	gc := newWithManager(goreleaserBuild(true), m)
 
-	err := gc.Run()
+	id, err := gc.Run()
 
 	assert.ErrorIs(t, err, ErrMissingToken)
+	assert.Empty(t, id)
 }
 
 func TestRun_WithToken(t *testing.T) {
@@ -146,9 +148,10 @@ func TestRun_WithToken(t *testing.T) {
 	m := mockManager(t)
 	gc := newWithManager(goreleaserBuild(true), m)
 
-	err := gc.Run()
+	id, err := gc.Run()
 
 	assert.NoError(t, err)
+	assert.Equal(t, m.ID, id)
 	assert.NotEmpty(t, m.Images)
 	assert.NotEmpty(t, m.Containers)
 }

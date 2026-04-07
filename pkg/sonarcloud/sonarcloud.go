@@ -36,9 +36,9 @@ func Matches(build container.Build) bool {
 	return true // SonarCloud analysis runs for all builds
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -208,7 +208,7 @@ func (c *SonarcloudContainer) Pull() error {
 	return c.Container.Pull(IMAGE)
 }
 
-func (c *SonarcloudContainer) Run() error {
+func (c *SonarcloudContainer) Run() (string, error) {
 	slog.Info("Run sonarcloud")
 	env := c.GetBuild().Env
 
@@ -236,5 +236,5 @@ func (c *SonarcloudContainer) Run() error {
 		slog.Error("Failed to create container: %s", "error", err)
 		os.Exit(1)
 	}
-	return nil
+	return c.ID, nil
 }

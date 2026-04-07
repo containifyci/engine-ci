@@ -32,9 +32,9 @@ func Matches(build container.Build) bool {
 		len(build.SourceFiles) > 0
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := newC(build)
 			return container.Run()
 		},
@@ -176,15 +176,15 @@ func computeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func (c *ProtogufContainer) Run() error {
+func (c *ProtogufContainer) Run() (string, error) {
 	if len(c.SourcePackages) == 0 && len(c.SourceFiles) == 0 {
 		slog.Info("Skip protobuf generate. No source packages or files provided")
-		return nil
+		return "", nil
 	}
 	err := c.Pull()
 	if err != nil {
 		slog.Error("Failed to pull image", "error", err)
-		return err
+		return "", err
 	}
 	err = c.Build()
 	if err != nil {
@@ -194,7 +194,7 @@ func (c *ProtogufContainer) Run() error {
 	err = c.Generate()
 	if err != nil {
 		slog.Error("Failed to generate protobuf", "error", err)
-		return err
+		return c.ID, err
 	}
-	return nil
+	return c.ID, nil
 }

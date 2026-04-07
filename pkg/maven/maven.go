@@ -43,10 +43,10 @@ func Matches(build container.Build) bool {
 	return build.BuildType == container.Maven
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.Maven,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -136,7 +136,7 @@ func (c *MavenContainer) Address() *network.Address {
 	return &network.Address{Host: "localhost"}
 }
 
-func (c *MavenContainer) Build() error {
+func (c *MavenContainer) Build() (string, error) {
 	imageTag := MavenImage(*c.GetBuild())
 
 	ssh, err := network.SSHForward(*c.GetBuild())
@@ -202,10 +202,10 @@ func (c *MavenContainer) Build() error {
 	err = c.BuildingContainer(opts)
 	if err != nil {
 		slog.Error("Failed to build container", "error", err)
-		return fmt.Errorf("failed to build container: %w", err)
+		return c.ID, fmt.Errorf("failed to build container: %w", err)
 	}
 
-	return err
+	return c.ID, err
 }
 
 func (c *MavenContainer) BuildScript() string {
@@ -213,10 +213,10 @@ func (c *MavenContainer) BuildScript() string {
 	return Script(NewBuildScript(c.Verbose))
 }
 
-func NewProd() build.BuildStepv3 {
+func NewProd() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.Maven,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Prod()
 		},
@@ -227,7 +227,7 @@ func NewProd() build.BuildStepv3 {
 	}
 }
 
-func (c *MavenContainer) Prod() error {
+func (c *MavenContainer) Prod() (string, error) {
 	opts := types.ContainerConfig{}
 	opts.Image = ProdImage
 	opts.Env = []string{
@@ -282,27 +282,27 @@ func (c *MavenContainer) Prod() error {
 		os.Exit(1)
 	}
 
-	return err
+	return c.ID, err
 }
 
-func (c *MavenContainer) Run() error {
+func (c *MavenContainer) Run() (string, error) {
 	err := c.Pull()
 	if err != nil {
 		slog.Error("Failed to pull base images: %s", "error", err)
-		return err
+		return "", err
 	}
 
 	err = c.BuildMavenImage()
 	if err != nil {
 		slog.Error("Failed to build go image: %s", "error", err)
-		return err
+		return "", err
 	}
 
-	err = c.Build()
+	_, err = c.Build()
 	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
-		return err
+		return c.ID, err
 	}
-	return nil
+	return c.ID, nil
 }

@@ -8,8 +8,7 @@ import (
 )
 
 type Stepper struct {
-	RunFn      RunFuncv2
-	RunFnV3    RunFuncv3
+	RunFn      RunFunc
 	MatchedFn  func(build container.Build) bool
 	ImagesFn   func(build container.Build) []string
 	BuildType_ container.BuildType
@@ -23,14 +22,8 @@ func (g Stepper) Run() error {
 	os.Exit(1)
 	return nil
 }
-func (g Stepper) RunWithBuild(build container.Build) error { return g.RunFn(build) }
+func (g Stepper) RunWithBuild(build container.Build) (string, error) { return g.RunFn(build) }
 
-func (g Stepper) RunWithBuildV3(build container.Build) (string, error) {
-	if g.RunFnV3 == nil {
-		return "", g.RunWithBuild(build)
-	}
-	return g.RunFnV3(build)
-}
 func (g Stepper) Name() string  { return g.Name_ }
 func (g Stepper) Alias() string { return g.Alias_ }
 
@@ -63,4 +56,4 @@ func StepperImages(images ...string) func(build container.Build) []string {
 	}
 }
 
-var _ BuildStepv2 = (*Stepper)(nil)
+var _ BuildStep = (*Stepper)(nil)

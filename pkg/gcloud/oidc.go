@@ -40,9 +40,9 @@ func Matches(build container.Build) bool {
 	return true
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -113,7 +113,7 @@ func (c *GCloudContainer) BuildImage() error {
 	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
-func (c *GCloudContainer) Auth() error {
+func (c *GCloudContainer) Auth() (string, error) {
 	opts := types.ContainerConfig{}
 	opts.Image = Image(c.GetBuild())
 
@@ -138,7 +138,7 @@ func (c *GCloudContainer) Auth() error {
 	if filesystem.FileExists(googleADC) {
 		cnt, err := os.ReadFile(googleADC)
 		if err != nil {
-			return err
+			return "", err
 		}
 		c.applicationCredentials = string(cnt)
 		opts.Env = append(opts.Env,
@@ -158,7 +158,7 @@ func (c *GCloudContainer) Auth() error {
 
 	err := c.Create(opts)
 	if err != nil {
-		return err
+		return c.ID, err
 	}
 
 	err = c.CopyContentTo(c.applicationCredentials, "/tmp/.gcloud/adc.json")
@@ -169,10 +169,10 @@ func (c *GCloudContainer) Auth() error {
 
 	err = c.Start()
 	if err != nil {
-		return err
+		return c.ID, err
 	}
 
-	return c.Wait()
+	return c.ID, c.Wait()
 }
 
 func Images(build container.Build) []string {
@@ -197,24 +197,24 @@ func Image(build *container.Build) string {
 	return utils.ImageURI(build.ContainifyRegistry, "gcloud", tag)
 }
 
-func (c *GCloudContainer) Run() error {
+func (c *GCloudContainer) Run() (string, error) {
 	if os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL") == "" &&
 		c.GetBuild().CustomString("gcloud_oidc") == "" {
 		slog.Info("No ACTIONS_ID_TOKEN_REQUEST_URL found and Custom property gcloud_oidc not set, skipping gcloud_oidc container", "ACTIONS_ID_TOKEN_REQUEST_URL", os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), "gcloud_oidc", c.GetBuild().CustomString("gcloud_oidc"))
-		return nil
+		return "", nil
 	}
 
 	err := c.BuildImage()
 	if err != nil {
 		slog.Error("Failed to build go image: %s", "error", err)
-		return err
+		return "", err
 	}
 
-	err = c.Auth()
+	id, err := c.Auth()
 	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
-		return err
+		return id, err
 	}
-	return nil
+	return id, nil
 }

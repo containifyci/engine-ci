@@ -51,10 +51,10 @@ func Matches(build container.Build) bool {
 	return false
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.GoLang,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -194,10 +194,10 @@ func (c *GoContainer) BuildScript() string {
 	return buildscript.NewBuildScript(c.App, c.File.Container(), c.Folder, c.Tags, c.Container.Verbose, nocoverage, coverageMode, generateMode, c.Platforms...).String()
 }
 
-func NewProd() build.BuildStepv3 {
+func NewProd() build.BuildStep {
 	return build.Stepper{
 		BuildType_: container.GoLang,
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Prod()
 		},
@@ -208,14 +208,14 @@ func NewProd() build.BuildStepv3 {
 	}
 }
 
-func (c *GoContainer) Prod() error {
+func (c *GoContainer) Prod() (string, error) {
 	if c.GetBuild().Env == container.LocalEnv {
 		slog.Info("Skip building prod image in local environment")
-		return nil
+		return "", nil
 	}
 	if c.Image == "" {
 		slog.Info("Skip No image specified to push")
-		return nil
+		return "", nil
 	}
 	imageTag := "alpine"
 
@@ -283,27 +283,27 @@ func (c *GoContainer) Prod() error {
 		os.Exit(1)
 	}
 
-	return err
+	return c.ID, err
 }
 
-func (c *GoContainer) Run() error {
+func (c *GoContainer) Run() (string, error) {
 	err := c.Pull()
 	if err != nil {
 		slog.Error("Failed to pull base images: %s", "error", err)
-		return err
+		return c.ID, err
 	}
 
 	err = c.BuildGoImage()
 	if err != nil {
 		slog.Error("Failed to build go image: %s", "error", err)
-		return err
+		return c.ID, err
 	}
 
 	err = c.Build()
 	slog.Info("Container created", "containerId", c.ID)
 	if err != nil {
 		slog.Error("Failed to create container: %s", "error", err)
-		return err
+		return c.ID, err
 	}
-	return nil
+	return c.ID, nil
 }
