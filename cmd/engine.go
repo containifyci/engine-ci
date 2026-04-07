@@ -380,8 +380,8 @@ func detectAILoopConfig(groups container.BuildGroups) AIConfig {
 			if b.BuildType == container.AI && b.Custom.Bool("agent_mode", false) {
 				//TODO: how to check if the needed secrets are available
 				// maye check the b.Secrets definition if the key and values asre set propwerly ?
-				claudeKey := utils.GetValue(b.Custom.String("claude_api_key"), "build")
-				if claudeKey != "" {
+				enabled := b.Secrets.Available()
+				if enabled {
 					config.HasAI = true
 					config.Enabled = true
 					config.Build = b

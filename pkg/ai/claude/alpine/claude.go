@@ -160,7 +160,7 @@ func (c *ClaudeContainer) Run() (string, error) {
 	auth := c.Build.Secret["CONTAINIFYCI_AUTH"]
 	claudeKey := c.Build.Secrets.Get("claude_api_key")
 	if claudeKey == nil {
-		panic(fmt.Errorf("Claude API Key not provided"))
+		panic(fmt.Errorf("claude API Key not provided"))
 	}
 
 	slog.Info("Claude Api Ket Secret found", "key", claudeKey.Key, "value", claudeKey.Value)
