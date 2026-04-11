@@ -1,6 +1,6 @@
 package alpine
 
-//go:generate go run ../../../../tools/dockerfile-metadata/ -package alpine -output docker_metadata_gen.go -input Dockerfile_claude -variant ""
+//go:generate go run ../../../../tools/dockerfile-metadata/ -package alpine -output docker_metadata_gen.go -input Dockerfile -variant ""
 
 import (
 	"embed"

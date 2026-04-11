@@ -24,6 +24,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/goreleaser"
 	"github.com/containifyci/engine-ci/pkg/maven"
 	"github.com/containifyci/engine-ci/pkg/network"
+	"github.com/containifyci/engine-ci/pkg/packer"
 	"github.com/containifyci/engine-ci/pkg/protobuf"
 	"github.com/containifyci/engine-ci/pkg/pulumi"
 	"github.com/containifyci/engine-ci/pkg/python"
@@ -425,6 +426,7 @@ func InitBuildSteps() {
 		// PreBuild: Setup, protobuf, dependencies
 		addStep(build.PreBuild, copier.New())
 		addStep(build.PreBuild, protobuf.New())
+		addStep(build.PreBuild, packer.New())
 
 		// Build: Language-specific compilation
 		addStep(build.Build, golang.New())       // Alpine variant
