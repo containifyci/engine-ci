@@ -5,14 +5,14 @@ package zig
 // Default Dockerfile (Dockerfile.zig)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "3.22"
+	ImageVersion = "3.23"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "10bbb6908b54b8300a3a05d74002b321eeb52ead87c52102bdc9fd2e5d9e1db6"
+	DockerfileChecksum = "37a9225ae146b47244ee518f7c273bc7f2e2c2577eb26f66c650eb1117997042"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM --platform=$TARGETPLATFORM alpine:3.22
+var DockerfileContent = `FROM --platform=$TARGETPLATFORM alpine:3.23
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 ARG ZIG_VERSION=0.15.2

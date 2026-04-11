@@ -20,6 +20,7 @@ enum BuildType {
     Zig = 6;
     Rust = 7;
     AI = 8;
+    Packer = 9;
 }
 
 enum RuntimeType {

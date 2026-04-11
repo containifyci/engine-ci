@@ -36,9 +36,9 @@ func Matches(build container.Build) bool {
 
 }
 
-func New() build.BuildStepv3 {
+func New() build.BuildStep {
 	return build.Stepper{
-		RunFn: func(build container.Build) error {
+		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
@@ -178,15 +178,15 @@ func (c *packerContainer) Pull() error {
 	return c.Container.Pull(IMAGE)
 }
 
-func (c *packerContainer) Run() error {
+func (c *packerContainer) Run() (string, error) {
 	if v, ok := c.GetBuild().Custom["packer"]; ok {
 		if v[0] != "true" {
 			slog.Debug("Skip packer")
-			return nil
+			return "", nil
 		}
 	} else {
 		slog.Debug("Skip packer")
-		return nil
+		return "", nil
 	}
 	slog.Info("Run packer")
 	env := c.GetBuild().Env
@@ -200,7 +200,7 @@ func (c *packerContainer) Run() error {
 	err = c.BuildpackerImage()
 	if err != nil {
 		slog.Error("Failed to build go image: %s", "error", err)
-		return err
+		return c.ID, err
 	}
 
 	err = c.Release(env)
@@ -208,5 +208,5 @@ func (c *packerContainer) Run() error {
 		slog.Error("Failed to create container: %s", "error", err)
 		os.Exit(1)
 	}
-	return nil
+	return c.ID, nil
 }

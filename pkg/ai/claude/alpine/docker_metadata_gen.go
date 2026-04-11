@@ -2,7 +2,7 @@
 
 package alpine
 
-// Default Dockerfile (Dockerfile_claude)
+// Default Dockerfile (Dockerfile)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
 	ImageVersion = "22-alpine"
