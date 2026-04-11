@@ -280,7 +280,7 @@ func GetBuild(auto bool) container.BuildGroups {
 			arg.Defaults()
 			// args = append(args, &arg)
 			g.Builds = append(g.Builds, &arg)
-			slog.Info("Build Arg", "arg", arg)
+			// slog.Info("Build Arg", "arg", arg)
 		}
 		groups = append(groups, g)
 	}
