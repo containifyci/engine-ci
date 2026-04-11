@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:25-alpine
 
 RUN apk --no-cache add \
       bash git openssh-client curl ca-certificates \
