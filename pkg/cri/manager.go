@@ -101,7 +101,6 @@ func DetectContainerRuntime() utils.RuntimeType {
 		}
 	}
 
-	// Use parallel detection for faster startup
 	return detectRuntime()
 }
 
