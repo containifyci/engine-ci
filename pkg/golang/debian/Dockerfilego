@@ -1,4 +1,4 @@
-FROM golang:1.26.1
+FROM golang:1.26.2
 
 # libbtrfs-dev is needed by podman go module
 RUN apt-get update && \
