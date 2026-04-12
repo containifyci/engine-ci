@@ -5,14 +5,14 @@ package alpine
 // Default Dockerfile (Dockerfile)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "22-alpine"
+	ImageVersion = "25-alpine"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "df729a9658e22a80475b9bde9b11648b8a9e369b7b5a03d26bb97fa925a3e59f"
+	DockerfileChecksum = "1795f5aa55c7cecc0e75b342d5b87871e5259559c507740ef25e6ab89cb3805d"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM node:22-alpine
+var DockerfileContent = `FROM node:25-alpine
 
 RUN apk --no-cache add \
       bash git openssh-client curl ca-certificates \

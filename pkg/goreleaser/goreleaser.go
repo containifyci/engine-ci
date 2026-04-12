@@ -22,7 +22,7 @@ import (
 var defaultGoreleaserConfig []byte
 
 const (
-	IMAGE             = "goreleaser/goreleaser:v2.13.3"
+	IMAGE             = "goreleaser/goreleaser:v2.15.2"
 	defaultConfigPath = "/tmp/.goreleaser-default.yaml"
 )
 
