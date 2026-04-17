@@ -7,13 +7,13 @@ go 1.25.5
 // replace github.com/containifyci/engine-ci/client => ./client
 
 require (
-	cloud.google.com/go/iam v1.8.0
+	cloud.google.com/go/iam v1.9.0
 	github.com/containers/buildah v1.43.1
-	github.com/containers/podman/v5 v5.8.1
+	github.com/containers/podman/v5 v5.8.2
 	github.com/containifyci/engine-ci/protos2 v0.25.0
 	github.com/containifyci/go-self-update v0.2.4
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/docker/go-connections v0.6.0
+	github.com/docker/go-connections v0.7.0
 	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
@@ -28,7 +28,7 @@ require (
 	go.podman.io/common v0.67.1
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/term v0.42.0
-	google.golang.org/api v0.275.0
+	google.golang.org/api v0.276.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
