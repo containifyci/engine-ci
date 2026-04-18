@@ -1,5 +1,7 @@
 package goreleaser
 
+//go:generate go run ../../tools/dockerfile-metadata/ -input Dockerfile.goreleaser-zig -output docker_metadata_gen.go -package goreleaser
+
 import (
 	_ "embed"
 	"fmt"
@@ -13,7 +15,9 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
+	criutils "github.com/containifyci/engine-ci/pkg/cri/utils"
 	utils "github.com/containifyci/engine-ci/pkg/utils"
+	"github.com/containifyci/engine-ci/pkg/zig"
 
 	"github.com/containifyci/engine-ci/pkg/svc"
 )
@@ -21,9 +25,13 @@ import (
 //go:embed .goreleaser.yaml
 var defaultGoreleaserConfig []byte
 
+//go:embed .goreleaser-zig.yaml
+var defaultZigGoreleaserConfig []byte
+
 const (
 	IMAGE             = "goreleaser/goreleaser:v2.15.2"
 	defaultConfigPath = "/tmp/.goreleaser-default.yaml"
+	zigCacheLocation  = "/root/.cache/zig"
 )
 
 type GoReleaserContainer struct {
@@ -50,11 +58,18 @@ func New() build.BuildStep {
 			return container.Run()
 		},
 		MatchedFn: Matches,
-		ImagesFn:  build.StepperImages(IMAGE),
+		ImagesFn:  goreleaserImages,
 		Name_:     "gorelease",
 		Alias_:    "release",
 		Async_:    false,
 	}
+}
+
+func goreleaserImages(b container.Build) []string {
+	if b.BuildType == container.Zig {
+		return []string{ZigGoreleaserImage(b), IMAGE}
+	}
+	return []string{IMAGE}
 }
 
 func new(build container.Build) *GoReleaserContainer {
@@ -94,6 +109,28 @@ func CacheFolder() string {
 	return gomodcache
 }
 
+func (c *GoReleaserContainer) isZig() bool {
+	return c.GetBuild().BuildType == container.Zig
+}
+
+// ZigGoreleaserImage returns the image URI for the goreleaser+zig intermediate image
+func ZigGoreleaserImage(build container.Build) string {
+	image := fmt.Sprintf("goreleaser-zig-%s", ImageVersion)
+	return criutils.ImageURI(build.ContainifyRegistry, image, DockerfileChecksum)
+}
+
+// BuildZigImage builds the intermediate goreleaser+zig Docker image
+func (c *GoReleaserContainer) BuildZigImage() error {
+	b := c.GetBuild()
+	image := ZigGoreleaserImage(*b)
+	platforms := types.GetPlatforms(b.Platform)
+	slog.Info("Building goreleaser-zig intermediate image", "image", image, "platforms", platforms)
+	return c.BuildIntermidiateContainer(image, []byte(DockerfileContent), platforms...)
+}
+
+// zigCacheFolderFn allows injection of zig cache folder lookup for testing
+var zigCacheFolderFn = zig.CacheFolder
+
 func (c *GoReleaserContainer) ApplyEnvs(envs []string) []string {
 	tag := os.Getenv("GORELEASER_CURRENT_TAG")
 	if tag != "" {
@@ -113,9 +150,9 @@ func hasProjectConfig(dir string) bool {
 	return false
 }
 
-// writeDefaultConfig writes the embedded default config to a temp file
-func writeDefaultConfig() (string, error) {
-	if err := os.WriteFile(defaultConfigPath, defaultGoreleaserConfig, 0644); err != nil {
+// writeDefaultConfigContent writes the given config content to a temp file
+func writeDefaultConfigContent(content []byte) (string, error) {
+	if err := os.WriteFile(defaultConfigPath, content, 0644); err != nil {
 		return "", fmt.Errorf("failed to write default config: %w", err)
 	}
 	return defaultConfigPath, nil
@@ -132,45 +169,42 @@ func (c *GoReleaserContainer) Release(env container.EnvType) error {
 	}
 
 	opts := types.ContainerConfig{}
-	opts.Image = IMAGE
-	//FIX: this should fix the permission issue with the mounted cache folder
-	// opts.User = "root"
 
 	envKeys := c.GetBuild().Custom.Strings("goreleaser_envs")
 	envs := utils.GetAllEnvs(envKeys, c.Env.String())
 
 	for k, v := range envs {
-		opts.Env = append(opts.Env, []string{k + "=" + v}...)
+		opts.Env = append(opts.Env, k+"="+v)
 	}
 
-	opts.Env = append(opts.Env, []string{
-		"GOMODCACHE=/go/pkg/",
-		"GOCACHE=/go/pkg/build-cache",
-		"GOLANGCI_LINT_CACHE=/go/pkg/lint-cache",
-		"GITHUB_TOKEN=" + token,
-	}...)
-
+	opts.Env = append(opts.Env, "GITHUB_TOKEN="+token)
 	opts.Env = c.ApplyEnvs(opts.Env)
 
+	dir, _ := filepath.Abs(".")
 	opts.WorkingDir = "/usr/src"
 
-	dir, _ := filepath.Abs(".")
-	cache := CacheFolder()
-	if cache == "" {
-		cache, _ = filepath.Abs(".tmp/go")
-	}
-
-	opts.Volumes = []types.Volume{
-		{
-			Type:   "bind",
-			Source: dir,
-			Target: "/usr/src",
-		},
-		{
-			Type:   "bind",
-			Source: cache,
-			Target: "/go/pkg",
-		},
+	if c.isZig() {
+		opts.Image = ZigGoreleaserImage(*c.GetBuild())
+		opts.Env = append(opts.Env, fmt.Sprintf("ZIG_GLOBAL_CACHE_DIR=%s", zigCacheLocation))
+		opts.Volumes = []types.Volume{
+			{Type: "bind", Source: dir, Target: "/usr/src"},
+			{Type: "bind", Source: zigCacheFolderFn(), Target: zigCacheLocation},
+		}
+	} else {
+		opts.Image = IMAGE
+		opts.Env = append(opts.Env, []string{
+			"GOMODCACHE=/go/pkg/",
+			"GOCACHE=/go/pkg/build-cache",
+			"GOLANGCI_LINT_CACHE=/go/pkg/lint-cache",
+		}...)
+		cache := CacheFolder()
+		if cache == "" {
+			cache, _ = filepath.Abs(".tmp/go")
+		}
+		opts.Volumes = []types.Volume{
+			{Type: "bind", Source: dir, Target: "/usr/src"},
+			{Type: "bind", Source: cache, Target: "/go/pkg"},
+		}
 	}
 
 	opts.Cmd = []string{"release", "--skip=validate", "--verbose", "--clean"}
@@ -178,7 +212,11 @@ func (c *GoReleaserContainer) Release(env container.EnvType) error {
 	// Use embedded default config if project doesn't have one
 	if !hasProjectConfig(dir) {
 		slog.Info("No goreleaser config found, using embedded default")
-		hostConfigPath, err := writeDefaultConfig()
+		configContent := defaultGoreleaserConfig
+		if c.isZig() {
+			configContent = defaultZigGoreleaserConfig
+		}
+		hostConfigPath, err := writeDefaultConfigContent(configContent)
 		if err != nil {
 			return fmt.Errorf("failed to write default goreleaser config: %w", err)
 		}
@@ -222,6 +260,12 @@ func (c *GoReleaserContainer) Run() (string, error) {
 
 	if err := c.Pull(); err != nil {
 		return "", fmt.Errorf("failed to pull image: %w", err)
+	}
+
+	if c.isZig() {
+		if err := c.BuildZigImage(); err != nil {
+			return "", fmt.Errorf("failed to build goreleaser-zig image: %w", err)
+		}
 	}
 
 	if err := c.Release(c.GetBuild().Env); err != nil {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/containifyci/engine-ci/pkg/container"
@@ -21,12 +22,16 @@ func mockManager(t *testing.T) *critest.MockContainerManager {
 	return m
 }
 
-func goreleaserBuild(enabled bool) container.Build {
+func releaserBuild(buildType container.BuildType, enabled bool) container.Build {
 	custom := map[string][]string{}
 	if enabled {
 		custom["goreleaser"] = []string{"true"}
 	}
-	return container.Build{BuildType: container.GoLang, Custom: custom}
+	return container.Build{BuildType: buildType, Custom: custom}
+}
+
+func goreleaserBuild(enabled bool) container.Build {
+	return releaserBuild(container.GoLang, enabled)
 }
 
 func setupGitTag(t *testing.T, tag string) {
@@ -61,16 +66,6 @@ func TestHasProjectConfig(t *testing.T) {
 			assert.Equal(t, tt.want, hasProjectConfig(dir))
 		})
 	}
-}
-
-func TestWriteDefaultConfig(t *testing.T) {
-	path, err := writeDefaultConfig()
-	require.NoError(t, err)
-	defer os.Remove(path)
-
-	assert.Equal(t, defaultConfigPath, path)
-	content, _ := os.ReadFile(path)
-	assert.Equal(t, defaultGoreleaserConfig, content)
 }
 
 func TestMatches(t *testing.T) {
@@ -301,4 +296,184 @@ func TestNewWithManager(t *testing.T) {
 	gc := newWithManager(container.Build{}, m)
 	assert.NotNil(t, gc)
 	assert.NotNil(t, gc.Container)
+}
+
+func zigGoreleaserBuild(enabled bool) container.Build {
+	return releaserBuild(container.Zig, enabled)
+}
+
+func TestDefaultZigGoreleaserConfigEmbedded(t *testing.T) {
+	assert.NotEmpty(t, defaultZigGoreleaserConfig)
+	assert.Contains(t, string(defaultZigGoreleaserConfig), "version:")
+	assert.Contains(t, string(defaultZigGoreleaserConfig), "builder: zig")
+}
+
+func TestIsZig(t *testing.T) {
+	tests := []struct {
+		name      string
+		buildType container.BuildType
+		want      bool
+	}{
+		{"zig", container.Zig, true},
+		{"golang", container.GoLang, false},
+		{"empty", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gc := newWithManager(container.Build{BuildType: tt.buildType}, mockManager(t))
+			assert.Equal(t, tt.want, gc.isZig())
+		})
+	}
+}
+
+func TestGoreleaserImages(t *testing.T) {
+	t.Run("golang returns only IMAGE", func(t *testing.T) {
+		images := goreleaserImages(container.Build{BuildType: container.GoLang})
+		assert.Equal(t, []string{IMAGE}, images)
+	})
+
+	t.Run("zig returns zig image and IMAGE", func(t *testing.T) {
+		b := container.Build{BuildType: container.Zig}
+		images := goreleaserImages(b)
+		assert.Len(t, images, 2)
+		assert.Contains(t, images[0], "goreleaser-zig")
+		assert.Equal(t, IMAGE, images[1])
+	})
+}
+
+func firstContainer(m *critest.MockContainerManager) *critest.MockContainerLifecycle {
+	for _, con := range m.Containers {
+		return con
+	}
+	return nil
+}
+
+func TestRelease_ZigBuild(t *testing.T) {
+	t.Setenv("CONTAINIFYCI_GITHUB_TOKEN", "test-token")
+
+	original := zigCacheFolderFn
+	defer func() { zigCacheFolderFn = original }()
+	zigCacheFolderFn = func() string { return "/mock/zig-cache" }
+
+	m := mockManager(t)
+	gc := newWithManager(zigGoreleaserBuild(true), m)
+
+	err := gc.Release(container.BuildEnv)
+
+	assert.NoError(t, err)
+	assert.Len(t, m.Containers, 1)
+
+	con := firstContainer(m)
+	require.NotNil(t, con)
+
+	// Verify Zig-specific env vars
+	hasZigCache := false
+	hasGoModCache := false
+	for _, env := range con.Opts.Env {
+		if strings.HasPrefix(env, "ZIG_GLOBAL_CACHE_DIR=") {
+			hasZigCache = true
+		}
+		if strings.HasPrefix(env, "GOMODCACHE=") {
+			hasGoModCache = true
+		}
+	}
+	assert.True(t, hasZigCache, "should have ZIG_GLOBAL_CACHE_DIR")
+	assert.False(t, hasGoModCache, "should NOT have GOMODCACHE for Zig builds")
+
+	// Verify working dir
+	assert.Equal(t, "/usr/src", con.Opts.WorkingDir)
+	assert.Contains(t, con.Opts.Cmd, "release")
+}
+
+func TestRelease_ZigUsesDefaultZigConfig(t *testing.T) {
+	t.Setenv("CONTAINIFYCI_GITHUB_TOKEN", "test-token")
+	origDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(origDir) }()
+
+	original := zigCacheFolderFn
+	defer func() { zigCacheFolderFn = original }()
+	zigCacheFolderFn = func() string { return "/mock/zig-cache" }
+
+	// Test in temp dir without config
+	tmpDir := t.TempDir()
+	require.NoError(t, os.Chdir(tmpDir))
+
+	m := mockManager(t)
+	gc := newWithManager(zigGoreleaserBuild(true), m)
+
+	err := gc.Release(container.BuildEnv)
+
+	assert.NoError(t, err)
+	con := firstContainer(m)
+	require.NotNil(t, con)
+	// Should have --config flag since no project config
+	assert.Contains(t, con.Opts.Cmd, "--config="+defaultConfigPath)
+
+	// Verify the written config is the Zig one
+	content, err := os.ReadFile(defaultConfigPath)
+	if err == nil {
+		assert.Contains(t, string(content), "builder: zig")
+		defer os.Remove(defaultConfigPath)
+	}
+}
+
+func TestRun_ZigBuild_WithToken(t *testing.T) {
+	setupGitTag(t, "v1.0.0")
+	t.Setenv("CONTAINIFYCI_GITHUB_TOKEN", "test-token")
+
+	original := zigCacheFolderFn
+	defer func() { zigCacheFolderFn = original }()
+	zigCacheFolderFn = func() string { return "/mock/zig-cache" }
+
+	m := mockManager(t)
+	gc := newWithManager(zigGoreleaserBuild(true), m)
+
+	id, err := gc.Run()
+
+	assert.NoError(t, err)
+	assert.Equal(t, m.ID, id)
+	assert.NotEmpty(t, m.Images)
+	assert.NotEmpty(t, m.Containers)
+}
+
+func TestRun_ZigBuild_SkipNonTag(t *testing.T) {
+	setupGitTag(t, "")
+	m := mockManager(t)
+	gc := newWithManager(zigGoreleaserBuild(true), m)
+
+	id, err := gc.Run()
+
+	assert.NoError(t, err)
+	assert.Empty(t, id)
+	assert.Empty(t, m.Containers)
+}
+
+func TestWriteDefaultConfigContent(t *testing.T) {
+	t.Run("go config", func(t *testing.T) {
+		path, err := writeDefaultConfigContent(defaultGoreleaserConfig)
+		require.NoError(t, err)
+		defer os.Remove(path)
+
+		content, _ := os.ReadFile(path)
+		assert.Equal(t, defaultGoreleaserConfig, content)
+	})
+
+	t.Run("zig config", func(t *testing.T) {
+		path, err := writeDefaultConfigContent(defaultZigGoreleaserConfig)
+		require.NoError(t, err)
+		defer os.Remove(path)
+
+		content, _ := os.ReadFile(path)
+		assert.Equal(t, defaultZigGoreleaserConfig, content)
+		assert.Contains(t, string(content), "builder: zig")
+	})
+}
+
+func TestZigCacheFolderFn_Injection(t *testing.T) {
+	original := zigCacheFolderFn
+	defer func() { zigCacheFolderFn = original }()
+
+	zigCacheFolderFn = func() string { return "/mock/zig-cache" }
+	result := zigCacheFolderFn()
+	assert.Equal(t, "/mock/zig-cache", result)
 }

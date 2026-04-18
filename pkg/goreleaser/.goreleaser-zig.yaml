@@ -1,0 +1,26 @@
+version: 2
+
+builds:
+  - builder: zig
+    targets:
+      - x86_64-linux
+      - aarch64-linux
+      - x86_64-macos
+      - aarch64-macos
+
+archives:
+  - formats: [ binary ]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
