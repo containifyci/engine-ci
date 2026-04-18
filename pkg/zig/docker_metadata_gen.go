@@ -8,7 +8,7 @@ const (
 	ImageVersion = "3.23"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "37498818f15880a8599ce58008eef3a3d75d33f25d0300d42c95c5a7efca9539"
+	DockerfileChecksum = "82a0e911deb344a641209b6a5d360a0e65a64f8de8bb30ae2e6baa3efed132d2"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
@@ -17,7 +17,7 @@ ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 ARG ZIG_VERSION=0.16.0
 
-RUN apk add --no-cache curl xz openssl-dev && \
+RUN apk add --no-cache curl xz && \
     ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
     curl -L https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz \
     | tar -xJ -C /usr/local && \
