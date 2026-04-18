@@ -32,7 +32,7 @@ type GoReleaserContainer struct {
 
 // Matches implements the Build interface - GoReleaser only runs for golang builds with goreleaser=true
 func Matches(build container.Build) bool {
-	if build.BuildType != container.GoLang {
+	if build.BuildType != container.GoLang && build.BuildType != container.Zig {
 		return false
 	}
 	// Check if goreleaser is enabled
