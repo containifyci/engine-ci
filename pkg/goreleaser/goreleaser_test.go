@@ -80,6 +80,7 @@ func TestMatches(t *testing.T) {
 		buildType container.BuildType
 		want      bool
 	}{
+		{name: "zig+enabled", buildType: container.Zig, custom: map[string][]string{"goreleaser": {"true"}}, want: true},
 		{name: "golang+enabled", buildType: container.GoLang, custom: map[string][]string{"goreleaser": {"true"}}, want: true},
 		{name: "golang+disabled", buildType: container.GoLang, custom: map[string][]string{"goreleaser": {"false"}}, want: false},
 		{name: "golang+notset", buildType: container.GoLang, custom: map[string][]string{}, want: false},
@@ -98,7 +99,7 @@ func TestNew(t *testing.T) {
 	step := New()
 	assert.Equal(t, "gorelease", step.Name())
 	assert.Equal(t, "release", step.Alias())
-	assert.Equal(t, container.GoLang, *step.BuildType())
+	assert.Nilf(t, step.BuildType(), "Expect build type to nil because it supports Golang and Zig")
 	assert.False(t, step.IsAsync())
 	assert.Contains(t, step.Images(container.Build{}), IMAGE)
 }

@@ -44,7 +44,7 @@ func Matches(build container.Build) bool {
 
 func New() build.BuildStep {
 	return build.Stepper{
-		BuildType_: container.GoLang,
+		// BuildType_: container.GoLang + container.Zig, // This step can run for both Go and Zig builds
 		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
