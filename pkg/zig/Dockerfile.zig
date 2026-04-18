@@ -1,12 +1,13 @@
 FROM --platform=$TARGETPLATFORM alpine:3.23
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-ARG ZIG_VERSION=0.15.2
+ARG ZIG_VERSION=0.16.0
 
 RUN apk add --no-cache curl xz && \
-    curl -L https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz \
+    ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
+    curl -L https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz \
     | tar -xJ -C /usr/local && \
-    ln -s /usr/local/zig-x86_64-linux-${ZIG_VERSION}/zig /usr/local/bin/zig && \
+    ln -s /usr/local/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}/zig /usr/local/bin/zig && \
     apk del curl xz && \
     rm -rf /var/cache/apk/*
 
