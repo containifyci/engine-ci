@@ -11,7 +11,7 @@ require (
 	github.com/containers/buildah v1.43.1
 	github.com/containers/podman/v5 v5.8.2
 	github.com/containifyci/engine-ci/protos2 v0.25.0
-	github.com/containifyci/go-self-update v0.2.4
+	github.com/containifyci/go-self-update v0.2.5
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.7.0
 	github.com/dusted-go/logging v1.3.0
@@ -73,9 +73,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-containerregistry v0.20.7 // indirect
-	github.com/google/go-github/v66 v66.0.0 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
@@ -144,7 +142,7 @@ require (
 	go.podman.io/storage v1.62.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
