@@ -8,7 +8,7 @@ const (
 	ImageVersion = "3.23"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "55d6b8389f5c9bc2ec849a466a6a7a54b9331971d85641b5c1f7f7fa3f50b408"
+	DockerfileChecksum = "58a4bf3cd46b4a7901c7c6074574a7593eac84a0853c65c4fcf89c13d0242621"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
