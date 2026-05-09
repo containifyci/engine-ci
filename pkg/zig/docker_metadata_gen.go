@@ -8,19 +8,18 @@ const (
 	ImageVersion = "3.23"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "0371fed9d61cd4f03ef606d87c8c19a050b59c442d13453bb13a43a6686acef5"
+	DockerfileChecksum = "55d6b8389f5c9bc2ec849a466a6a7a54b9331971d85641b5c1f7f7fa3f50b408"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
 var DockerfileContent = `FROM --platform=$TARGETPLATFORM alpine:3.23
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-ARG ZIG_VERSION="0.17.0-dev.87+9b177a7d2"
+ARG ZIG_VERSION=0.17.0-dev.263+0add2dfc4
 
 ##    curl -L https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz \
 RUN apk add --no-cache curl xz && \
-    ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
-    curl -L https://ziglang.org/builds/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz \
+    curl -L https://ziglang.org/builds/zig-x86_64-linux-${ZIG_VERSION}.tar.xz \
     | tar -xJ -C /usr/local && \
     ln -s /usr/local/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}/zig /usr/local/bin/zig && \
     apk del curl xz && \
