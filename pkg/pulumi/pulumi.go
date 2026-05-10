@@ -1,9 +1,7 @@
 package pulumi
 
 import (
-	"crypto/sha256"
 	"embed"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -15,6 +13,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	coreutils "github.com/containifyci/engine-ci/pkg/utils"
 )
 
 const (
@@ -75,10 +74,8 @@ func CacheFolder() string {
 	return gomodcache
 }
 
-// TODO: provide a shorter checksum
 func ComputeChecksum(data []byte) string {
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
+	return coreutils.ShortChecksum(data)
 }
 
 func (c *PulumiContainer) PulumiImage() string {
