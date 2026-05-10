@@ -217,7 +217,7 @@ The commit message should:
 
 	ssh, err := network.SSHForward(*c.GetBuild())
 	if err != nil {
-		return "", fmt.Errorf("SSH forward failed: %w", err)
+		return "", fmt.Errorf("ssh forward failed: %w", err)
 	}
 
 	opts := types.ContainerConfig{}

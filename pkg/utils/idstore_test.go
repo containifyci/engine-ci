@@ -48,19 +48,19 @@ func TestIDStore_Add(t *testing.T) {
 
 func TestIDStore_Get(t *testing.T) {
 	tests := []struct {
-		name     string
+		name       string
 		initialIDs []string
-		want     []string
+		want       []string
 	}{
 		{
-			name:     "empty store",
+			name:       "empty store",
 			initialIDs: nil,
-			want:     nil,
+			want:       nil,
 		},
 		{
-			name:     "store with IDs",
+			name:       "store with IDs",
 			initialIDs: []string{"id1", "id2"},
-			want:     []string{"id1", "id2"},
+			want:       []string{"id1", "id2"},
 		},
 	}
 

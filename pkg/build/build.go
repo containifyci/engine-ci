@@ -242,14 +242,21 @@ func (bs *BuildSteps) PrintSteps() {
 }
 
 func (bs *BuildSteps) Run(arg *container.Build, step ...string) BuildResult {
-	return bs.runAllMatchingBuilds(arg, step)
+	// TODO: Wire through a proper context from the caller instead of context.Background().
+	// The Run method should accept a context.Context parameter, and callers (e.g. Command.Run
+	// in cmd/build.go) should propagate one from the HTTP request or CLI signal handling.
+	ctx := context.Background()
+	return bs.runAllMatchingBuilds(ctx, arg, step)
 }
 
-func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) BuildResult {
+func (bs *BuildSteps) runAllMatchingBuilds(ctx context.Context, arg *container.Build, step []string) BuildResult {
 	var wg sync.WaitGroup
 	ids := utils.IDStore{}
 	var buildErr error
 	var aiBuildResult *BuildResult
+
+	// Channel to collect errors from async goroutines
+	errCh := make(chan error, len(bs.Steps))
 
 	for i, buildCtx := range bs.Steps {
 		if !buildCtx.build.Matches(*arg) {
@@ -273,8 +280,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 				ids.Add(id)
 				if err != nil {
 					slog.Error("Failed to run build step.", "error", err)
-					// TODO how to pass errors back from here to main thread
-					// os.Exit(1)
+					errCh <- err
 				}
 
 				slog.Debug("Completed async step", "step", build.Name())
@@ -289,7 +295,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 			slog.Info("AI build step detected - ensure proper handling", "step", buildCtx.build.Name(), "ids", ids.Get())
 
 			// TODO: use Container Manager to get container logs
-			if aiCtx, err := GetLog(arg, arg.Custom.Strings("ai_context")...); err != nil {
+			if aiCtx, err := GetLog(ctx, arg, arg.Custom.Strings("ai_context")...); err != nil {
 				slog.Error("Failed to get AI context logs", "error", err)
 			} else {
 				arg.Custom["ai_context"] = []string{aiCtx}
@@ -308,7 +314,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 		if buildType != nil && *buildType == container.AI {
 			finishSignal := arg.Custom.String("ai_done_word")
 			if finishSignal != "" {
-				logs, logErr := GetLog(arg, id)
+				logs, logErr := GetLog(ctx, arg, id)
 				if logErr != nil {
 					slog.Error("Failed to get container logs", "error", logErr)
 					return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: logErr}
@@ -336,9 +342,30 @@ func (bs *BuildSteps) runAllMatchingBuilds(arg *container.Build, step []string) 
 	// Wait for all async steps to complete
 	slog.Debug("Waiting for all async steps to complete")
 	wg.Wait()
+	close(errCh)
+
+	// Collect the first async error (if any) for the BuildResult
+	var asyncErr error
+	for err := range errCh {
+		if asyncErr == nil {
+			asyncErr = err
+		}
+		slog.Warn("Async build step error collected", "error", err)
+	}
 
 	if aiBuildResult != nil {
 		return *aiBuildResult
+	}
+
+	// Propagate async error if there was no sync error
+	if buildErr == nil && asyncErr != nil {
+		buildErr = asyncErr
+		slog.Warn("Build completed with async step error(s)", "error", asyncErr)
+	}
+
+	if buildErr != nil {
+		slog.Info("Build completed with errors")
+		return BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: buildErr}
 	}
 
 	slog.Info("All build steps completed successfully")
@@ -375,7 +402,7 @@ func uniqueStrings(input []string) []string {
 	return result
 }
 
-func GetLog(arg *container.Build, ids ...string) (string, error) {
+func GetLog(ctx context.Context, arg *container.Build, ids ...string) (string, error) {
 	var logs []string
 
 	for _, id := range ids {
@@ -383,7 +410,7 @@ func GetLog(arg *container.Build, ids ...string) (string, error) {
 			continue
 		}
 
-		r, err := arg.RuntimeClient().ContainerLogs(context.TODO(), id, true, true, false)
+		r, err := arg.RuntimeClient().ContainerLogs(ctx, id, true, true, false)
 		if err != nil {
 			slog.Error("Failed to get container logs", "error", err)
 			return "", fmt.Errorf("failed to get container logs for %s: %w", id, err)

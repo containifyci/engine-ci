@@ -2,6 +2,8 @@ module github.com/containifyci/engine-ci
 
 go 1.25.5
 
+toolchain go1.25.10
+
 // replace github.com/containifyci/engine-ci/protos2 => ./protos2
 
 // replace github.com/containifyci/engine-ci/client => ./client
