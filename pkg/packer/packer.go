@@ -1,9 +1,7 @@
 package packer
 
 import (
-	"crypto/sha256"
 	"embed"
-	"encoding/hex"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,6 +10,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	coreutils "github.com/containifyci/engine-ci/pkg/utils"
 )
 
 const (
@@ -57,10 +56,8 @@ func new(build container.Build) *packerContainer {
 	}
 }
 
-// TODO: provide a shorter checksum
 func ComputeChecksum(data []byte) string {
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
+	return coreutils.ShortChecksum(data)
 }
 
 func (c *packerContainer) packerImage() string {
@@ -109,14 +106,6 @@ packer build .
 	return err
 }
 
-func (c *packerContainer) ApplyEnvs(envs []string) []string {
-	tag := os.Getenv("packer_CONFIG_PASSPHRASE")
-	if tag != "" {
-		envs = append(envs, "packer_CONFIG_PASSPHRASE="+tag)
-	}
-	return envs
-}
-
 func (c *packerContainer) Release(env container.EnvType) error {
 	if v, ok := c.GetBuild().Custom["packer"]; ok {
 		if v[0] == "false" {
@@ -135,10 +124,11 @@ func (c *packerContainer) Release(env container.EnvType) error {
 	opts.Image = c.packerImage()
 	opts.User = "root"
 
-	opts.Env = c.ApplyEnvs(opts.Env)
-	//TODO move the secret handling to kv instead of opts.Env this will hide the secret from docker envs
+	// Use the KV secret store (opts.Secrets) instead of plain env vars (opts.Env)
+	// This hides secrets from `docker inspect` and uses Podman's secret management
 	opts.Secrets = map[string]string{
-		"HCLOUD_TOKEN": token,
+		"HCLOUD_TOKEN":              token,
+		"packer_CONFIG_PASSPHRASE": os.Getenv("packer_CONFIG_PASSPHRASE"),
 	}
 
 	opts.WorkingDir = "/usr/src/" + c.Folder

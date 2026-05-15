@@ -70,16 +70,17 @@ func (e *EnvType) Type() string {
 
 type Container struct {
 	t
-	Source  fs.ReadDirFS
-	Build   *Build
-	Secret  map[string]string
-	Env     EnvType
-	Prefix  string
-	Image   string
-	Name    string
-	ID      string
-	Opts    types.ContainerConfig
-	Verbose bool
+	Source     fs.ReadDirFS
+	Build      *Build
+	Secret     map[string]string
+	Env        EnvType
+	Prefix     string
+	Image      string
+	Name       string
+	ID         string
+	Opts       types.ContainerConfig
+	Verbose    bool
+	StreamLogs bool // controls whether container logs are streamed; defaults to true
 }
 
 type PushOption struct {
@@ -105,7 +106,7 @@ func NewWithManager(manager cri.ContainerManager) *Container {
 	ctx := context.Background()
 	build := &Build{}
 	logger.NewLogAggregator("")
-	return &Container{t: t{client: _client, ctx: ctx}, Build: build.Defaults()}
+	return &Container{t: t{client: _client, ctx: ctx}, Build: build.Defaults(), StreamLogs: true}
 }
 
 func New(build Build) *Container {
@@ -122,7 +123,7 @@ func New(build Build) *Container {
 
 	// Use background context with reasonable timeout instead of TODO
 	ctx := context.Background()
-	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Secret: build.Secret, Verbose: build.Verbose}
+	container := &Container{t: t{client: _client, ctx: ctx}, Env: build.Env, Build: &build, Secret: build.Secret, Verbose: build.Verbose, StreamLogs: true}
 
 	return container
 }
@@ -222,14 +223,15 @@ func (c *Container) Start() error {
 		return fmt.Errorf("failed to start container %s: %w", c.ID, err)
 	}
 
-	// TODO make this optional or provide a way to opt out
 	shortImage := strings.ReplaceAll(c.Opts.Image, c.GetBuild().Registry+"/", "")
 	img, tag := ParseImageTag(shortImage)
 
 	short := fmt.Sprintf("%s:%s", img, safeShort(tag, 8))
-	go func() {
-		streamContainerLogs(c.ctx, c.client(), c.ID, short, c.Prefix)
-	}()
+	if c.StreamLogs {
+		go func() {
+			streamContainerLogs(c.ctx, c.client(), c.ID, short, c.Prefix)
+		}()
+	}
 	return err
 }
 
@@ -316,7 +318,7 @@ func (c *Container) Exec(cmd ...string) error {
 		slog.Error("Failed to exec command", "error", err)
 		return err
 	}
-	//TODO: the stdout is not showing up at all, need to fix that
+	// Demultiplex stdout/stderr and write to os.Stdout
 	_, err = io.Copy(os.Stdout, reader)
 	if err != nil {
 		slog.Error("Failed to copy output", "error", err)
@@ -351,7 +353,7 @@ func (c *Container) Wait() error {
 			c.ctx.Done()
 			slog.Error("Failed to inspect container", "error", err)
 		}
-		return fmt.Errorf("Container %s exited with status %d", inspection.Image, *statusCode)
+		return fmt.Errorf("container %s exited with status %d", inspection.Image, *statusCode)
 	}
 	logger.GetLogAggregator().SuccessMessage(c.Prefix, "Container exited with status 0")
 	return nil

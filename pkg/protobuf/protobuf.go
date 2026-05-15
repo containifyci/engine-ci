@@ -1,9 +1,7 @@
 package protobuf
 
 import (
-	"crypto/sha256"
 	"embed"
-	"encoding/hex"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,6 +10,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/container"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
+	coreutils "github.com/containifyci/engine-ci/pkg/utils"
 )
 
 //go:embed Dockerfile
@@ -170,10 +169,8 @@ func (c *ProtogufContainer) Build() error {
 	return c.BuildIntermidiateContainer(image, dockerFile, platforms...)
 }
 
-// TODO: provide a shorter checksum
 func computeChecksum(data []byte) string {
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
+	return coreutils.ShortChecksum(data)
 }
 
 func (c *ProtogufContainer) Run() (string, error) {

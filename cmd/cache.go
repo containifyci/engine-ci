@@ -77,20 +77,20 @@ func SaveCache() error {
 			os.Exit(1)
 		}
 		cmd := fmt.Sprintf(`
-set -x
-docker pull %s
-docker save -o ~/image-cache/%s.tar %s
-`, image, info.Image, image)
+	set -x
+	docker pull %s
+	docker save -o ~/image-cache/%s.tar %s
+	`, image, info.Image, image)
 		go runCommand(&wg, errs, "sh", []string{"-c", cmd}...)
 	}
 
 	// Wait for all commands to complete
 	wg.Wait()
 	close(errs)
-	// Check for any errors
 	for err := range errs {
-		// errors.
-		slog.Warn("Error pull image", "error", err)
+		if err != nil {
+			slog.Warn("Error pull image", "error", err)
+		}
 	}
 	return nil
 }
@@ -98,7 +98,12 @@ docker save -o ~/image-cache/%s.tar %s
 func LoadCache() error {
 	InitBuildSteps()
 	args := GetBuild(false) // Use plugin system for cache operations
-	//TODO: possible nil pointer dereference
+	if len(args) == 0 {
+		return fmt.Errorf("no build groups found in cache load")
+	}
+	if len(args[0].Builds) == 0 {
+		return fmt.Errorf("no builds found in first build group for cache load")
+	}
 	arg := args[0].Builds[0]
 	images := buildSteps.Images(args)
 	if len(images) == 0 {
@@ -121,15 +126,15 @@ func LoadCache() error {
 		// nolint:staticcheck
 		if arg.Runtime == utils.Docker {
 			cmd := fmt.Sprintf(`
-set -x
-docker load -i ~/image-cache/%s.tar
-`, info.Image)
+	set -x
+	docker load -i ~/image-cache/%s.tar
+	`, info.Image)
 			go runCommand(&wg, errs, "sh", []string{"-c", cmd}...)
 		} else if arg.Runtime == utils.Podman {
 			cmd := fmt.Sprintf(`
-set -x
-podman load -i ~/image-cache/%s.tar
-`, info.Image)
+	set -x
+	podman load -i ~/image-cache/%s.tar
+	`, info.Image)
 			runCommand(&wg, errs, "sh", []string{"-c", cmd}...)
 		} else {
 			slog.Warn("Unsupported runtime for cache load", "runtime", arg.Runtime)
@@ -140,10 +145,10 @@ podman load -i ~/image-cache/%s.tar
 	// Wait for all commands to complete
 	wg.Wait()
 	close(errs)
-	// Check for any errors
 	for err := range errs {
-		// errors.
-		slog.Warn("Error loading image", "error", err)
+		if err != nil {
+			slog.Warn("Error loading image", "error", err)
+		}
 	}
 	return nil
 }
@@ -160,6 +165,6 @@ func runCommand(wg *sync.WaitGroup, errors chan<- error, cmd string, args ...str
 	// Run the command
 	err := command.Run()
 	if err != nil {
-		errors <- fmt.Errorf("error running command: error %s, cmd %s, args %s", err, cmd, args)
+		errors <- fmt.Errorf("run command %s %v: %w", cmd, args, err)
 	}
 }

@@ -159,7 +159,7 @@ jobs:
             ${{ runner.os }}-cache-
 
       - name: Install Engine CI
-        uses: jaxxstorm/action-install-gh-release@v1
+        uses: jaxxstorm/action-install-gh-release@v3.0.0
         if: ${{ inputs.install_binary }}
         with:
           repo: containifyci/engine-ci

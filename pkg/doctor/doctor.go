@@ -14,12 +14,12 @@ type Doctor struct {
 
 // DoctorOptions configures doctor behavior
 type DoctorOptions struct {
-	Categories          []CheckCategory
-	Verbose             bool
-	JSONOutput          bool
-	IncludeWarnings     bool
-	Parallel            bool
-	KeepTestContainers  bool // Don't cleanup test containers (for debugging)
+	Categories         []CheckCategory
+	Verbose            bool
+	JSONOutput         bool
+	IncludeWarnings    bool
+	Parallel           bool
+	KeepTestContainers bool // Don't cleanup test containers (for debugging)
 }
 
 // NewDoctor creates a new doctor instance

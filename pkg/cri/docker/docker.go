@@ -23,6 +23,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -129,7 +130,7 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 			slog.Error("Failed to inspect image", "error", err, "image", opts.Image)
 			return "", fmt.Errorf("error inspecting image: %w", err)
 		}
-		if info.Platform != nil && info.Platform.OS != opts.Platform.Container.OS {
+		if info.Platform != nil && (info.Platform.OS != opts.Platform.Container.OS || info.Platform.Architecture != opts.Platform.Container.Architecture) {
 			slog.Info("Pull image for platform", "image", opts.Image, "requestedPlatform", opts.Platform.Container.String(), "imagePlatform", info.Platform.OS)
 
 			//This ensure that the requested platform is pulled before creating the container.
@@ -387,7 +388,17 @@ func (d *DockerManager) ExecContainer(ctx context.Context, id string, cmd []stri
 	if err != nil {
 		return nil, err
 	}
-	return resp.Reader, nil
+	defer resp.Close()
+
+	// Docker's exec attach returns a multiplexed stream (stdout+stderr
+	// interleaved with 8-byte headers). We must demultiplex it via
+	// stdcopy.StdCopy so the caller can read clean output.
+	out := new(bytes.Buffer)
+	_, err = stdcopy.StdCopy(out, out, resp.Reader)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (d *DockerManager) InspectContainer(ctx context.Context, id string) (*types.ContainerConfig, error) {
