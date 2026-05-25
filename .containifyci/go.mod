@@ -6,7 +6,7 @@ go 1.25.5
 // replace github.com/containifyci/engine-ci/client => ../client
 
 require (
-	github.com/containifyci/engine-ci/client v0.30.2
+	github.com/containifyci/engine-ci/client v0.30.3
 	github.com/containifyci/engine-ci/protos2 v0.26.2
 )
 
