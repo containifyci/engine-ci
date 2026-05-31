@@ -1,7 +1,7 @@
 FROM --platform=$TARGETPLATFORM alpine:3.23
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-ARG ZIG_VERSION=0.17.0-dev.420+8086ae176
+ARG ZIG_VERSION=0.17.0-dev.263+0add2dfc4
 ARG ZIG_ARCH=x86_64  # Define the architecture
 
 RUN apk add --no-cache curl xz && \
