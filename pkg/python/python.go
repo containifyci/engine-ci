@@ -240,6 +240,14 @@ func NewProd() build.BuildStep {
 }
 
 func (c *PythonContainer) Prod() (string, error) {
+	// Check for custom prod Dockerfile
+	if image, err := c.BuildCustomProdImage(); err != nil {
+		slog.Error("Failed to build custom prod image", "error", err)
+		return c.ID, err
+	} else if image != "" {
+		return image, nil
+	}
+
 	opts := types.ContainerConfig{}
 	// opts.Image = fmt.Sprintf("%s:%s", c.Image, c.ImageTag)
 	opts.Image = BaseImage

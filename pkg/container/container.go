@@ -795,6 +795,34 @@ func (c *Container) BuildIntermidiateContainer(image string, dockerFile []byte, 
 	return err
 }
 
+// BuildCustomProdImage builds a custom prod Dockerfile using BuildIntermidiateContainer and pushes it.
+// Returns the image tag (name:tag) and nil on success, or empty string and the error on failure.
+// If no custom prod Dockerfile is set, returns ("", nil) — this is not an error.
+func (c *Container) BuildCustomProdImage() (string, error) {
+	b := c.GetBuild()
+	v, ok := b.ContainerFiles["prod"]
+	if !ok {
+		return "", nil
+	}
+
+	slog.Info("Using custom prod Dockerfile", "name", v.Name)
+	image := fmt.Sprintf("%s:%s", b.Image, b.ImageTag)
+
+	platforms := types.GetPlatforms(b.Platform)
+	err := c.BuildIntermidiateContainer(image, []byte(v.Content), platforms...)
+	if err != nil {
+		return "", fmt.Errorf("build prod image from custom Dockerfile: %w", err)
+	}
+
+	imageUri := b.ImageURI()
+	err = c.Push(image, imageUri, PushOption{Remove: false})
+	if err != nil {
+		return "", fmt.Errorf("push prod image: %w", err)
+	}
+
+	return image, nil
+}
+
 // TarDir creates a tar archive from a filesystem with memory optimizations and concurrent processing
 func TarDir(src fs.ReadDirFS) (*bytes.Buffer, error) {
 	// Count files first to determine if concurrent processing is beneficial
