@@ -390,6 +390,15 @@ func (c *GoContainer) Prod() (string, error) {
 		slog.Info("Skip No image specified to push")
 		return "", nil
 	}
+
+	// Check for custom prod Dockerfile
+	if image, err := c.BuildCustomProdImage(); err != nil {
+		slog.Error("Failed to build custom prod image", "error", err)
+		return c.ID, err
+	} else if image != "" {
+		return image, nil
+	}
+
 	imageTag := "alpine"
 
 	opts := types.ContainerConfig{}

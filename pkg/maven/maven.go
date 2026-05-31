@@ -18,6 +18,7 @@ import (
 	"github.com/containifyci/engine-ci/pkg/filesystem"
 	"github.com/containifyci/engine-ci/pkg/network"
 	u "github.com/containifyci/engine-ci/pkg/utils"
+	"github.com/containifyci/engine-ci/protos2"
 )
 
 const (
@@ -102,29 +103,47 @@ func ComputeChecksum(data []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func MavenImage(build container.Build) string {
-	dockerFile, err := f.ReadFile("Dockerfile.maven")
+func dockerFile(build *container.Build) (*protos2.ContainerFile, error) {
+	if build != nil {
+		if v, ok := build.ContainerFiles["build"]; ok {
+			slog.Info("Using custom build Dockerfile", "name", v.Name)
+			return v, nil
+		}
+	}
+
+	content, err := f.ReadFile("Dockerfile.maven")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile.maven", "error", err)
 		os.Exit(1)
 	}
-	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(build.ContainifyRegistry, "maven-3-eclipse-temurin-17-alpine", tag)
-	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "maven-3-eclipse-temurin-17-alpine", tag)
+	return &protos2.ContainerFile{
+		Name:    "maven-3-eclipse-temurin-17-alpine",
+		Content: string(content),
+	}, nil
+}
+
+func MavenImage(build container.Build) string {
+	dockerFile, err := dockerFile(&build)
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
+		os.Exit(1)
+	}
+	tag := ComputeChecksum([]byte(dockerFile.Content))
+	return utils.ImageURI(build.ContainifyRegistry, dockerFile.Name, tag)
 }
 
 func (c *MavenContainer) BuildMavenImage() error {
 	image := MavenImage(*c.GetBuild())
-	dockerFile, err := f.ReadFile("Dockerfile.maven")
+	dockerFile, err := dockerFile(c.GetBuild())
 	if err != nil {
-		slog.Error("Failed to read Dockerfile.maven", "error", err)
+		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
 	}
 
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	err = c.BuildIntermidiateContainer(image, dockerFile, platforms...)
+	err = c.BuildIntermidiateContainer(image, []byte(dockerFile.Content), platforms...)
 	if err != nil {
 		slog.Error("Failed to build maven image", "error", err)
 		os.Exit(1)
@@ -228,6 +247,14 @@ func NewProd() build.BuildStep {
 }
 
 func (c *MavenContainer) Prod() (string, error) {
+	// Check for custom prod Dockerfile
+	if image, err := c.BuildCustomProdImage(); err != nil {
+		slog.Error("Failed to build custom prod image", "error", err)
+		return c.ID, err
+	} else if image != "" {
+		return image, nil
+	}
+
 	opts := types.ContainerConfig{}
 	opts.Image = ProdImage
 	opts.Env = []string{

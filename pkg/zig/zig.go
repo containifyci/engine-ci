@@ -10,10 +10,12 @@ import (
 
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
+	"github.com/containifyci/engine-ci/pkg/cri/parser"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/filesystem"
 	"github.com/containifyci/engine-ci/pkg/network"
+	"github.com/containifyci/engine-ci/protos2"
 
 	u "github.com/containifyci/engine-ci/pkg/utils"
 )
@@ -101,18 +103,58 @@ func Images(build container.Build) []string {
 	return []string{ZigImage(build), BaseImage}
 }
 
-func ZigImage(build container.Build) string {
+func dockerFileVersion(dockerFile []byte) string {
+	p := parser.New(dockerFile)
+	from, err := p.ParseFrom()
+	if err != nil {
+		slog.Error("Failed to parse Dockerfile", "error", err)
+		os.Exit(1)
+	}
+	return from[0].BaseVersion
+}
+
+func dockerFile(build *container.Build) (*protos2.ContainerFile, string, error) {
+	if build != nil {
+		if v, ok := build.ContainerFiles["build"]; ok {
+			slog.Info("Using custom build Dockerfile", "name", v.Name)
+			version := dockerFileVersion([]byte(v.Content))
+			return v, version, nil
+		}
+	}
+
 	image := fmt.Sprintf("zig-%s", ImageVersion)
-	return utils.ImageURI(build.ContainifyRegistry, image, DockerfileChecksum)
+	version, _, content := GetDockerfileMetadata("")
+
+	return &protos2.ContainerFile{
+		Name:    image,
+		Content: content,
+	}, version, nil
+}
+
+func ZigImage(build container.Build) string {
+	dockerFile, _, err := dockerFile(&build)
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
+		os.Exit(1)
+	}
+	tag := container.ComputeChecksum([]byte(dockerFile.Content))
+	// image := fmt.Sprintf("golang-%s-alpine", DEFAULT_GO)
+	image := dockerFile.Name
+	return utils.ImageURI(build.ContainifyRegistry, image, tag)
 }
 
 func (c *ZigContainer) BuildZigImage() error {
 	image := ZigImage(*c.GetBuild())
+	dockerFile, _, err := dockerFile(c.GetBuild())
+	if err != nil {
+		slog.Error("Failed to read Dockerfile", "error", err)
+		os.Exit(1)
+	}
 
 	platforms := types.GetPlatforms(c.GetBuild().Platform)
 	slog.Info("Building intermediate image", "image", image, "platforms", platforms)
 
-	return c.BuildIntermidiateContainer(image, ([]byte)(DockerfileContent), platforms...)
+	return c.BuildIntermidiateContainer(image, ([]byte)(dockerFile.Content), platforms...)
 }
 
 func (c *ZigContainer) Address() *network.Address {
@@ -206,6 +248,15 @@ func (c *ZigContainer) Prod() (string, error) {
 		slog.Info("Skip No image specified to push")
 		return "", nil
 	}
+
+	// Check for custom prod Dockerfile
+	if image, err := c.BuildCustomProdImage(); err != nil {
+		slog.Error("Failed to build custom prod image", "error", err)
+		return c.ID, err
+	} else if image != "" {
+		return image, nil
+	}
+
 	opts := types.ContainerConfig{}
 	opts.Image = BaseImage
 	opts.Env = []string{}
