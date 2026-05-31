@@ -171,6 +171,10 @@ jobs:
           chmod: 0755
           # token: ${{ secrets.CONTAINIFYCI_RELEASE_TOKEN }}
 
+      - name: Migrate v1 to v2 /etc/containers/registries.conf
+        run: |
+          echo "unqualified-search-registries = ['docker.io', 'quay.io']" | sudo tee /etc/containers/registries.conf
+
       - name: Install libbtrfs-dev needed by podman go module and libgpgme-dev for containers_image_openpgp
         if: ${{ !inputs.install_binary }}
         run: |
