@@ -8,7 +8,7 @@ const (
 	ImageVersion = "3.23"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "84bd5a3bb267357b412a3673c504c784030c5ca87b2d66f865cf9046a91d1b4f"
+	DockerfileChecksum = "6cd66c03cce5e35ea4f3fff2f571f4441eaefb5e57ce193d00457b2e60207159"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
@@ -16,9 +16,13 @@ var DockerfileContent = `FROM --platform=$TARGETPLATFORM alpine:3.23
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 ARG ZIG_VERSION=0.17.0-dev.263+0add2dfc4
-ARG ZIG_ARCH=x86_64  # Define the architecture
 
 RUN apk add --no-cache curl xz && \
+    case "$TARGETPLATFORM" in \
+        linux/amd64)  ZIG_ARCH=x86_64  ;; \
+        linux/arm64)  ZIG_ARCH=aarch64 ;; \
+        *) echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
+    esac && \
     curl -L https://ziglang.org/builds/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz \
     | tar -xJ -C /usr/local && \
     ln -s /usr/local/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}/zig /usr/local/bin/zig
