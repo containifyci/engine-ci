@@ -351,7 +351,7 @@ func TestContainifyCIv1GRPCPlugin_GRPCClient(t *testing.T) {
 	// We can't easily test the full gRPC client creation without a real gRPC connection
 	// But we can test that the method returns the expected type
 	client, err := plugin.GRPCClient(context.Background(), nil, nil)
-	
+
 	assert.NoError(t, err)
 	assert.IsType(t, &ContainifyCIv1GRPCClient{}, client)
 }
@@ -363,7 +363,7 @@ func TestContainifyCIv2GRPCPlugin_GRPCClient(t *testing.T) {
 	// We can't easily test the full gRPC client creation without a real gRPC connection
 	// But we can test that the method returns the expected type
 	client, err := plugin.GRPCClient(context.Background(), nil, nil)
-	
+
 	assert.NoError(t, err)
 	assert.IsType(t, &ContainifyCIv2GRPCClient{}, client)
 }
@@ -433,7 +433,7 @@ func TestErrorPropagation_NoPanic(t *testing.T) {
 			assert.Nil(t, result)
 			assert.Equal(t, expectedError, err)
 		})
-		
+
 		mockClient.AssertExpectations(t)
 	})
 
@@ -453,7 +453,7 @@ func TestErrorPropagation_NoPanic(t *testing.T) {
 			assert.Nil(t, result)
 			assert.Equal(t, expectedError, err)
 		})
-		
+
 		mockClient.AssertExpectations(t)
 	})
 }
@@ -462,10 +462,10 @@ func TestErrorPropagation_NoPanic(t *testing.T) {
 func TestInterfaceCompliance(t *testing.T) {
 	// Test that v1 client implements the interface
 	var _ ContainifyCIv1 = &ContainifyCIv1GRPCClient{}
-	
-	// Test that v2 client implements the interface  
+
+	// Test that v2 client implements the interface
 	var _ ContainifyCIv2 = &ContainifyCIv2GRPCClient{}
-	
+
 	// This test will fail to compile if the interfaces aren't properly implemented
 	t.Log("Interface compliance check passed")
 }
@@ -480,7 +480,7 @@ func BenchmarkContainifyCIv1GRPCClient_GetBuild(b *testing.B) {
 	response := &BuildArgsResponse{
 		Args: []*BuildArgs{{
 			Application: "test",
-			Registry:    "docker.io", 
+			Registry:    "docker.io",
 			Image:       "test:latest",
 		}},
 	}
