@@ -11,7 +11,7 @@ require (
 	github.com/containers/buildah v1.43.1
 	github.com/containers/podman/v5 v5.8.2
 	github.com/containifyci/engine-ci/protos2 v0.26.2
-	github.com/containifyci/go-self-update v0.2.5
+	github.com/containifyci/go-self-update v0.2.7
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.7.0
 	github.com/dusted-go/logging v1.3.0
@@ -25,10 +25,10 @@ require (
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
-	go.podman.io/common v0.67.1
+	go.podman.io/common v0.68.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/term v0.43.0
-	google.golang.org/api v0.282.0
+	google.golang.org/api v0.283.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -101,6 +101,7 @@ require (
 	github.com/moby/moby/api v1.54.2 // indirect
 	github.com/moby/moby/client v0.4.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
+	github.com/moby/sys/devices v0.1.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/sys/user v0.4.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
@@ -144,7 +145,7 @@ require (
 	go.podman.io/storage v1.63.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.51.0 // indirect
-	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
