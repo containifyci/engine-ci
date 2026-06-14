@@ -1,4 +1,4 @@
-FROM alpine:3.23 as builder
+FROM alpine:3.24 as builder
 
 ARG TARGETPLATFORM
 ARG GH_VERSION=2.86.0
@@ -10,7 +10,7 @@ RUN export RELEASE_LOCATION="${GH_VERSION}_$(echo "${TARGETPLATFORM//\//_}")" &&
     chmod +x gh_${RELEASE_LOCATION}/bin/gh && \
     rsync -az --remove-source-files gh_${RELEASE_LOCATION}/bin/ /usr/bin
 
-FROM alpine:3.23 as gh
+FROM alpine:3.24 as gh
 
 RUN apk add --no-cache git libc6-compat curl openssh
 COPY --from=builder /usr/bin/gh /usr/bin/
