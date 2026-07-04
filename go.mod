@@ -9,8 +9,8 @@ go 1.25.9
 require (
 	cloud.google.com/go/iam v1.11.0
 	github.com/containers/buildah v1.43.2
-	github.com/containers/podman/v5 v5.8.3
-	github.com/containifyci/engine-ci/protos2 v0.26.2
+	github.com/containers/podman/v5 v5.8.4
+	github.com/containifyci/engine-ci/protos2 v0.26.3
 	github.com/containifyci/go-self-update v0.2.7
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.7.0
@@ -25,7 +25,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
-	go.podman.io/common v0.68.0
+	go.podman.io/common v1.0.1
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/term v0.44.0
 	google.golang.org/api v0.285.0
@@ -36,6 +36,7 @@ require (
 	cloud.google.com/go/auth v0.20.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
+	cyphar.com/go-pathrs v0.2.4 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
@@ -101,7 +102,6 @@ require (
 	github.com/moby/moby/client v0.4.1 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
-	github.com/moby/sys/devices v0.1.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/sys/user v0.4.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
@@ -154,7 +154,7 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
-	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/grpc v1.82.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
@@ -171,7 +171,7 @@ require (
 // wrappers (these were moved to the pathrs-lite package within the same module in v0.5.0),
 // but go.podman.io/storage@v1.62.0 still uses them.
 // Pin to v0.5.2 which still has those wrappers until storage is updated.
-replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.2
+// replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.2
 
 // podman v5.8.0 (and its transitive deps) use LinuxPids.Limit as int64 (not *int64),
 // but runtime-spec v1.3.0 changed that field to *int64. Pin to v1.2.1 until podman is updated.
@@ -180,3 +180,5 @@ replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runt
 // runtime-tools v0.9.1-0.20251114084447 uses &limit (*int64) for LinuxPids.Limit which requires
 // runtime-spec v1.3.0, but we're pinned to v1.2.1 (int64). Pin to old version that uses int64.
 replace github.com/opencontainers/runtime-tools => github.com/opencontainers/runtime-tools v0.9.1-0.20250523060157-0ea5ed0382a2
+
+replace go.podman.io/common => go.podman.io/common v0.67.1
