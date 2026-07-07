@@ -3,41 +3,30 @@ name: Reusable ContainifyCI workflow
 on:
   workflow_call:
     inputs:
-      dockerhub_user:
-        description: "The Docker Hub username"
-        required: true
-        default: "containifyci"
-        type: string
-      version:
-        description: "The engine version to use"
+      ai_enabled:
+        description: "Enable ai build steps for the build"
         required: false
-        # This value has to be adjusted during the release process
-        default: "v1.0.12"
+        default: true
+        type: boolean
+      checkout_ref:
+        description: "The ref to use for git checkout action. Leave empty to use the workflow ref"
+        required: false
+        default: ""
+        type: string
+      checkout_repository:
+        description: "The repository to use for git checkout action. Leave empty to use the current repository"
+        required: false
+        default: ""
         type: string
       containifyci_file:
         description: "The engine file to use"
         required: false
         default: ".containifyci/containifyci.go"
         type: string
-      runs_on:
-        description: "The runner vm image to use for example ubuntu-24.04"
-        required: false
-        default: "ubuntu-24.04"
-        type: string
-      remote_debug:
-        description: "Enable remote debugging. Also pass the NGROK_AUTH_TOKEN"
-        required: false
-        default: false
-        type: boolean
-      remote_debug_user:
-        description: "Github user account used for fetching the public key to setup ssh access"
-        required: false
-        default: ""
-        type: string
-      runtime:
-        description: "Configure the container runtime to use (docker or podman)"
-        required: false
-        default: "docker"
+      dockerhub_user:
+        description: "The Docker Hub username"
+        required: true
+        default: "containifyci"
         type: string
       engine_command:
         description: "The engine command to run"
@@ -49,16 +38,37 @@ on:
         required: false
         default: true
         type: boolean
+      remote_debug:
+        description: "Enable remote debugging. Also pass the NGROK_AUTH_TOKEN"
+        required: false
+        default: false
+        type: boolean
+      remote_debug_user:
+        description: "Github user account used for fetching the public key to setup ssh access"
+        required: false
+        default: ""
+        type: string
+      runs_on:
+        description: "The runner vm image to use for example ubuntu-24.04"
+        required: false
+        default: "ubuntu-24.04"
+        type: string
+      runtime:
+        description: "Configure the container runtime to use (docker or podman)"
+        required: false
+        default: "docker"
+        type: string
       upload_artifacts:
         description: "Upload artifacts after the build"
         required: false
         default: false
         type: boolean
-      ai_enabled:
-        description: "Enable ai build steps for the build"
+      version:
+        description: "The engine version to use"
         required: false
-        default: true
-        type: boolean
+        # This value has to be adjusted during the release process
+        default: "v0.42.9"
+        type: string
     secrets:
       CONTAINIFYCI_DOCKER_TOKEN:
         required: false
@@ -97,7 +107,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.head_ref }}
+          repository: ${{ inputs.checkout_repository || github.repository }}
+          ref: ${{ inputs.checkout_ref || github.head_ref || github.ref_name }}
 
       - name: Set COMMIT_SHA environment variable
         run: echo "COMMIT_SHA=$(if [ '${{ github.event_name }}' == 'pull_request' ]; then echo '${{ github.event.pull_request.head.sha }}'; else echo '${{ github.sha }}'; fi)" >> $GITHUB_ENV
