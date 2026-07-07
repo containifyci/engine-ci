@@ -1,7 +1,7 @@
-FROM --platform=$TARGETPLATFORM alpine:3.24
+FROM alpine:3.24
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-ARG ZIG_VERSION=0.17.0-dev.263+0add2dfc4
+ARG ZIG_VERSION=0.17.0-dev.1267+300116b02
 
 RUN apk add --no-cache curl xz && \
     case "$TARGETPLATFORM" in \
