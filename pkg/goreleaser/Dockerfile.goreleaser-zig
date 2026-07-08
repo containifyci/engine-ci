@@ -1,5 +1,5 @@
-FROM goreleaser/goreleaser:v2.15.2
-ARG ZIG_VERSION="0.17.0-dev.87+9b177a7d2"
+FROM goreleaser/goreleaser:v2.17.0
+ARG ZIG_VERSION="0.17.0-dev.1267+300116b02"
 
 RUN apk add --no-cache curl xz && \
     ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
