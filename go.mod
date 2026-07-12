@@ -9,7 +9,7 @@ go 1.25.9
 require (
 	cloud.google.com/go/iam v1.11.0
 	github.com/containers/buildah v1.43.2
-	github.com/containers/podman/v5 v5.8.4
+	github.com/containers/podman/v5 v5.8.5
 	github.com/containifyci/engine-ci/protos2 v0.26.3
 	github.com/containifyci/go-self-update v0.2.7
 	github.com/docker/docker v28.5.2+incompatible
@@ -27,8 +27,8 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.podman.io/common v1.0.1
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/term v0.44.0
-	google.golang.org/api v0.287.0
+	golang.org/x/term v0.45.0
+	google.golang.org/api v0.288.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -149,11 +149,11 @@ require (
 	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260622175928-b703f567277d // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260630182238-925bb5da69e7 // indirect
 	google.golang.org/grpc v1.82.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
