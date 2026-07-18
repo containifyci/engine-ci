@@ -280,6 +280,7 @@ func (c *GoContainer) Build() error {
 
 	opts := types.ContainerConfig{}
 	opts.Image = imageTag
+	opts.Platform = types.AutoPlatform
 	opts.Env = append(opts.Env, []string{
 		"GOMODCACHE=/go/pkg/",
 		"GOCACHE=/go/pkg/build-cache",

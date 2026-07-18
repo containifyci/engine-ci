@@ -73,6 +73,15 @@ func CacheFolder() string {
 		slog.Error("Failed to create cache folder: %s", "error", err)
 		os.Exit(1)
 	}
+
+	// Ensure the cache directory is world-writable so the SonarScanner container
+	// (running as root) can create subdirectories like _tmp inside it.
+	// os.MkdirAll uses os.ModePerm but actual permissions are masked by umask.
+	err = os.Chmod(folder, 0777)
+	if err != nil {
+		slog.Warn("Failed to set permissions on cache folder", "folder", folder, "error", err)
+	}
+
 	slog.Info("Cache folder", "folder", folder)
 
 	return folder
@@ -174,7 +183,6 @@ func (c *SonarcloudContainer) Analyze(env container.EnvType, token *string, addr
 			Source: dir,
 			Target: "/usr/src",
 		},
-		//TODO: Fix accessing problem from Github Action Unable to create temp dir/opt/sonar-scanner/.sonar/cache/_tmp
 		{
 			Type:   "bind",
 			Source: cache,

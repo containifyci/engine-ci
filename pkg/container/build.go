@@ -138,7 +138,6 @@ type Build struct {
 	defaults           bool
 }
 
-
 type BuildGroup struct {
 	Builds []*Build
 }

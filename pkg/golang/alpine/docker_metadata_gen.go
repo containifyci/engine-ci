@@ -8,7 +8,7 @@ const (
 	ImageVersion = "1.26.5-alpine"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "fda4324cb201eb016e7316383141e2fe2835dbab6fb675260333b05ed239a344"
+	DockerfileChecksum = "096a36b82ff5fb5374e293978cafc2ef2acd74dca11238cb8c034d61ae3d91f3"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
@@ -19,7 +19,7 @@ RUN apk --no-cache add git openssh-client && \
 
 RUN go install github.com/wadey/gocovmerge@latest && \
   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.3 && \
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 && \
   go clean -cache && \
   go clean -modcache
 `
@@ -30,7 +30,7 @@ const (
 	ImageVersionChromium = "1.26.5-alpine"
 
 	// DockerfileChecksumChromium is the checksum of the Dockerfile content
-	DockerfileChecksumChromium = "516bd5e4ed85eebc2b538a117550742a75edc935365d457620630f52c42748e5"
+	DockerfileChecksumChromium = "d3696de6aee51d403bc2b27d88acc9d58d1d774952440b55edcd5d8bce9ff459"
 )
 
 // DockerfileContentChromium contains the embedded Dockerfile content
@@ -41,7 +41,7 @@ RUN apk --no-cache add git openssh-client chromium && \
 
 RUN go install github.com/wadey/gocovmerge@latest && \
   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.3 && \
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 && \
   go clean -cache && \
   go clean -modcache
 `

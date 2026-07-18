@@ -123,7 +123,7 @@ RUN apk --no-cache add git openssh-client && \
 
 RUN go install github.com/wadey/gocovmerge@latest && \
   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0 && \
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 && \
   go clean -cache && \
   go clean -modcache
 WORKDIR /app`,

@@ -873,7 +873,8 @@ func (p *PodmanManager) PullImage(ctx context.Context, image string, authBase64 
 
 	var buf bytes.Buffer
 	unwahr := false
-	var progressWriter io.Writer = &buf
+	// Write progress to both stderr (visible to user) and the buffer (returned to caller)
+	var progressWriter = io.MultiWriter(os.Stderr, &buf)
 
 	platformSpec := types.ParsePlatform(platform)
 
@@ -888,7 +889,6 @@ func (p *PodmanManager) PullImage(ctx context.Context, image string, authBase64 
 		opts.OS = &platformSpec.OS
 	}
 
-	// TODO progress writer is not working
 	_, err = images.Pull(p.conn, image, &opts)
 	if err != nil {
 		return nil, err
