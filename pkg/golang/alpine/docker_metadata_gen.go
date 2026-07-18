@@ -8,11 +8,11 @@ const (
 	ImageVersion = "1.26.5-alpine"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "e8bef64de8b7157070af75d2830a3718ad6de035d64b6c67d89c27f0aafcac7f"
+	DockerfileChecksum = "096a36b82ff5fb5374e293978cafc2ef2acd74dca11238cb8c034d61ae3d91f3"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM --platform=$BUILDPLATFORM golang:1.26.5-alpine
+var DockerfileContent = `FROM golang:1.26.5-alpine
 
 RUN apk --no-cache add git openssh-client && \
   rm -rf /var/cache/apk/*
@@ -30,11 +30,11 @@ const (
 	ImageVersionChromium = "1.26.5-alpine"
 
 	// DockerfileChecksumChromium is the checksum of the Dockerfile content
-	DockerfileChecksumChromium = "fce9c239ee34f763a98a73259ad31a135203a005ba60b982c05f57a42e67e457"
+	DockerfileChecksumChromium = "d3696de6aee51d403bc2b27d88acc9d58d1d774952440b55edcd5d8bce9ff459"
 )
 
 // DockerfileContentChromium contains the embedded Dockerfile content
-var DockerfileContentChromium = `FROM --platform=$BUILDPLATFORM golang:1.26.5-alpine
+var DockerfileContentChromium = `FROM golang:1.26.5-alpine
 
 RUN apk --no-cache add git openssh-client chromium && \
   rm -rf /var/cache/apk/*

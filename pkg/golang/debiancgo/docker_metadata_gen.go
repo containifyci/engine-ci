@@ -8,11 +8,11 @@ const (
 	ImageVersion = "1.26.5"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "b1b82e9880e54d325a42e4f1610d9ae972de34ae44be88ed26525e218369053e"
+	DockerfileChecksum = "90d42faddd6109c248982316fb76266f3466e0d358b30b46660ba5082b535cf5"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM --platform=$BUILDPLATFORM golang:1.26.5
+var DockerfileContent = `FROM golang:1.26.5
 
 RUN apt-get update && \
     apt-get install -y clang build-essential \
@@ -39,10 +39,11 @@ RUN apt-get update && \
 #   go clean -cache && \
 #   go clean -modcache
 
+ARG TARGETARCH
 ENV CGO_ENABLED=1
 ENV OPENSSL_DIR=/usr/include/openssl
 ENV CGO_CFLAGS="-I/usr/include/openssl"
-ENV CGO_LDFLAGS="-L/usr/lib/$TARGETARCH-linux-gnu -lssl -lcrypto"
+ENV CGO_LDFLAGS="-L/usr/lib/${TARGETARCH}-linux-gnu -lssl -lcrypto"
 `
 
 // GetDockerfileMetadata returns the metadata for the specified variant type.

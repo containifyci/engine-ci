@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.26.5
+FROM golang:1.26.5
 
 RUN apt-get update && \
     apt-get install -y clang build-essential \
@@ -25,7 +25,8 @@ RUN apt-get update && \
 #   go clean -cache && \
 #   go clean -modcache
 
+ARG TARGETARCH
 ENV CGO_ENABLED=1
 ENV OPENSSL_DIR=/usr/include/openssl
 ENV CGO_CFLAGS="-I/usr/include/openssl"
-ENV CGO_LDFLAGS="-L/usr/lib/$TARGETARCH-linux-gnu -lssl -lcrypto"
+ENV CGO_LDFLAGS="-L/usr/lib/${TARGETARCH}-linux-gnu -lssl -lcrypto"
