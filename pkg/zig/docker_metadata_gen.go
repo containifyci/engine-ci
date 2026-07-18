@@ -8,14 +8,14 @@ const (
 	ImageVersion = "3.24"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "e6162720b8c60c5856790e7864262208a925e3254b39c6034d6e45d7049e0a32"
+	DockerfileChecksum = "e5b7e67c638a5cfe63223a0440d2102971f2beff79e4e8db8ee59d8d498df94d"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
 var DockerfileContent = `FROM alpine:3.24
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-ARG ZIG_VERSION=0.17.0-dev.1267+300116b02
+ARG ZIG_VERSION=0.17.0-dev.1422+e863bf3be
 
 RUN apk add --no-cache curl xz && \
     case "$TARGETPLATFORM" in \
