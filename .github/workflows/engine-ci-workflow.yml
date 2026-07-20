@@ -142,7 +142,7 @@ jobs:
           password: ${{ secrets.CONTAINIFYCI_DOCKER_TOKEN }}
 
       - name: Install go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         if: ${{ !inputs.install_binary }}
         with:
           go-version-file: go.mod
