@@ -15,7 +15,7 @@ require (
 	github.com/containifyci/engine-ci/protos2 v0.26.5
 	github.com/containifyci/go-self-update v0.2.7
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/docker/go-connections v0.7.0
+	github.com/docker/go-connections v0.8.0
 	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
@@ -30,7 +30,7 @@ require (
 	go.podman.io/common v1.0.1
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/term v0.45.0
-	google.golang.org/api v0.289.0
+	google.golang.org/api v0.290.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
