@@ -5,15 +5,15 @@ package goreleaser
 // Default Dockerfile (Dockerfile.goreleaser-zig)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "v2.17.0"
+	ImageVersion = "v2.17.1"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "5eeaea063fae3f1c38f39cd89badc352c0f2ab1eecced8d3c7fca40c23fdec60"
+	DockerfileChecksum = "24e45c31c25e590d0374326a70b60dbd1f2848bd42556b76ab1ce09a4e214c04"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM goreleaser/goreleaser:v2.17.0
-ARG ZIG_VERSION="0.17.0-dev.1267+300116b02"
+var DockerfileContent = `FROM goreleaser/goreleaser:v2.17.1
+ARG ZIG_VERSION="0.17.0-dev.1422+e863bf3be"
 
 RUN apk add --no-cache curl xz && \
     ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
