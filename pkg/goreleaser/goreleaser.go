@@ -16,10 +16,9 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	criutils "github.com/containifyci/engine-ci/pkg/cri/utils"
+	"github.com/containifyci/engine-ci/pkg/svc"
 	utils "github.com/containifyci/engine-ci/pkg/utils"
 	"github.com/containifyci/engine-ci/pkg/zig"
-
-	"github.com/containifyci/engine-ci/pkg/svc"
 )
 
 //go:embed .goreleaser.yaml
@@ -29,7 +28,7 @@ var defaultGoreleaserConfig []byte
 var defaultZigGoreleaserConfig []byte
 
 const (
-	IMAGE             = "goreleaser/goreleaser:v2.17.0"
+	IMAGE             = "goreleaser/goreleaser:v2.17.1"
 	defaultConfigPath = "/tmp/.goreleaser-default.yaml"
 	zigCacheLocation  = "/root/.cache/zig"
 )
