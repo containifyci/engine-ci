@@ -186,11 +186,11 @@ jobs:
         run: |
           echo "unqualified-search-registries = ['docker.io', 'quay.io']" | sudo tee /etc/containers/registries.conf
 
-      - name: Install libbtrfs-dev needed by podman go module and libgpgme-dev for containers_image_openpgp
+      - name: Install libbtrfs-dev needed by podman go module
         if: ${{ !inputs.install_binary }}
         run: |
           sudo apt-get update
-          sudo apt-get install libbtrfs-dev libgpgme-dev
+          sudo apt-get install libbtrfs-dev
 
       - name: Prepare Github Action
         run: |

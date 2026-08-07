@@ -65,7 +65,7 @@ func main() {
 	opts1.File = "main.go"
 	opts1.Properties = map[string]*build.ListValue{
 		"goreleaser": build.NewList("true"),
-		"tags":       build.NewList("containers_image_openpgp"),
+		"tags":       build.NewList("containers_image_openpgp", "exclude_graphdriver_btrfs"),
 	}
 	opts1.Image = ""
 	opts1.Registries = registryAuth()
@@ -73,7 +73,7 @@ func main() {
 	custom := build.NewGoServiceBuild("engine-ci-custom")
 	custom.File = "main.go"
 	custom.Properties = map[string]*build.ListValue{
-		"tags": build.NewList("containers_image_openpgp"),
+		"tags": build.NewList("containers_image_openpgp", "exclude_graphdriver_btrfs"),
 	}
 	custom.Image = ""
 	custom.ContainerFiles = map[string]*protos2.ContainerFile{
@@ -85,7 +85,7 @@ func main() {
 	opts2 := build.NewGoServiceBuild("engine-ci-debian")
 	opts2.File = "main.go"
 	opts2.Properties = map[string]*build.ListValue{
-		"tags": build.NewList("containers_image_openpgp"),
+		"tags": build.NewList("containers_image_openpgp", "exclude_graphdriver_btrfs"),
 		"from": build.NewList("debian"),
 	}
 	opts2.Image = ""
@@ -94,7 +94,7 @@ func main() {
 	opts3 := build.NewGoServiceBuild("engine-ci-debiancgo")
 	opts3.File = "main.go"
 	opts3.Properties = map[string]*build.ListValue{
-		"tags": build.NewList("containers_image_openpgp"),
+		"tags": build.NewList("containers_image_openpgp", "exclude_graphdriver_btrfs"),
 		"from": build.NewList("debiancgo"),
 	}
 	opts3.Image = ""

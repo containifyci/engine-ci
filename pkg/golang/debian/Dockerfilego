@@ -1,8 +1,8 @@
 FROM golang:1.26.5
 
-# libbtrfs-dev is needed by podman go module
+# Note: libbtrfs-dev is not needed since we build with exclude_graphdriver_btrfs tag
 RUN apt-get update && \
-  apt-get install -y git openssh-client libbtrfs-dev && \
+  apt-get install -y git openssh-client && \
   apt-get clean -y && \
   apt-get autoremove -y && \
   rm -rf /tmp/* /var/tmp/* && \

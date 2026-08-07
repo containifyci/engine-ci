@@ -44,11 +44,6 @@ jobs:
           tag: ${{ inputs.tag_name }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install libbtrfs-dev needed by podman go module
-        run: |
-          sudo apt-get update
-          sudo apt-get install libbtrfs-dev
-
       - name: Install go
         uses: actions/setup-go@v7
         with:
@@ -67,4 +62,4 @@ jobs:
 
       - name: Release
         run: |
-          go run --tags containers_image_openpgp main.go engine -t release
+          go run --tags containers_image_openpgp,exclude_graphdriver_btrfs main.go engine -t release
