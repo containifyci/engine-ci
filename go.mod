@@ -165,16 +165,17 @@ require (
 	tags.cncf.io/container-device-interface v1.1.0 // indirect
 )
 
+// The following commented-out replaces were needed in the Podman v5 era.
+// Podman v6 (go.podman.io/podman/v6) resolves these natively, so they are no longer needed.
 // github.com/containers/common => github.com/containers/common v0.62.3
-// until https://github.com/containers/podman release a new version that includes docker v28.0.x
 // github.com/containers/image/v5 => github.com/containers/image/v5 v5.34.3
 // Use local protos2 instead of remote version
 // replace github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
 
 // github.com/cyphar/filepath-securejoin v0.6.0 removed the deprecated OpenInRoot and Reopen
-// wrappers (these were moved to the pathrs-lite package within the same module in v0.5.0),
-// but go.podman.io/storage@v1.62.0 still uses them.
-// Pin to v0.5.2 which still has those wrappers until storage is updated.
+// wrappers (these were moved to the pathrs-lite package within the same module in v0.5.0).
+// Podman v6.0.2 uses storage v1.63.0 which no longer needs these wrappers.
+// replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.2
 // replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.2
 
 // podman v6.0.2 uses runtime-spec v1.3.0 natively (*int64 for LinuxPids.Limit)
