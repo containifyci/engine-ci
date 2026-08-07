@@ -17,21 +17,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/api/types/registry"
+	"github.com/moby/moby/api/types/registry"
 
-	"github.com/containers/podman/v5/libpod/define"
-	"github.com/containers/podman/v5/pkg/api/handlers"
-	"github.com/containers/podman/v5/pkg/bindings"
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/bindings/images"
-	"github.com/containers/podman/v5/pkg/bindings/manifests"
-	"github.com/containers/podman/v5/pkg/bindings/secrets"
-	"github.com/containers/podman/v5/pkg/specgen"
-	"github.com/docker/docker/api/types/container"
+	"go.podman.io/podman/v6/libpod/define"
+	"go.podman.io/podman/v6/pkg/api/handlers"
+	"go.podman.io/podman/v6/pkg/bindings"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/bindings/images"
+	"go.podman.io/podman/v6/pkg/bindings/manifests"
+	"go.podman.io/podman/v6/pkg/bindings/secrets"
+	"go.podman.io/podman/v6/pkg/specgen"
+	"github.com/moby/moby/api/types/container"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
 	nettypes "go.podman.io/common/libnetwork/types"
 
-	buildahDefine "github.com/containers/buildah/define"
+	buildahDefine "go.podman.io/buildah/define"
 
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
@@ -80,12 +80,14 @@ func NewPodmanManager() (*PodmanManager, error) {
 
 	if strings.HasPrefix(strings.TrimSpace(string(output)), "podman version 3.") ||
 		strings.HasPrefix(strings.TrimSpace(string(output)), "podman version 4.") {
+		// Podman v3/v4: use 'podman info' to get the socket path
 		cmd, err := exec.Command("podman", "info", "-f", "{{ .Host.RemoteSocket.Path }}").Output()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get podman socket info: %w", err)
 		}
 		podmanSocket = strings.TrimSpace(string(cmd))
 	} else {
+		// Podman v5/v6+: use 'podman machine inspect' to get the socket path
 		cmd, err := exec.Command("podman", "machine", "inspect", "--format", "{{ .ConnectionInfo.PodmanSocket.Path }}").Output()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get podman machine socket: %w", err)
@@ -532,7 +534,7 @@ func tarFile(srcPath, destPath string) (*bytes.Buffer, error) {
 // ExecContainer executes a container
 func (p *PodmanManager) ExecContainer(ctx context.Context, id string, cmd []string, attachStdOut bool) (io.Reader, error) {
 	id, err := containers.ExecCreate(p.conn, id, &handlers.ExecCreateConfig{
-		ExecOptions: container.ExecOptions{
+		ExecCreateRequest: container.ExecCreateRequest{
 			Cmd:          cmd,
 			AttachStdout: attachStdOut,
 		},
