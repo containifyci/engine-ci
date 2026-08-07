@@ -158,7 +158,8 @@ verification when running against actual Podman v6 binaries:
 - [ ] **5.1** Verify `podman info -f "{{ .Host.RemoteSocket.Path }}"` works in v6
 - [ ] **5.2** Check GitHub Actions runner OS (no `macos-13` Intel, use ubuntu-24.04)
 - [ ] **5.3** Verify `/etc/containers/registries.conf` format valid in v6
-- [ ] **5.4** Verify `libbtrfs-dev` still needed (storage v1.63.0 unchanged, likely fine)
+- [x] **5.4** `libbtrfs-dev` and `libgpgme-dev` are NOT needed - removed from CI/Dockerfiles
+      (build tags `containers_image_openpgp,exclude_graphdriver_btrfs` exclude both C libraries)
 - [ ] **5.5** If CI uses distro podman, ensure v6 is available (may need PPA or static binary)
 - [ ] **5.6** Network isolation default change (v6 defaults to enabled) - test cross-container networking
 - [ ] **5.7** Run integration tests with podman v6 runtime in CI matrix

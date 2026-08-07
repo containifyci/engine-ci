@@ -8,15 +8,15 @@ const (
 	ImageVersion = "1.26.5"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "e0fb67fb45bdc2c0383140a3caf66d5596bac4ffd974f4ff88b5e2fe836712a8"
+	DockerfileChecksum = "1e85e8fff6276d3e0b3d3d69e74d22bad97dae6f6f44334372c38e252dc2af47"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
 var DockerfileContent = `FROM golang:1.26.5
 
-# libbtrfs-dev is needed by podman go module
+# Note: libbtrfs-dev is not needed since we build with exclude_graphdriver_btrfs tag
 RUN apt-get update && \
-  apt-get install -y git openssh-client libbtrfs-dev && \
+  apt-get install -y git openssh-client && \
   apt-get clean -y && \
   apt-get autoremove -y && \
   rm -rf /tmp/* /var/tmp/* && \
