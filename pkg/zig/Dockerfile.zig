@@ -1,5 +1,5 @@
 FROM alpine:3.24
-ARG ZIG_VERSION=0.17.0-dev.1422+e863bf3be
+ARG ZIG_VERSION=0.17.0-dev.1609+11e2bb391
 
 RUN apk add --no-cache curl xz && \
     ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
