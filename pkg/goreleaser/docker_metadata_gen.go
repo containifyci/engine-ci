@@ -8,12 +8,12 @@ const (
 	ImageVersion = "v2.17.1"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "4f45d3f29233c888ef6be3e287ae80fa700658433eb906f7565109f60062b83c"
+	DockerfileChecksum = "5fc517a43b1ab2bef5d342f5adbe1a5fa62b8aa7145758bb5b69d7c5e0caf75e"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
 var DockerfileContent = `FROM goreleaser/goreleaser:v2.17.1
-ARG ZIG_VERSION="0.17.0-dev.1609+11e2bb391"
+ARG ZIG_VERSION="0.17.0-dev.1622+2b242157b"
 
 RUN apk add --no-cache curl xz && \
     ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
