@@ -1,0 +1,157 @@
+package cmd
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestCollectImagesCount verifies that every known intermediate image producer
+// is enumerated. Update this count when a new package is added to
+// allImageProducers().
+func TestCollectImagesCount(t *testing.T) {
+	images := CollectImages()
+	// 14 intermediate images: zig, goreleaser-zig, 3x golang (alpine, alpine-chromium,
+	// debian, debian-cgo) wait that's 4 golang, claude, gcloud, github, maven,
+	// packer, protobuf, pulumi, python => 14 total.
+	assert.Len(t, images, 14, "expected 14 intermediate images, got %d", len(images))
+}
+
+// TestCollectImagesUnique verifies there are no duplicate image URIs.
+func TestCollectImagesUnique(t *testing.T) {
+	images := CollectImages()
+	seen := map[string]bool{}
+	for _, img := range images {
+		require.Falsef(t, seen[img.URI], "duplicate image URI: %s", img.URI)
+		seen[img.URI] = true
+	}
+}
+
+// TestCollectImagesContainifyOnly verifies every image is a containifyci
+// intermediate image (no base images like golang:1.26.5 or alpine:latest).
+func TestCollectImagesContainifyOnly(t *testing.T) {
+	images := CollectImages()
+	require.NotEmpty(t, images, "expected at least one image")
+	for _, img := range images {
+		assert.Containsf(t, img.URI, "containifyci/", "image URI should be a containifyci intermediate: %s", img.URI)
+		assert.NotEmptyf(t, img.Name, "image name should not be empty: %s", img.URI)
+		assert.NotEmptyf(t, img.Tag, "image tag should not be empty: %s", img.URI)
+		assert.NotEmptyf(t, img.Dockerfile, "dockerfile path should not be empty: %s", img.URI)
+		assert.NotEmptyf(t, img.Context, "context path should not be empty: %s", img.URI)
+		assert.NotEmptyf(t, img.LatestURI, "latest_uri should not be empty: %s", img.URI)
+		assert.Containsf(t, img.LatestURI, ":latest", "latest_uri should end with :latest: %s", img.LatestURI)
+		assert.NotEmptyf(t, img.BuildStep, "build step should not be empty: %s", img.URI)
+	}
+}
+
+// TestCollectImagesKnownImages verifies that the key expected images are present.
+func TestCollectImagesKnownImages(t *testing.T) {
+	images := CollectImages()
+	names := map[string]ImageInfo{}
+	for _, img := range images {
+		names[img.Name] = img
+	}
+
+	expected := []string{
+		"zig-3.24",
+		"goreleaser-zig-v2.17.1",
+		"golang-1.26.5-alpine",
+		"golang-1.26.5-alpine-chromium",
+		"golang-1.26.5",
+		"golang-1.26.5-cgo",
+		"claude-26-alpine",
+		"gcloud",
+		"gh",
+		"maven-3-eclipse-temurin-17-alpine",
+		"packer",
+		"protobuf",
+		"pulumi-go",
+		"python-3.14-slim-bookworm",
+	}
+	for _, name := range expected {
+		img, ok := names[name]
+		require.Truef(t, ok, "expected image %q in output", name)
+		assert.Truef(t, strings.HasSuffix(img.Dockerfile, "Dockerfile") || strings.Contains(img.Dockerfile, "Dockerfile"),
+			"dockerfile path should reference a Dockerfile: %s", img.Dockerfile)
+	}
+}
+
+// TestCollectImagesSorted verifies the output is sorted by URI for stable
+// matrix generation.
+func TestCollectImagesSorted(t *testing.T) {
+	images := CollectImages()
+	for i := 1; i < len(images); i++ {
+		assert.LessOrEqualf(t, images[i-1].URI, images[i].URI,
+			"images should be sorted by URI: %s > %s", images[i-1].URI, images[i].URI)
+	}
+}
+
+// TestCollectImagesJSONSerializable verifies the output can be marshalled to
+// valid JSON (as the workflow consumes it).
+func TestCollectImagesJSONSerializable(t *testing.T) {
+	images := CollectImages()
+	out, err := json.Marshal(images)
+	require.NoError(t, err)
+	require.NotEmpty(t, out)
+
+	// And can be unmarshalled back.
+	var back []ImageInfo
+	require.NoError(t, json.Unmarshal(out, &back))
+	assert.Len(t, back, len(images))
+}
+
+// TestParseImageURI verifies the URI parser splits image URIs correctly.
+func TestParseImageURI(t *testing.T) {
+	tests := []struct {
+		name       string
+		uri        string
+		dockerfile string
+		buildStep  string
+		wantName   string
+		wantTag    string
+		wantReg    string
+	}{
+		{
+			name:       "simple containifyci image",
+			uri:        "containifyci/zig-3.24:6f9120d0aabb",
+			dockerfile: "pkg/zig/Dockerfile.zig",
+			buildStep:  "zig",
+			wantName:   "zig-3.24",
+			wantTag:    "6f9120d0aabb",
+			wantReg:    "containifyci",
+		},
+		{
+			name:       "image with hyphens in name",
+			uri:        "containifyci/maven-3-eclipse-temurin-17-alpine:214f702cd3",
+			dockerfile: "pkg/maven/Dockerfile.maven",
+			buildStep:  "maven",
+			wantName:   "maven-3-eclipse-temurin-17-alpine",
+			wantTag:    "214f702cd3",
+			wantReg:    "containifyci",
+		},
+		{
+			name:       "image with docker.io host prefix",
+			uri:        "docker.io/containifyci/gh:035c2a5d",
+			dockerfile: "pkg/github/Dockerfile",
+			buildStep:  "github",
+			wantName:   "gh",
+			wantTag:    "035c2a5d",
+			wantReg:    "docker.io/containifyci",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := parseImageURI(tt.uri, tt.dockerfile, tt.buildStep)
+			assert.Equal(t, tt.uri, info.URI)
+			assert.Equal(t, tt.wantName, info.Name)
+			assert.Equal(t, tt.wantTag, info.Tag)
+			assert.Equal(t, tt.wantReg, info.Registry)
+			assert.Equal(t, tt.dockerfile, info.Dockerfile)
+			assert.Equal(t, tt.buildStep, info.BuildStep)
+			assert.NotEmpty(t, info.Context, "context should be the dockerfile directory")
+		})
+	}
+}

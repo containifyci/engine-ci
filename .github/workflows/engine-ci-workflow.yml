@@ -209,6 +209,14 @@ jobs:
         env:
           # If ai_enabled is true => secret value, else => empty string
           CI_CLAUDE_KEY: ${{ inputs.ai_enabled && secrets.CI_CLAUDE_KEY || '' }}
+          # The engine-ci Go code (pkg/container/build.go Defaults()) reads
+          # DOCKER_USERNAME/DOCKER_PASSWORD for the docker.io registry auth used
+          # by registryAuthBase64() to pull/push intermediate images. Without
+          # these, the pull/push falls back to anonymous access and fails for
+          # private/containifyci images. These map to the same secret as the
+          # top-level DOCKER_USER/DOCKER_TOKEN used by the plugin build files.
+          DOCKER_USERNAME: ${{ inputs.dockerhub_user }}
+          DOCKER_PASSWORD: ${{ secrets.CONTAINIFYCI_DOCKER_TOKEN }}
 
       - name: Prepare artifact paths
         if: ${{ inputs.upload_artifacts }}
