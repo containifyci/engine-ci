@@ -8,6 +8,19 @@ on:
         required: false
         default: ""
         type: string
+    secrets:
+      CONTAINIFYCI_DOCKER_TOKEN:
+        required: false
+      CONTAINIFYCI_RELEASE_TOKEN:
+        required: false
+      CONTAINIFYCI_CI_SSH_PRIVATE_KEY:
+        required: false
+      SONAR_TOKEN:
+        required: false
+      NGROK_AUTH_TOKEN:
+        required: false
+      CI_CLAUDE_KEY:
+        required: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
