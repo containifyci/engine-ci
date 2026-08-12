@@ -58,11 +58,12 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  Images,
-		Name_:     "golang",
-		Alias_:    "build",
-		Async_:    false,
+		MatchedFn:      Matches,
+		ImagesFn:       Images,
+		DockerfilesFn:  []string{"pkg/golang/debiancgo/Dockerfilego"},
+		Name_:          "golang",
+		Alias_:         "build",
+		Async_:         false,
 	}
 }
 

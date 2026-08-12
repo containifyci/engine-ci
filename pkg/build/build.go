@@ -49,6 +49,11 @@ type BuildStep interface {
 	BuildType() *container.BuildType
 	Name() string
 	Images(build container.Build) []string
+	// Dockerfiles returns the repository-relative paths to the Dockerfile(s)
+	// this step builds its intermediate image(s) from. Returns empty for steps
+	// that don't build containifyci intermediate images (e.g. linters, trivy,
+	// sonarcloud which only pull pre-built images).
+	Dockerfiles() []string
 	IsAsync() bool
 	Matches(build container.Build) bool
 	RunWithBuild(build container.Build) (string, error)

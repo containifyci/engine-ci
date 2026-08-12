@@ -56,11 +56,12 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  goreleaserImages,
-		Name_:     "gorelease",
-		Alias_:    "release",
-		Async_:    false,
+		MatchedFn:      Matches,
+		ImagesFn:       goreleaserImages,
+		DockerfilesFn:  []string{"pkg/goreleaser/Dockerfile.goreleaser-zig"},
+		Name_:          "gorelease",
+		Alias_:         "release",
+		Async_:         false,
 	}
 }
 

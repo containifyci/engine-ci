@@ -37,11 +37,12 @@ func New() build.BuildStep {
 			container := newC(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  Images,
-		Name_:     "protobuf",
-		Alias_:    "protobuf",
-		Async_:    false,
+		MatchedFn:      Matches,
+		ImagesFn:       Images,
+		DockerfilesFn:  []string{"pkg/protobuf/Dockerfile"},
+		Name_:          "protobuf",
+		Alias_:         "protobuf",
+		Async_:         false,
 	}
 }
 

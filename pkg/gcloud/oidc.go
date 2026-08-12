@@ -46,11 +46,12 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  Images,
-		Name_:     "gcloud_oidc",
-		Alias_:    "oidc",
-		Async_:    false,
+		MatchedFn:      Matches,
+		ImagesFn:       Images,
+		DockerfilesFn:  []string{"pkg/gcloud/Dockerfile"},
+		Name_:          "gcloud_oidc",
+		Alias_:         "oidc",
+		Async_:         false,
 	}
 }
 

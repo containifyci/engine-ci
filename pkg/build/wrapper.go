@@ -8,13 +8,14 @@ import (
 )
 
 type Stepper struct {
-	RunFn      RunFunc
-	MatchedFn  func(build container.Build) bool
-	ImagesFn   func(build container.Build) []string
-	BuildType_ container.BuildType
-	Name_      string
-	Alias_     string
-	Async_     bool
+	RunFn         RunFunc
+	MatchedFn     func(build container.Build) bool
+	ImagesFn      func(build container.Build) []string
+	BuildType_    container.BuildType
+	Name_         string
+	Alias_        string
+	DockerfilesFn []string
+	Async_        bool
 }
 
 func (g Stepper) Run() error {
@@ -39,6 +40,12 @@ func (g Stepper) Images(build container.Build) []string {
 		return g.ImagesFn(build)
 	}
 	return []string{}
+}
+
+// Dockerfiles returns the Dockerfile paths this step builds from. Empty by
+// default; steps that produce containifyci intermediate images set DockerfilesFn.
+func (g Stepper) Dockerfiles() []string {
+	return g.DockerfilesFn
 }
 func (g Stepper) IsAsync() bool { return g.Async_ }
 

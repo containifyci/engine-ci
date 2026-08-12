@@ -62,11 +62,12 @@ func New() build.BuildStep {
 			slog.Info("Claude build", "custom", b.Custom)
 			return c.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  ClaudeImages,
-		Name_:     "claude",
-		Alias_:    "ai",
-		Async_:    false,
+		MatchedFn:      Matches,
+		ImagesFn:       ClaudeImages,
+		DockerfilesFn:  []string{"pkg/ai/claude/alpine/Dockerfile"},
+		Name_:          "claude",
+		Alias_:         "ai",
+		Async_:         false,
 	}
 }
 

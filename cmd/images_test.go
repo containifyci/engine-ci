@@ -10,12 +10,12 @@ import (
 )
 
 // TestCollectImagesCount verifies that every known intermediate image producer
-// is enumerated. Update this count when a new package is added to
-// allImageProducers().
+// is enumerated. Update this count when a new package is added with a
+// Dockerfiles() declaration.
 func TestCollectImagesCount(t *testing.T) {
 	images := CollectImages()
-	// 14 intermediate images: zig, goreleaser-zig, 3x golang (alpine, alpine-chromium,
-	// debian, debian-cgo) wait that's 4 golang, claude, gcloud, github, maven,
+	// 14 intermediate images: zig, goreleaser-zig, 4x golang (alpine,
+	// alpine-chromium, debian, debian-cgo), claude, gcloud, github, maven,
 	// packer, protobuf, pulumi, python => 14 total.
 	assert.Len(t, images, 14, "expected 14 intermediate images, got %d", len(images))
 }
@@ -74,8 +74,20 @@ func TestCollectImagesKnownImages(t *testing.T) {
 	for _, name := range expected {
 		img, ok := names[name]
 		require.Truef(t, ok, "expected image %q in output", name)
-		assert.Truef(t, strings.HasSuffix(img.Dockerfile, "Dockerfile") || strings.Contains(img.Dockerfile, "Dockerfile"),
+		assert.Containsf(t, img.Dockerfile, "Dockerfile",
 			"dockerfile path should reference a Dockerfile: %s", img.Dockerfile)
+	}
+}
+
+// TestCollectImagesDockerfilePaths verifies each image maps to a Dockerfile
+// path and that the context is the Dockerfile's directory.
+func TestCollectImagesDockerfilePaths(t *testing.T) {
+	images := CollectImages()
+	for _, img := range images {
+		assert.Containsf(t, img.Dockerfile, "Dockerfile", "dockerfile path should reference a Dockerfile: %s", img.Dockerfile)
+		assert.NotEmptyf(t, img.Context, "context should be the dockerfile dir: %s", img.Dockerfile)
+		assert.Truef(t, strings.HasSuffix(img.Dockerfile, "/"+img.Context) || strings.Contains(img.Dockerfile, img.Context),
+			"context should be the directory of the dockerfile: ctx=%s df=%s", img.Context, img.Dockerfile)
 	}
 }
 
@@ -101,6 +113,15 @@ func TestCollectImagesJSONSerializable(t *testing.T) {
 	var back []ImageInfo
 	require.NoError(t, json.Unmarshal(out, &back))
 	assert.Len(t, back, len(images))
+}
+
+// TestCollectImagesNoSonar verifies that the sonarcloud image (containifyci/sonar)
+// is intentionally excluded — its Dockerfile lives in hack/sonarcloud/, not a
+// pkg/ package, and it is not part of the pre-build workflow.
+func TestCollectImagesNoSonar(t *testing.T) {
+	for _, img := range CollectImages() {
+		assert.NotContainsf(t, img.Name, "sonar", "sonar image should not be included: %s", img.URI)
+	}
 }
 
 // TestParseImageURI verifies the URI parser splits image URIs correctly.

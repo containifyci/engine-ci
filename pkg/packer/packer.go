@@ -41,12 +41,20 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  build.StepperImages(IMAGE),
-		Name_:     "packer",
-		Alias_:    "packer",
-		Async_:    false,
+		MatchedFn:      Matches,
+		ImagesFn:       Images,
+		DockerfilesFn:  []string{"pkg/packer/Dockerfile"},
+		Name_:          "packer",
+		Alias_:         "packer",
+		Async_:         false,
 	}
+}
+
+// Images returns all images needed for the packer build step: the base
+// image (pulled from Docker Hub) and the containifyci intermediate image
+// (built from the embedded Dockerfile).
+func Images(build container.Build) []string {
+	return []string{IMAGE, Image(build)}
 }
 
 func new(build container.Build) *packerContainer {

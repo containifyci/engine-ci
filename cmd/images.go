@@ -1,31 +1,32 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	claudealpine "github.com/containifyci/engine-ci/pkg/ai/claude/alpine"
 	"github.com/containifyci/engine-ci/pkg/container"
-	"github.com/containifyci/engine-ci/pkg/gcloud"
-	"github.com/containifyci/engine-ci/pkg/github"
-	golangalpine "github.com/containifyci/engine-ci/pkg/golang/alpine"
-	golangdebian "github.com/containifyci/engine-ci/pkg/golang/debian"
-	golangdebiancgo "github.com/containifyci/engine-ci/pkg/golang/debiancgo"
-	"github.com/containifyci/engine-ci/pkg/goreleaser"
-	"github.com/containifyci/engine-ci/pkg/maven"
-	"github.com/containifyci/engine-ci/pkg/packer"
-	"github.com/containifyci/engine-ci/pkg/protobuf"
-	"github.com/containifyci/engine-ci/pkg/pulumi"
-	"github.com/containifyci/engine-ci/pkg/python"
-	"github.com/containifyci/engine-ci/pkg/zig"
-
 	"github.com/spf13/cobra"
 )
 
 // imagesCmd lists all intermediate containifyci container images as JSON.
+//
+// Unlike the cache save/load commands (which call buildSteps.Images() with a
+// real consumer build and rely on Matches() to filter steps), this command
+// enumerates ALL possible intermediate images across every build type and
+// variant. It does so by iterating the steps registered in InitBuildSteps()
+// (cmd/engine.go), bypassing Matches() and calling step.Images() directly with
+// a set of synthetic probe builds that cover all variant-selection mechanisms
+// (BuildType, go_type, from, goreleaser custom property).
+//
+// Each step that produces containifyci intermediate images declares its
+// Dockerfile(s) via the BuildStep.Dockerfiles() method. The command correlates
+// each step's Dockerfiles with the containifyci image URIs returned by
+// step.Images().
 var imagesCmd = &cobra.Command{
 	Use:   "images",
 	Short: "List all intermediate containifyci container images as JSON",
@@ -33,13 +34,18 @@ var imagesCmd = &cobra.Command{
 to the containifyci Docker Hub registry.
 
 The output is a JSON array of objects, each describing one intermediate image
-(image name, checksum tag, full URI, Dockerfile path and the build step name).
-Base images (e.g. golang:1.26.5, alpine:latest) are NOT included — only the
-containifyci/* intermediate images that engine-ci itself produces.
+(image name, checksum tag, full URI, Dockerfile path, build context dir and
+the build step name). Base images (e.g. golang:1.26.5, alpine:latest) are NOT
+included — only the containifyci/* intermediate images that engine-ci itself
+produces.
 
 This is used by the build-intermediate-images GitHub Actions workflow to
 pre-build and push every intermediate image to Docker Hub so that consumer
 CI runs can pull them instead of rebuilding from scratch every time.
+
+The image list is derived automatically from the build steps registered in
+InitBuildSteps() — adding a new package with a Dockerfile and a Dockerfiles()
+declaration automatically includes its intermediate image here.
 `,
 	RunE:       RunImagesCmd,
 	Annotations: map[string]string{skipRootHooks: "true"},
@@ -71,131 +77,6 @@ type ImageInfo struct {
 	BuildStep string `json:"build_step"`
 }
 
-// imageProducer describes a single source of intermediate images.
-type imageProducer struct {
-	// produce returns the containifyci intermediate image URI(s) for this step.
-	// Base images returned by a step's Images() method are filtered out.
-	produce func(build container.Build) []string
-	// buildStep is the engine-ci build step name (for documentation/debugging).
-	buildStep string
-	// dockerfile is the repository-relative path to the Dockerfile.
-	dockerfile string
-}
-
-// allImageProducers returns the list of every intermediate image producer in
-// engine-ci. Adding a new package here automatically includes its image in the
-// `engine-ci images` output and the pre-build workflow.
-//
-// Each producer calls the package's image function directly (e.g. zig.ZigImage,
-// alpine.GoImage) rather than going through buildSteps.Images(), because the
-// latter requires the step's Matches() predicate to pass — and many Matches()
-// functions depend on runtime state (env vars, secrets, custom properties) that
-// is not available when simply enumerating images.
-func allImageProducers() []imageProducer {
-	return []imageProducer{
-		{
-			buildStep:  "zig",
-			dockerfile: "pkg/zig/Dockerfile.zig",
-			produce: func(b container.Build) []string {
-				return []string{zig.ZigImage(b)}
-			},
-		},
-		{
-			buildStep:  "goreleaser",
-			dockerfile: "pkg/goreleaser/Dockerfile.goreleaser-zig",
-			produce: func(b container.Build) []string {
-				return []string{goreleaser.ZigGoreleaserImage(b)}
-			},
-		},
-		{
-			buildStep:  "golang (alpine)",
-			dockerfile: "pkg/golang/alpine/Dockerfile_go",
-			produce: func(b container.Build) []string {
-				return []string{golangalpine.GoImage(b)}
-			},
-		},
-		{
-			buildStep:  "golang (alpine, chromium)",
-			dockerfile: "pkg/golang/alpine/Dockerfile_chromium_go",
-			produce: func(b container.Build) []string {
-				// The chromium variant is selected via the go_type custom property.
-				b.Custom = container.Custom{"go_type": []string{"chromium"}}
-				return []string{golangalpine.GoImage(b)}
-			},
-		},
-		{
-			buildStep:  "golang (debian)",
-			dockerfile: "pkg/golang/debian/Dockerfilego",
-			produce: func(b container.Build) []string {
-				return []string{golangdebian.GoImage(b)}
-			},
-		},
-		{
-			buildStep:  "golang (debian cgo)",
-			dockerfile: "pkg/golang/debiancgo/Dockerfilego",
-			produce: func(b container.Build) []string {
-				return []string{golangdebiancgo.GoImage(b)}
-			},
-		},
-		{
-			buildStep:  "claude",
-			dockerfile: "pkg/ai/claude/alpine/Dockerfile",
-			produce: func(b container.Build) []string {
-				return []string{claudealpine.ClaudeImage(b)}
-			},
-		},
-		{
-			buildStep:  "gcloud",
-			dockerfile: "pkg/gcloud/Dockerfile",
-			produce: func(b container.Build) []string {
-				return []string{gcloud.Image(&b)}
-			},
-		},
-		{
-			buildStep:  "github",
-			dockerfile: "pkg/github/Dockerfile",
-			produce: func(b container.Build) []string {
-				return []string{github.Image(b)}
-			},
-		},
-		{
-			buildStep:  "maven",
-			dockerfile: "pkg/maven/Dockerfile.maven",
-			produce: func(b container.Build) []string {
-				return []string{maven.MavenImage(b)}
-			},
-		},
-		{
-			buildStep:  "packer",
-			dockerfile: "pkg/packer/Dockerfile",
-			produce: func(b container.Build) []string {
-				return []string{packer.Image(b)}
-			},
-		},
-		{
-			buildStep:  "protobuf",
-			dockerfile: "pkg/protobuf/Dockerfile",
-			produce: func(b container.Build) []string {
-				return []string{protobuf.Image(b)}
-			},
-		},
-		{
-			buildStep:  "pulumi",
-			dockerfile: "pkg/pulumi/Dockerfile",
-			produce: func(b container.Build) []string {
-				return []string{pulumi.Image(b)}
-			},
-		},
-		{
-			buildStep:  "python",
-			dockerfile: "pkg/python/Dockerfile.python",
-			produce: func(b container.Build) []string {
-				return []string{python.PythonImage(b)}
-			},
-		},
-	}
-}
-
 // RunImagesCmd implements the `engine-ci images` command.
 func RunImagesCmd(cmd *cobra.Command, _ []string) error {
 	images := CollectImages()
@@ -207,30 +88,92 @@ func RunImagesCmd(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// CollectImages enumerates all intermediate containifyci container images.
+// probeBuilds is the set of synthetic builds used to enumerate all image
+// variants. Each build varies the custom properties / build type that select
+// different Dockerfile variants within a single step (e.g. go_type=chromium
+// selects the chromium Dockerfile in pkg/golang/alpine, from=debian selects
+// the debian variant, BuildType=Zig + goreleaser=true selects the
+// goreleaser-zig image).
+//
+// Adding a new variant mechanism to engine-ci only requires adding a probe
+// build here — the rest of the discovery is automatic.
+func probeBuilds() []*container.Build {
+	mk := func(bt container.BuildType, custom map[string][]string) *container.Build {
+		return (&container.Build{
+			ContainifyRegistry: "containifyci",
+			BuildType:           bt,
+			Custom:              container.Custom(custom),
+		}).Defaults()
+	}
+	return []*container.Build{
+		mk(container.Generic, nil),                                       // default (zig, maven, python, generic, etc.)
+		mk(container.GoLang, nil),                                        // golang alpine default
+		mk(container.GoLang, map[string][]string{"go_type": {"chromium"}}), // golang alpine chromium
+		mk(container.GoLang, map[string][]string{"from": {"debian"}}),    // golang debian
+		mk(container.GoLang, map[string][]string{"from": {"debiancgo"}}),  // golang debiancgo
+		mk(container.Zig, map[string][]string{"goreleaser": {"true"}}),   // goreleaser-zig
+		mk(container.Maven, nil),                                         // maven
+		mk(container.Python, nil),                                        // python
+		mk(container.AI, nil),                                            // claude
+	}
+}
+
+// CollectImages enumerates all intermediate containifyci container images by
+// iterating the build steps registered in InitBuildSteps() and probing each
+// step's Images() method with synthetic builds covering all variants.
+//
 // It is exported so it can be reused by tests and other tooling.
 func CollectImages() []ImageInfo {
-	// A synthetic build with the containifyci registry. Defaults() fills in
-	// the registries/platform map but does NOT require a container runtime.
-	build := (&container.Build{
-		App:                "images",
-		ContainifyRegistry: "containifyci",
-	}).Defaults()
+	// Silence logs — some image functions log warnings on edge cases.
+	slog.SetDefault(slog.New(discardHandler{}))
 
+	InitBuildSteps()
+
+	// Track seen URIs to deduplicate across steps (e.g. golang build + prod
+	// steps both return the same intermediate image).
+	seen := map[string]bool{}
 	var images []ImageInfo
-	seen := make(map[string]bool)
 
-	for _, p := range allImageProducers() {
-		for _, uri := range p.produce(*build) {
-			// Only include containifyci intermediate images, not base images.
-			if !strings.Contains(uri, "containifyci/") {
-				continue
+	for _, bctx := range buildSteps.Steps {
+		step := bctx.Build()
+		dockerfiles := step.Dockerfiles()
+		if len(dockerfiles) == 0 {
+			continue // step doesn't build containifyci intermediate images
+		}
+
+		// Collect all containifyci image URIs this step can produce by probing
+		// it with every variant build. Bypass Matches() (which depends on
+		// runtime state) by calling Images() directly.
+		uris := map[string]bool{}
+		for _, b := range probeBuilds() {
+			for _, uri := range step.Images(*b) {
+				if strings.Contains(uri, "containifyci/") {
+					uris[uri] = true
+				}
+			}
+		}
+
+		// Correlate Dockerfiles with image URIs. If the step declares exactly
+		// one Dockerfile, assign it to every URI this step produces (most steps
+		// produce a single intermediate image). If it declares multiple
+		// Dockerfiles (e.g. golang/alpine has default + chromium), assign them
+		// in sorted order to the sorted URIs.
+		sortedURIs := keys(uris)
+		sort.Strings(sortedURIs)
+		sortedDFs := append([]string{}, dockerfiles...)
+		sort.Strings(sortedDFs)
+
+		for i, uri := range sortedURIs {
+			df := sortedDFs[0]
+			if i < len(sortedDFs) {
+				df = sortedDFs[i]
 			}
 			if seen[uri] {
 				continue
 			}
 			seen[uri] = true
-			images = append(images, parseImageURI(uri, p.dockerfile, p.buildStep))
+			info := parseImageURI(uri, df, step.Name())
+			images = append(images, info)
 		}
 	}
 
@@ -239,6 +182,15 @@ func CollectImages() []ImageInfo {
 		return images[i].URI < images[j].URI
 	})
 	return images
+}
+
+// keys returns the keys of a map[string]bool as a slice.
+func keys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }
 
 // parseImageURI splits a full image URI into an ImageInfo, attaching the
@@ -268,3 +220,11 @@ func parseImageURI(uri, dockerfile, buildStep string) ImageInfo {
 	info.LatestURI = uri + ":latest"
 	return info
 }
+
+// discardHandler is a no-op slog.Handler used to keep command/test output clean.
+type discardHandler struct{}
+
+func (discardHandler) Enabled(_ context.Context, _ slog.Level) bool  { return false }
+func (discardHandler) Handle(_ context.Context, _ slog.Record) error { return nil }
+func (h discardHandler) WithAttrs(_ []slog.Attr) slog.Handler           { return h }
+func (h discardHandler) WithGroup(_ string) slog.Handler                { return h }

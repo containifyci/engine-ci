@@ -46,11 +46,12 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  Images,
-		Name_:     "github",
-		Alias_:    "github",
-		Async_:    true,
+		MatchedFn:      Matches,
+		ImagesFn:       Images,
+		DockerfilesFn:  []string{"pkg/github/Dockerfile"},
+		Name_:          "github",
+		Alias_:         "github",
+		Async_:         true,
 	}
 }
 

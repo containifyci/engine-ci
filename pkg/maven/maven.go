@@ -51,11 +51,12 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  Images,
-		Name_:     "maven",
-		Alias_:    "build",
-		Async_:    false,
+		MatchedFn:      Matches,
+		ImagesFn:       Images,
+		DockerfilesFn:  []string{"pkg/maven/Dockerfile.maven"},
+		Name_:          "maven",
+		Alias_:         "build",
+		Async_:         false,
 	}
 }
 

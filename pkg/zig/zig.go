@@ -45,16 +45,17 @@ func Matches(build container.Build) bool {
 
 func New() build.BuildStep {
 	return build.Stepper{
-		BuildType_: container.Zig,
+		BuildType_:   container.Zig,
 		RunFn: func(build container.Build) (string, error) {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  Images,
-		Name_:     "zig",
-		Alias_:    "build",
-		Async_:    false,
+		MatchedFn:    Matches,
+		ImagesFn:     Images,
+		DockerfilesFn: []string{"pkg/zig/Dockerfile.zig"},
+		Name_:        "zig",
+		Alias_:       "build",
+		Async_:       false,
 	}
 }
 
