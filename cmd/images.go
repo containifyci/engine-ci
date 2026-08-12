@@ -15,18 +15,15 @@ import (
 
 // imagesCmd lists all intermediate containifyci container images as JSON.
 //
-// Unlike the cache save/load commands (which call buildSteps.Images() with a
-// real consumer build and rely on Matches() to filter steps), this command
-// enumerates ALL possible intermediate images across every build type and
-// variant. It does so by iterating the steps registered in InitBuildSteps()
-// (cmd/engine.go), bypassing Matches() and calling step.Images() directly with
-// a set of synthetic probe builds that cover all variant-selection mechanisms
-// (BuildType, go_type, from, goreleaser custom property).
+// It iterates the build steps registered in InitBuildSteps() (cmd/engine.go)
+// and calls step.IntermediateImages() on each. Each step is the authority on
+// its own images and variants — it returns every containifyci intermediate
+// image it can build, paired with its Dockerfile path, in a single call. This
+// bypasses Matches() (which depends on runtime state like env vars/secrets) and
+// avoids any external probing or correlation.
 //
-// Each step that produces containifyci intermediate images declares its
-// Dockerfile(s) via the BuildStep.Dockerfiles() method. The command correlates
-// each step's Dockerfiles with the containifyci image URIs returned by
-// step.Images().
+// Adding a new package with an IntermediateImagesFn declaration automatically
+// includes its image in the output and the pre-build workflow.
 var imagesCmd = &cobra.Command{
 	Use:   "images",
 	Short: "List all intermediate containifyci container images as JSON",
@@ -44,7 +41,7 @@ pre-build and push every intermediate image to Docker Hub so that consumer
 CI runs can pull them instead of rebuilding from scratch every time.
 
 The image list is derived automatically from the build steps registered in
-InitBuildSteps() — adding a new package with a Dockerfile and a Dockerfiles()
+InitBuildSteps() — adding a new package with an IntermediateImagesFn
 declaration automatically includes its intermediate image here.
 `,
 	RunE:       RunImagesCmd,
@@ -88,39 +85,10 @@ func RunImagesCmd(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// probeBuilds is the set of synthetic builds used to enumerate all image
-// variants. Each build varies the custom properties / build type that select
-// different Dockerfile variants within a single step (e.g. go_type=chromium
-// selects the chromium Dockerfile in pkg/golang/alpine, from=debian selects
-// the debian variant, BuildType=Zig + goreleaser=true selects the
-// goreleaser-zig image).
-//
-// Adding a new variant mechanism to engine-ci only requires adding a probe
-// build here — the rest of the discovery is automatic.
-func probeBuilds() []*container.Build {
-	mk := func(bt container.BuildType, custom map[string][]string) *container.Build {
-		return (&container.Build{
-			ContainifyRegistry: "containifyci",
-			BuildType:           bt,
-			Custom:              container.Custom(custom),
-		}).Defaults()
-	}
-	return []*container.Build{
-		mk(container.Generic, nil),                                       // default (zig, maven, python, generic, etc.)
-		mk(container.GoLang, nil),                                        // golang alpine default
-		mk(container.GoLang, map[string][]string{"go_type": {"chromium"}}), // golang alpine chromium
-		mk(container.GoLang, map[string][]string{"from": {"debian"}}),    // golang debian
-		mk(container.GoLang, map[string][]string{"from": {"debiancgo"}}),  // golang debiancgo
-		mk(container.Zig, map[string][]string{"goreleaser": {"true"}}),   // goreleaser-zig
-		mk(container.Maven, nil),                                         // maven
-		mk(container.Python, nil),                                        // python
-		mk(container.AI, nil),                                            // claude
-	}
-}
-
 // CollectImages enumerates all intermediate containifyci container images by
-// iterating the build steps registered in InitBuildSteps() and probing each
-// step's Images() method with synthetic builds covering all variants.
+// iterating the build steps registered in InitBuildSteps() and calling
+// step.IntermediateImages() on each. Each step returns all its images (with
+// Dockerfile paths) in one call — no probing or correlation needed.
 //
 // It is exported so it can be reused by tests and other tooling.
 func CollectImages() []ImageInfo {
@@ -129,50 +97,28 @@ func CollectImages() []ImageInfo {
 
 	InitBuildSteps()
 
-	// Track seen URIs to deduplicate across steps (e.g. golang build + prod
-	// steps both return the same intermediate image).
+	// A synthetic build with the containifyci registry. Defaults() fills in
+	// the registries/platform map but does NOT require a container runtime.
+	build := (&container.Build{
+		App:               "images",
+		ContainifyRegistry: "containifyci",
+	}).Defaults()
+
 	seen := map[string]bool{}
 	var images []ImageInfo
 
 	for _, bctx := range buildSteps.Steps {
 		step := bctx.Build()
-		dockerfiles := step.Dockerfiles()
-		if len(dockerfiles) == 0 {
-			continue // step doesn't build containifyci intermediate images
-		}
-
-		// Collect all containifyci image URIs this step can produce by probing
-		// it with every variant build. Bypass Matches() (which depends on
-		// runtime state) by calling Images() directly.
-		uris := map[string]bool{}
-		for _, b := range probeBuilds() {
-			for _, uri := range step.Images(*b) {
-				if strings.Contains(uri, "containifyci/") {
-					uris[uri] = true
-				}
-			}
-		}
-
-		// Correlate Dockerfiles with image URIs. If the step declares exactly
-		// one Dockerfile, assign it to every URI this step produces (most steps
-		// produce a single intermediate image). If it declares multiple
-		// Dockerfiles (e.g. golang/alpine has default + chromium), assign them
-		// in sorted order to the sorted URIs.
-		sortedURIs := keys(uris)
-		sort.Strings(sortedURIs)
-		sortedDFs := append([]string{}, dockerfiles...)
-		sort.Strings(sortedDFs)
-
-		for i, uri := range sortedURIs {
-			df := sortedDFs[0]
-			if i < len(sortedDFs) {
-				df = sortedDFs[i]
+		for _, img := range step.IntermediateImages(*build) {
+			uri := img.URI
+			if !strings.Contains(uri, "containifyci/") {
+				continue // not a containifyci intermediate image
 			}
 			if seen[uri] {
-				continue
+				continue // deduplicate across steps (e.g. build + prod)
 			}
 			seen[uri] = true
-			info := parseImageURI(uri, df, step.Name())
+			info := parseImageURI(uri, img.Dockerfile, step.Name())
 			images = append(images, info)
 		}
 	}
@@ -182,15 +128,6 @@ func CollectImages() []ImageInfo {
 		return images[i].URI < images[j].URI
 	})
 	return images
-}
-
-// keys returns the keys of a map[string]bool as a slice.
-func keys(m map[string]bool) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	return out
 }
 
 // parseImageURI splits a full image URI into an ImageInfo, attaching the

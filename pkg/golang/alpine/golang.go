@@ -49,12 +49,20 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn:      Matches,
-		ImagesFn:       GoImages,
-		DockerfilesFn:  []string{"pkg/golang/alpine/Dockerfile_go", "pkg/golang/alpine/Dockerfile_chromium_go"},
-		Name_:          "golang",
-		Alias_:         "build",
-		Async_:         false,
+		MatchedFn: Matches,
+		ImagesFn:  GoImages,
+		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
+			// default variant
+			images := []build.IntermediateImage{{URI: GoImage(b), Dockerfile: "pkg/golang/alpine/Dockerfile_go"}}
+			// chromium variant (selected via go_type custom property)
+			chromium := b
+			chromium.Custom = container.Custom{"go_type": []string{"chromium"}}
+			images = append(images, build.IntermediateImage{URI: GoImage(chromium), Dockerfile: "pkg/golang/alpine/Dockerfile_chromium_go"})
+			return images
+		},
+		Name_:  "golang",
+		Alias_: "build",
+		Async_: false,
 	}
 }
 

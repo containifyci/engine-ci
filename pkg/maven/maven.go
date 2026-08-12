@@ -51,12 +51,14 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn:      Matches,
-		ImagesFn:       Images,
-		DockerfilesFn:  []string{"pkg/maven/Dockerfile.maven"},
-		Name_:          "maven",
-		Alias_:         "build",
-		Async_:         false,
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
+			return []build.IntermediateImage{{URI: MavenImage(b), Dockerfile: "pkg/maven/Dockerfile.maven"}}
+		},
+		Name_:  "maven",
+		Alias_: "build",
+		Async_: false,
 	}
 }
 

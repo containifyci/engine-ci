@@ -58,12 +58,14 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn:      Matches,
-		ImagesFn:       Images,
-		DockerfilesFn:  []string{"pkg/golang/debian/Dockerfilego"},
-		Name_:          "golang",
-		Alias_:         "build",
-		Async_:         false,
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
+			return []build.IntermediateImage{{URI: GoImage(b), Dockerfile: "pkg/golang/debian/Dockerfilego"}}
+		},
+		Name_:  "golang",
+		Alias_: "build",
+		Async_: false,
 	}
 }
 

@@ -41,12 +41,14 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn:      Matches,
-		ImagesFn:       Images,
-		DockerfilesFn:  []string{"pkg/packer/Dockerfile"},
-		Name_:          "packer",
-		Alias_:         "packer",
-		Async_:         false,
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
+			return []build.IntermediateImage{{URI: Image(b), Dockerfile: "pkg/packer/Dockerfile"}}
+		},
+		Name_:  "packer",
+		Alias_: "packer",
+		Async_: false,
 	}
 }
 
@@ -141,7 +143,7 @@ func (c *packerContainer) Release(env container.EnvType) error {
 	// Use the KV secret store (opts.Secrets) instead of plain env vars (opts.Env)
 	// This hides secrets from `docker inspect` and uses Podman's secret management
 	opts.Secrets = map[string]string{
-		"HCLOUD_TOKEN":              token,
+		"HCLOUD_TOKEN":             token,
 		"packer_CONFIG_PASSPHRASE": os.Getenv("packer_CONFIG_PASSPHRASE"),
 	}
 

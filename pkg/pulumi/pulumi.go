@@ -43,12 +43,14 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn:      Matches,
-		ImagesFn:       Images,
-		DockerfilesFn:  []string{"pkg/pulumi/Dockerfile"},
-		Name_:          "pulumi",
-		Alias_:         "pulumi",
-		Async_:         false,
+		MatchedFn: Matches,
+		ImagesFn:  Images,
+		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
+			return []build.IntermediateImage{{URI: Image(b), Dockerfile: "pkg/pulumi/Dockerfile"}}
+		},
+		Name_:  "pulumi",
+		Alias_: "pulumi",
+		Async_: false,
 	}
 }
 
