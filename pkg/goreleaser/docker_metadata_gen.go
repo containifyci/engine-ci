@@ -10,6 +10,7 @@ const (
 	// DockerfileChecksum is the checksum of the Dockerfile content
 
 	DockerfileChecksum = "5fc517a43b1ab2bef5d342f5adbe1a5fa62b8aa7145758bb5b69d7c5e0caf75e"
+)
 
 // DockerfileContent contains the embedded Dockerfile content
 var DockerfileContent = `FROM goreleaser/goreleaser:v2.17.1
