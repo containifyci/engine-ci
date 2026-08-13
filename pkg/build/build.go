@@ -16,7 +16,7 @@ import (
 type BuildCategory string
 
 // IntermediateImage pairs a containifyci intermediate image URI with the
-// repository-relative path of the Dockerfile it is built from.
+// path of the Dockerfile.
 type IntermediateImage struct {
 	// URI is the full image URI, e.g. containifyci/zig-3.24:6f9120d0...
 	URI string
@@ -58,12 +58,6 @@ type BuildStep interface {
 	BuildType() *container.BuildType
 	Name() string
 	Images(build container.Build) []string
-	// IntermediateImages returns all containifyci intermediate images this step
-	// can build, each paired with its Dockerfile path. Unlike Images(), this is
-	// NOT gated by Matches() and returns every variant the step produces (e.g.
-	// golang/alpine returns both the default and chromium images). Returns empty
-	// for steps that don't build intermediate images (linters, trivy, sonarcloud
-	// which only pull pre-built images).
 	IntermediateImages(build container.Build) []IntermediateImage
 	IsAsync() bool
 	Matches(build container.Build) bool

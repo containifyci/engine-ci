@@ -1,14 +1,5 @@
 name: Build Intermediate Images
 
-# Pre-builds and pushes ALL engine-ci intermediate container images to Docker Hub
-# so that consumer CI runs can pull them instead of rebuilding from scratch.
-#
-# The image list (names, checksum tags, Dockerfile paths) is generated
-# dynamically by `engine-ci images` — adding a new package/Dockerfile to
-# engine-ci automatically includes its intermediate image here.
-#
-# See PLAN-zompress-integration.md (Phase 1 & 2) for the full design.
-
 on:
   push:
     branches: [main]
@@ -24,8 +15,6 @@ permissions:
   packages: write
 
 env:
-  # Same build tags the engine-ci build uses (required for the containers/image
-  # library and to avoid the btrfs dependency).
   BUILD_TAGS: containers_image_openpgp,exclude_graphdriver_btrfs
 
 jobs:
@@ -54,7 +43,7 @@ jobs:
 
           # Build the GitHub Actions matrix. Each matrix entry carries the
           # fields needed by the build job below.
-          MATRIX="$(printf '%s' "$IMAGES_JSON" | jq -c '{include: [.[] | {name: .name, uri: .uri, latest_uri: .latest_uri, dockerfile: .dockerfile, context: .context, build_step: .build_step}}]')"
+          MATRIX="$(printf '%s' "$IMAGES_JSON" | jq -c '{include: [.[] | {name: .name, uri: .uri, dockerfile: .dockerfile, context: .context, build_step: .build_step}]}')"
           COUNT="$(printf '%s' "$IMAGES_JSON" | jq 'length')"
 
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
@@ -91,12 +80,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: true
-          # The checksum tag (matrix.uri) is exactly what engine-ci will try to
-          # pull at runtime, so it must match. We also tag :latest for
-          # discoverability and debugging.
           tags: |
             ${{ matrix.uri }}
-            ${{ matrix.latest_uri }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 

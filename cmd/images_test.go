@@ -9,18 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCollectImagesCount verifies that every known intermediate image producer
-// is enumerated. Update this count when a new package is added with a
-// Dockerfiles() declaration.
 func TestCollectImagesCount(t *testing.T) {
 	images := CollectImages()
-	// 14 intermediate images: zig, goreleaser-zig, 4x golang (alpine,
-	// alpine-chromium, debian, debian-cgo), claude, gcloud, github, maven,
-	// packer, protobuf, pulumi, python => 14 total.
 	assert.Len(t, images, 14, "expected 14 intermediate images, got %d", len(images))
 }
 
-// TestCollectImagesUnique verifies there are no duplicate image URIs.
 func TestCollectImagesUnique(t *testing.T) {
 	images := CollectImages()
 	seen := map[string]bool{}
@@ -30,8 +23,6 @@ func TestCollectImagesUnique(t *testing.T) {
 	}
 }
 
-// TestCollectImagesContainifyOnly verifies every image is a containifyci
-// intermediate image (no base images like golang:1.26.5 or alpine:latest).
 func TestCollectImagesContainifyOnly(t *testing.T) {
 	images := CollectImages()
 	require.NotEmpty(t, images, "expected at least one image")
@@ -41,13 +32,10 @@ func TestCollectImagesContainifyOnly(t *testing.T) {
 		assert.NotEmptyf(t, img.Tag, "image tag should not be empty: %s", img.URI)
 		assert.NotEmptyf(t, img.Dockerfile, "dockerfile path should not be empty: %s", img.URI)
 		assert.NotEmptyf(t, img.Context, "context path should not be empty: %s", img.URI)
-		assert.NotEmptyf(t, img.LatestURI, "latest_uri should not be empty: %s", img.URI)
-		assert.Containsf(t, img.LatestURI, ":latest", "latest_uri should end with :latest: %s", img.LatestURI)
 		assert.NotEmptyf(t, img.BuildStep, "build step should not be empty: %s", img.URI)
 	}
 }
 
-// TestCollectImagesKnownImages verifies that the key expected images are present.
 func TestCollectImagesKnownImages(t *testing.T) {
 	images := CollectImages()
 	names := map[string]ImageInfo{}
@@ -76,23 +64,12 @@ func TestCollectImagesKnownImages(t *testing.T) {
 		require.Truef(t, ok, "expected image %q in output", name)
 		assert.Containsf(t, img.Dockerfile, "Dockerfile",
 			"dockerfile path should reference a Dockerfile: %s", img.Dockerfile)
-	}
-}
-
-// TestCollectImagesDockerfilePaths verifies each image maps to a Dockerfile
-// path and that the context is the Dockerfile's directory.
-func TestCollectImagesDockerfilePaths(t *testing.T) {
-	images := CollectImages()
-	for _, img := range images {
-		assert.Containsf(t, img.Dockerfile, "Dockerfile", "dockerfile path should reference a Dockerfile: %s", img.Dockerfile)
 		assert.NotEmptyf(t, img.Context, "context should be the dockerfile dir: %s", img.Dockerfile)
 		assert.Truef(t, strings.HasSuffix(img.Dockerfile, "/"+img.Context) || strings.Contains(img.Dockerfile, img.Context),
 			"context should be the directory of the dockerfile: ctx=%s df=%s", img.Context, img.Dockerfile)
 	}
 }
 
-// TestCollectImagesSorted verifies the output is sorted by URI for stable
-// matrix generation.
 func TestCollectImagesSorted(t *testing.T) {
 	images := CollectImages()
 	for i := 1; i < len(images); i++ {
@@ -101,8 +78,6 @@ func TestCollectImagesSorted(t *testing.T) {
 	}
 }
 
-// TestCollectImagesJSONSerializable verifies the output can be marshalled to
-// valid JSON (as the workflow consumes it).
 func TestCollectImagesJSONSerializable(t *testing.T) {
 	images := CollectImages()
 	out, err := json.Marshal(images)
@@ -124,7 +99,6 @@ func TestCollectImagesNoSonar(t *testing.T) {
 	}
 }
 
-// TestParseImageURI verifies the URI parser splits image URIs correctly.
 func TestParseImageURI(t *testing.T) {
 	tests := []struct {
 		name       string

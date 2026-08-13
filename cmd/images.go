@@ -14,16 +14,6 @@ import (
 )
 
 // imagesCmd lists all intermediate containifyci container images as JSON.
-//
-// It iterates the build steps registered in InitBuildSteps() (cmd/engine.go)
-// and calls step.IntermediateImages() on each. Each step is the authority on
-// its own images and variants — it returns every containifyci intermediate
-// image it can build, paired with its Dockerfile path, in a single call. This
-// bypasses Matches() (which depends on runtime state like env vars/secrets) and
-// avoids any external probing or correlation.
-//
-// Adding a new package with an IntermediateImagesFn declaration automatically
-// includes its image in the output and the pre-build workflow.
 var imagesCmd = &cobra.Command{
 	Use:   "images",
 	Short: "List all intermediate containifyci container images as JSON",
@@ -44,7 +34,7 @@ The image list is derived automatically from the build steps registered in
 InitBuildSteps() — adding a new package with an IntermediateImagesFn
 declaration automatically includes its intermediate image here.
 `,
-	RunE:       RunImagesCmd,
+	RunE:        RunImagesCmd,
 	Annotations: map[string]string{skipRootHooks: "true"},
 }
 
@@ -55,13 +45,9 @@ func init() {
 // ImageInfo describes a single intermediate container image.
 type ImageInfo struct {
 	// URI is the full image URI, e.g. docker.io/containifyci/zig-3.24:6f9120d0...
-	URI string `json:"uri"`
-	// LatestURI is the same image tagged :latest, e.g. docker.io/containifyci/zig-3.24:latest
-	LatestURI string `json:"latest_uri"`
-	// Name is the image name without registry/tag, e.g. zig-3.24
+	URI  string `json:"uri"`
 	Name string `json:"name"`
-	// Tag is the image tag (the Dockerfile checksum), e.g. 6f9120d0...
-	Tag string `json:"tag"`
+	Tag  string `json:"tag"`
 	// Registry is the registry host + namespace, e.g. docker.io/containifyci
 	Registry string `json:"registry"`
 	// Dockerfile is the repository-relative path to the Dockerfile, e.g. pkg/zig/Dockerfile.zig
@@ -74,7 +60,6 @@ type ImageInfo struct {
 	BuildStep string `json:"build_step"`
 }
 
-// RunImagesCmd implements the `engine-ci images` command.
 func RunImagesCmd(cmd *cobra.Command, _ []string) error {
 	images := CollectImages()
 	out, err := json.MarshalIndent(images, "", "  ")
@@ -87,20 +72,16 @@ func RunImagesCmd(cmd *cobra.Command, _ []string) error {
 
 // CollectImages enumerates all intermediate containifyci container images by
 // iterating the build steps registered in InitBuildSteps() and calling
-// step.IntermediateImages() on each. Each step returns all its images (with
-// Dockerfile paths) in one call — no probing or correlation needed.
-//
-// It is exported so it can be reused by tests and other tooling.
+// step.IntermediateImages() on each.
 func CollectImages() []ImageInfo {
 	// Silence logs — some image functions log warnings on edge cases.
 	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	InitBuildSteps()
 
-	// A synthetic build with the containifyci registry. Defaults() fills in
-	// the registries/platform map but does NOT require a container runtime.
+	// A synthetic build with the containifyci registry.
 	build := (&container.Build{
-		App:               "images",
+		App:                "images",
 		ContainifyRegistry: "containifyci",
 	}).Defaults()
 
@@ -111,11 +92,9 @@ func CollectImages() []ImageInfo {
 		step := bctx.Build()
 		for _, img := range step.IntermediateImages(*build) {
 			uri := img.URI
-			if !strings.Contains(uri, "containifyci/") {
-				continue // not a containifyci intermediate image
-			}
-			if seen[uri] {
-				continue // deduplicate across steps (e.g. build + prod)
+			if !strings.Contains(uri, "containifyci/") ||
+				seen[uri] {
+				continue // not a containifyci intermediate image + deduplicate across steps (e.g. build + prod)
 			}
 			seen[uri] = true
 			info := parseImageURI(uri, img.Dockerfile, step.Name())
@@ -154,6 +133,5 @@ func parseImageURI(uri, dockerfile, buildStep string) ImageInfo {
 	} else {
 		info.Name = uri
 	}
-	info.LatestURI = uri + ":latest"
 	return info
 }

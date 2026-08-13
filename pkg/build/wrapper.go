@@ -8,14 +8,14 @@ import (
 )
 
 type Stepper struct {
-	RunFn              RunFunc
-	MatchedFn          func(build container.Build) bool
-	ImagesFn           func(build container.Build) []string
+	RunFn                RunFunc
+	MatchedFn            func(build container.Build) bool
+	ImagesFn             func(build container.Build) []string
 	IntermediateImagesFn func(build container.Build) []IntermediateImage
-	BuildType_         container.BuildType
-	Name_              string
-	Alias_             string
-	Async_             bool
+	BuildType_           container.BuildType
+	Name_                string
+	Alias_               string
+	Async_               bool
 }
 
 func (g Stepper) Run() error {
@@ -42,9 +42,6 @@ func (g Stepper) Images(build container.Build) []string {
 	return []string{}
 }
 
-// IntermediateImages returns all containifyci intermediate images this step can
-// build, each paired with its Dockerfile path. Empty by default; steps that
-// produce intermediate images set IntermediateImagesFn.
 func (g Stepper) IntermediateImages(build container.Build) []IntermediateImage {
 	if g.IntermediateImagesFn != nil {
 		return g.IntermediateImagesFn(build)
@@ -67,11 +64,6 @@ func StepperImages(images ...string) func(build container.Build) []string {
 	}
 }
 
-// SingleIntermediateImage returns an IntermediateImagesFn that produces a
-// single containifyci intermediate image. It is a convenience helper for the
-// common case where a build step produces exactly one intermediate image from
-// one Dockerfile — most steps use this. Steps with multiple variants (e.g.
-// golang/alpine has default + chromium) define their own IntermediateImagesFn.
 func SingleIntermediateImage(uriFn func(container.Build) string, dockerfile string) func(container.Build) []IntermediateImage {
 	return func(b container.Build) []IntermediateImage {
 		return []IntermediateImage{{URI: uriFn(b), Dockerfile: dockerfile}}
