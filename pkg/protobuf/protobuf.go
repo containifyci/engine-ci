@@ -39,9 +39,10 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		Name_:     "protobuf",
-		Alias_:    "protobuf",
-		Async_:    false,
+		IntermediateImagesFn: build.SingleIntermediateImage(Image, "pkg/protobuf/Dockerfile"),
+		Name_:  "protobuf",
+		Alias_: "protobuf",
+		Async_: false,
 	}
 }
 

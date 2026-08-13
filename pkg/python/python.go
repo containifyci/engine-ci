@@ -52,9 +52,10 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		Name_:     "python",
-		Alias_:    "build",
-		Async_:    false,
+		IntermediateImagesFn: build.SingleIntermediateImage(PythonImage, "pkg/python/Dockerfile.python"),
+		Name_:  "python",
+		Alias_: "build",
+		Async_: false,
 	}
 }
 

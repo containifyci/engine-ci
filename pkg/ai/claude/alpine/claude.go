@@ -64,9 +64,10 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  ClaudeImages,
-		Name_:     "claude",
-		Alias_:    "ai",
-		Async_:    false,
+		IntermediateImagesFn: build.SingleIntermediateImage(ClaudeImage, "pkg/ai/claude/alpine/Dockerfile"),
+		Name_:  "claude",
+		Alias_: "ai",
+		Async_: false,
 	}
 }
 

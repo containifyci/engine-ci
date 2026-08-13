@@ -8,13 +8,14 @@ import (
 )
 
 type Stepper struct {
-	RunFn      RunFunc
-	MatchedFn  func(build container.Build) bool
-	ImagesFn   func(build container.Build) []string
-	BuildType_ container.BuildType
-	Name_      string
-	Alias_     string
-	Async_     bool
+	RunFn                RunFunc
+	MatchedFn            func(build container.Build) bool
+	ImagesFn             func(build container.Build) []string
+	IntermediateImagesFn func(build container.Build) []IntermediateImage
+	BuildType_           container.BuildType
+	Name_                string
+	Alias_               string
+	Async_               bool
 }
 
 func (g Stepper) Run() error {
@@ -40,6 +41,13 @@ func (g Stepper) Images(build container.Build) []string {
 	}
 	return []string{}
 }
+
+func (g Stepper) IntermediateImages(build container.Build) []IntermediateImage {
+	if g.IntermediateImagesFn != nil {
+		return g.IntermediateImagesFn(build)
+	}
+	return nil
+}
 func (g Stepper) IsAsync() bool { return g.Async_ }
 
 // Matches implements the Build interface provider matching logic
@@ -53,6 +61,12 @@ func (g Stepper) Matches(build container.Build) bool {
 func StepperImages(images ...string) func(build container.Build) []string {
 	return func(build container.Build) []string {
 		return images
+	}
+}
+
+func SingleIntermediateImage(uriFn func(container.Build) string, dockerfile string) func(container.Build) []IntermediateImage {
+	return func(b container.Build) []IntermediateImage {
+		return []IntermediateImage{{URI: uriFn(b), Dockerfile: dockerfile}}
 	}
 }
 

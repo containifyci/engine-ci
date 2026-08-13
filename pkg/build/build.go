@@ -15,6 +15,15 @@ import (
 // BuildCategory represents different phases of the build pipeline
 type BuildCategory string
 
+// IntermediateImage pairs a containifyci intermediate image URI with the
+// path of the Dockerfile.
+type IntermediateImage struct {
+	// URI is the full image URI, e.g. containifyci/zig-3.24:6f9120d0...
+	URI string
+	// Dockerfile is the repository-relative path, e.g. pkg/zig/Dockerfile.zig
+	Dockerfile string
+}
+
 type BuildResult struct {
 	Loop  container.BuildLoop
 	Error error
@@ -49,6 +58,7 @@ type BuildStep interface {
 	BuildType() *container.BuildType
 	Name() string
 	Images(build container.Build) []string
+	IntermediateImages(build container.Build) []IntermediateImage
 	IsAsync() bool
 	Matches(build container.Build) bool
 	RunWithBuild(build container.Build) (string, error)

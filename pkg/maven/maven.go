@@ -53,9 +53,10 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		Name_:     "maven",
-		Alias_:    "build",
-		Async_:    false,
+		IntermediateImagesFn: build.SingleIntermediateImage(MavenImage, "pkg/maven/Dockerfile.maven"),
+		Name_:  "maven",
+		Alias_: "build",
+		Async_: false,
 	}
 }
 

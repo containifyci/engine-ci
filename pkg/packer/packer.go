@@ -42,11 +42,19 @@ func New() build.BuildStep {
 			return container.Run()
 		},
 		MatchedFn: Matches,
-		ImagesFn:  build.StepperImages(IMAGE),
-		Name_:     "packer",
-		Alias_:    "packer",
-		Async_:    false,
+		ImagesFn:  Images,
+		IntermediateImagesFn: build.SingleIntermediateImage(Image, "pkg/packer/Dockerfile"),
+		Name_:  "packer",
+		Alias_: "packer",
+		Async_: false,
 	}
+}
+
+// Images returns all images needed for the packer build step: the base
+// image (pulled from Docker Hub) and the containifyci intermediate image
+// (built from the embedded Dockerfile).
+func Images(build container.Build) []string {
+	return []string{IMAGE, Image(build)}
 }
 
 func new(build container.Build) *packerContainer {
@@ -60,15 +68,21 @@ func ComputeChecksum(data []byte) string {
 	return coreutils.ShortChecksum(data)
 }
 
-func (c *packerContainer) packerImage() string {
+// Image returns the containifyci intermediate image URI for the packer build step.
+// It is exported so the `engine-ci images` command can enumerate it without
+// running the full build step (which requires a container runtime).
+func Image(build container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "packer", tag)
-	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "maven-3-eclipse-temurin-17-alpine", tag)
+	return utils.ImageURI(build.ContainifyRegistry, "packer", tag)
+}
+
+func (c *packerContainer) packerImage() string {
+	return Image(*c.GetBuild())
 }
 
 func (c *packerContainer) BuildpackerImage() error {
@@ -127,7 +141,7 @@ func (c *packerContainer) Release(env container.EnvType) error {
 	// Use the KV secret store (opts.Secrets) instead of plain env vars (opts.Env)
 	// This hides secrets from `docker inspect` and uses Podman's secret management
 	opts.Secrets = map[string]string{
-		"HCLOUD_TOKEN":              token,
+		"HCLOUD_TOKEN":             token,
 		"packer_CONFIG_PASSPHRASE": os.Getenv("packer_CONFIG_PASSPHRASE"),
 	}
 

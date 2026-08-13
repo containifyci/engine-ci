@@ -48,9 +48,10 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		Name_:     "github",
-		Alias_:    "github",
-		Async_:    true,
+		IntermediateImagesFn: build.SingleIntermediateImage(Image, "pkg/github/Dockerfile"),
+		Name_:  "github",
+		Alias_: "github",
+		Async_: true,
 	}
 }
 

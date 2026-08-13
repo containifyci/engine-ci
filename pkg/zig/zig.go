@@ -52,9 +52,10 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		Name_:     "zig",
-		Alias_:    "build",
-		Async_:    false,
+		IntermediateImagesFn: build.SingleIntermediateImage(ZigImage, "pkg/zig/Dockerfile.zig"),
+		Name_:  "zig",
+		Alias_: "build",
+		Async_: false,
 	}
 }
 

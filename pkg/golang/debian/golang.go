@@ -60,9 +60,10 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		Name_:     "golang",
-		Alias_:    "build",
-		Async_:    false,
+		IntermediateImagesFn: build.SingleIntermediateImage(GoImage, "pkg/golang/debian/Dockerfilego"),
+		Name_:  "golang",
+		Alias_: "build",
+		Async_: false,
 	}
 }
 

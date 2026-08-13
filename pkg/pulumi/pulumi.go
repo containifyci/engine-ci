@@ -44,11 +44,19 @@ func New() build.BuildStep {
 			return container.Run()
 		},
 		MatchedFn: Matches,
-		ImagesFn:  build.StepperImages(IMAGE),
-		Name_:     "pulumi",
-		Alias_:    "pulumi",
-		Async_:    false,
+		ImagesFn:  Images,
+		IntermediateImagesFn: build.SingleIntermediateImage(Image, "pkg/pulumi/Dockerfile"),
+		Name_:  "pulumi",
+		Alias_: "pulumi",
+		Async_: false,
 	}
+}
+
+// Images returns all images needed for the pulumi build step: the base
+// image (pulled from Docker Hub) and the containifyci intermediate image
+// (built from the embedded Dockerfile).
+func Images(build container.Build) []string {
+	return []string{IMAGE, Image(build)}
 }
 
 func new(build container.Build) *PulumiContainer {
@@ -78,15 +86,21 @@ func ComputeChecksum(data []byte) string {
 	return coreutils.ShortChecksum(data)
 }
 
-func (c *PulumiContainer) PulumiImage() string {
+// Image returns the containifyci intermediate image URI for the pulumi build step.
+// It is exported so the `engine-ci images` command can enumerate it without
+// running the full build step (which requires a container runtime).
+func Image(build container.Build) string {
 	dockerFile, err := f.ReadFile("Dockerfile")
 	if err != nil {
 		slog.Error("Failed to read Dockerfile", "error", err)
 		os.Exit(1)
 	}
 	tag := ComputeChecksum(dockerFile)
-	return utils.ImageURI(c.GetBuild().ContainifyRegistry, "pulumi-go", tag)
-	// return fmt.Sprintf("%s/%s/%s:%s", container.GetBuild().Registry, "containifyci", "maven-3-eclipse-temurin-17-alpine", tag)
+	return utils.ImageURI(build.ContainifyRegistry, "pulumi-go", tag)
+}
+
+func (c *PulumiContainer) PulumiImage() string {
+	return Image(*c.GetBuild())
 }
 
 func (c *PulumiContainer) BuildPulumiImage() error {
