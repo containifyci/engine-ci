@@ -7,7 +7,7 @@ go 1.26.3
 // replace github.com/containifyci/engine-ci/client => ./client
 
 require (
-	cloud.google.com/go/iam v1.12.0
+	cloud.google.com/go/iam v1.13.0
 	github.com/containifyci/engine-ci/protos2 v0.26.6
 	github.com/containifyci/go-self-update v0.2.7
 	github.com/docker/docker v28.5.2+incompatible
