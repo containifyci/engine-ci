@@ -52,9 +52,7 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
-			return []build.IntermediateImage{{URI: ZigImage(b), Dockerfile: "pkg/zig/Dockerfile.zig"}}
-		},
+		IntermediateImagesFn: build.SingleIntermediateImage(ZigImage, "pkg/zig/Dockerfile.zig"),
 		Name_:  "zig",
 		Alias_: "build",
 		Async_: false,

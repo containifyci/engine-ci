@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
-	"path/filepath"
+	"path"
 	"sort"
 	"strings"
 
@@ -93,7 +93,7 @@ func RunImagesCmd(cmd *cobra.Command, _ []string) error {
 // It is exported so it can be reused by tests and other tooling.
 func CollectImages() []ImageInfo {
 	// Silence logs — some image functions log warnings on edge cases.
-	slog.SetDefault(slog.New(discardHandler{}))
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	InitBuildSteps()
 
@@ -136,7 +136,7 @@ func parseImageURI(uri, dockerfile, buildStep string) ImageInfo {
 	info := ImageInfo{
 		URI:        uri,
 		Dockerfile: dockerfile,
-		Context:    filepath.Dir(dockerfile),
+		Context:    path.Dir(dockerfile),
 		BuildStep:  buildStep,
 	}
 	// URI format: <registry>/<image>:<tag>  e.g. containifyci/zig-3.24:6f9120d0...
@@ -157,11 +157,3 @@ func parseImageURI(uri, dockerfile, buildStep string) ImageInfo {
 	info.LatestURI = uri + ":latest"
 	return info
 }
-
-// discardHandler is a no-op slog.Handler used to keep command/test output clean.
-type discardHandler struct{}
-
-func (discardHandler) Enabled(_ context.Context, _ slog.Level) bool  { return false }
-func (discardHandler) Handle(_ context.Context, _ slog.Record) error { return nil }
-func (h discardHandler) WithAttrs(_ []slog.Attr) slog.Handler           { return h }
-func (h discardHandler) WithGroup(_ string) slog.Handler                { return h }

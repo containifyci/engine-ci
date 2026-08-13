@@ -52,9 +52,7 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
-			return []build.IntermediateImage{{URI: PythonImage(b), Dockerfile: "pkg/python/Dockerfile.python"}}
-		},
+		IntermediateImagesFn: build.SingleIntermediateImage(PythonImage, "pkg/python/Dockerfile.python"),
 		Name_:  "python",
 		Alias_: "build",
 		Async_: false,

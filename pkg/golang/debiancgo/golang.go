@@ -60,9 +60,7 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
-			return []build.IntermediateImage{{URI: GoImage(b), Dockerfile: "pkg/golang/debiancgo/Dockerfilego"}}
-		},
+		IntermediateImagesFn: build.SingleIntermediateImage(GoImage, "pkg/golang/debiancgo/Dockerfilego"),
 		Name_:  "golang",
 		Alias_: "build",
 		Async_: false,

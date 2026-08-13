@@ -58,9 +58,7 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  goreleaserImages,
-		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
-			return []build.IntermediateImage{{URI: ZigGoreleaserImage(b), Dockerfile: "pkg/goreleaser/Dockerfile.goreleaser-zig"}}
-		},
+		IntermediateImagesFn: build.SingleIntermediateImage(ZigGoreleaserImage, "pkg/goreleaser/Dockerfile.goreleaser-zig"),
 		Name_:  "gorelease",
 		Alias_: "release",
 		Async_: false,

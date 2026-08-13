@@ -67,4 +67,15 @@ func StepperImages(images ...string) func(build container.Build) []string {
 	}
 }
 
+// SingleIntermediateImage returns an IntermediateImagesFn that produces a
+// single containifyci intermediate image. It is a convenience helper for the
+// common case where a build step produces exactly one intermediate image from
+// one Dockerfile — most steps use this. Steps with multiple variants (e.g.
+// golang/alpine has default + chromium) define their own IntermediateImagesFn.
+func SingleIntermediateImage(uriFn func(container.Build) string, dockerfile string) func(container.Build) []IntermediateImage {
+	return func(b container.Build) []IntermediateImage {
+		return []IntermediateImage{{URI: uriFn(b), Dockerfile: dockerfile}}
+	}
+}
+
 var _ BuildStep = (*Stepper)(nil)

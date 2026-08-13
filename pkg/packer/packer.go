@@ -43,9 +43,7 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
-			return []build.IntermediateImage{{URI: Image(b), Dockerfile: "pkg/packer/Dockerfile"}}
-		},
+		IntermediateImagesFn: build.SingleIntermediateImage(Image, "pkg/packer/Dockerfile"),
 		Name_:  "packer",
 		Alias_: "packer",
 		Async_: false,

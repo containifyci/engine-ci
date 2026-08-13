@@ -48,9 +48,7 @@ func New() build.BuildStep {
 		},
 		MatchedFn: Matches,
 		ImagesFn:  Images,
-		IntermediateImagesFn: func(b container.Build) []build.IntermediateImage {
-			return []build.IntermediateImage{{URI: Image(&b), Dockerfile: "pkg/gcloud/Dockerfile"}}
-		},
+		IntermediateImagesFn: build.SingleIntermediateImage(func(b container.Build) string { return Image(&b) }, "pkg/gcloud/Dockerfile"),
 		Name_:  "gcloud_oidc",
 		Alias_: "oidc",
 		Async_: false,
