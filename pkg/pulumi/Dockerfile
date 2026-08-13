@@ -39,7 +39,6 @@ RUN apt-get update -y && \
 COPY --from=pulumi /golang/go/bin /golang/go/bin
 COPY --from=pulumi /pulumi/bin/pulumi /pulumi/bin/pulumi
 COPY --from=pulumi /pulumi/bin/pulumi-language-go /pulumi/bin/pulumi-language-go
-COPY --from=pulumi /pulumi/bin/pulumi-analyzer-policy /pulumi/bin/pulumi-analyzer-policy
 
 ENV PATH="$PATH:/pulumi/bin/:/golang/go/bin"
 ENV GOROOT="/golang/go"
