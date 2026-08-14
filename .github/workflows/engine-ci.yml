@@ -19,7 +19,6 @@ on:
         required: false
       NGROK_AUTH_TOKEN:
         required: false
-        required: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
