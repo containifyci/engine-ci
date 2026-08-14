@@ -87,12 +87,33 @@ func NewPodmanManager() (*PodmanManager, error) {
 		}
 		podmanSocket = strings.TrimSpace(string(cmd))
 	} else {
-		// Podman v5/v6+: use 'podman machine inspect' to get the socket path
-		cmd, err := exec.Command("podman", "machine", "inspect", "--format", "{{ .ConnectionInfo.PodmanSocket.Path }}").Output()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get podman machine socket: %w", err)
+		// Podman v5/v6+: try 'podman machine inspect' first (macOS/Windows)
+		// fall back to native Linux socket when no podman machine exists
+		if cmd, err := exec.Command("podman", "machine", "inspect", "--format", "{{ .ConnectionInfo.PodmanSocket.Path }}").Output(); err == nil && len(cmd) > 0 {
+			podmanSocket = strings.TrimSpace(string(cmd))
 		}
-		podmanSocket = strings.TrimSpace(string(cmd))
+		if podmanSocket == "" {
+			// Native Linux podman socket path
+			candidates := []string{
+				"/run/podman/podman.sock",
+				"/var/run/podman/podman.sock",
+			}
+			for _, sock := range candidates {
+				if _, err := os.Stat(sock); err == nil {
+					podmanSocket = sock
+					break
+				}
+			}
+			if podmanSocket == "" {
+				// Try DOCKER_HOST env var (podman sets this in docker-compatible mode)
+				if dh := os.Getenv("DOCKER_HOST"); dh != "" {
+					podmanSocket = strings.TrimPrefix(dh, "unix://")
+				}
+			}
+			if podmanSocket == "" {
+				return nil, fmt.Errorf("failed to find podman socket: no podman machine, no native socket, and no DOCKER_HOST set")
+			}
+		}
 	}
 
 	conn, err := bindings.NewConnection(context.Background(), "unix://"+podmanSocket)
