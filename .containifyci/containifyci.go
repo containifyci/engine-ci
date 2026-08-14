@@ -31,25 +31,6 @@ func main() {
 		panic(err)
 	}
 
-	// uuid, err := random.NewUUID()
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// claude := build.NewAIBuild("claude-review")
-	// claude.Properties = map[string]*build.ListValue{
-	// 	"auto_commit": build.NewList("true"),
-	// 	"ai_role":     build.NewList("build-reviewer"),
-	// 	// "ai_prompt":      build.NewList(`Optain the build logs from the provided context and. Ensure the following quality gates no linting issues and build compilation succeed. Please write your reasoning and actions into the claude-actions.log file in the format <timestamp>: <action>.` + fmt.Sprintf("Also if you get the build fixed, please print the following %s_SUCCESSFUL_FIX_%s or %s_FAILED_FIX_%s to indicate if the fix was successful or not. Also add this as the last entry to the claude-actions.log file.", uuid, uuid, uuid, uuid)),
-	// 	"ai_done_word":   build.NewList(fmt.Sprintf("%s_SUCCESSFUL_FIX_%s", uuid, uuid)),
-	// 	"agent_mode":     build.NewList("true"),
-	// 	"max_iterations": build.NewList("2"),
-	// }
-	// claude.Secrets = []*protos2.Secret{{
-	// 	Key:   "claude_api_key",
-	// 	Value: "env:CI_CLAUDE_KEY",
-	// }}
-
 	pr2 := build.NewGoServiceBuild("engine-ci-protos2")
 	pr2.Folder = "protos2"
 	pr2.Image = ""
@@ -78,7 +59,6 @@ func main() {
 		"build": DockerFile(),
 	}
 	custom.Registries = registryAuth()
-	// opts1.Verbose = true
 
 	opts2 := build.NewGoServiceBuild("engine-ci-debian")
 	opts2.File = "main.go"
@@ -105,9 +85,6 @@ func main() {
 		&protos2.BuildArgsGroup{
 			Args: []*protos2.BuildArgs{opts1, custom, opts2, opts3},
 		},
-		// &protos2.BuildArgsGroup{
-		// 	Args: []*protos2.BuildArgs{claude},
-		// },
 	)
 }
 
@@ -116,14 +93,14 @@ func DockerFile() *protos2.ContainerFile {
 		Name: "golang-1.26.5-alpine-custom",
 		Content: `FROM golang:1.26.5-alpine
 
-RUN apk --no-cache add git openssh-client && \
-  rm -rf /var/cache/apk/*
+	RUN apk --no-cache add git openssh-client && \
+	  rm -rf /var/cache/apk/*
 
-RUN go install github.com/wadey/gocovmerge@latest && \
-  go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 && \
-  go clean -cache && \
-  go clean -modcache
-WORKDIR /app`,
+	RUN go install github.com/wadey/gocovmerge@latest && \
+	  go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
+	  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 && \
+	  go clean -cache && \
+	  go clean -modcache
+	WORKDIR /app`,
 	}
 }

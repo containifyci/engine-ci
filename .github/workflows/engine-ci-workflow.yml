@@ -3,11 +3,6 @@ name: Reusable ContainifyCI workflow
 on:
   workflow_call:
     inputs:
-      ai_enabled:
-        description: "Enable ai build steps for the build"
-        required: false
-        default: true
-        type: boolean
       checkout_ref:
         description: "The ref to use for git checkout action. Leave empty to use the workflow ref"
         required: false
@@ -79,8 +74,6 @@ on:
       SONAR_TOKEN:
         required: false
       NGROK_AUTH_TOKEN:
-        required: false
-      CI_CLAUDE_KEY:
         required: false
 
 env:
@@ -207,8 +200,6 @@ jobs:
       - name: Run engine
         run: ${{ env.ENGINE_COMMAND }} engine
         env:
-          # If ai_enabled is true => secret value, else => empty string
-          CI_CLAUDE_KEY: ${{ inputs.ai_enabled && secrets.CI_CLAUDE_KEY || '' }}
           # The engine-ci Go code (pkg/container/build.go Defaults()) reads
           # DOCKER_USERNAME/DOCKER_PASSWORD for the docker.io registry auth used
           # by registryAuthBase64() to pull/push intermediate images.

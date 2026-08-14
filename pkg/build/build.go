@@ -3,7 +3,6 @@ package build
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"strings"
 	"sync"
@@ -70,7 +69,6 @@ type RunFunc func(container.Build) (string, error)
 type BuildSteps struct {
 	Steps []*BuildContext
 	init  bool
-	HasAI bool
 }
 
 func ToBuildContexts(steps ...BuildStep) []*BuildContext {
@@ -263,7 +261,6 @@ func (bs *BuildSteps) runAllMatchingBuilds(ctx context.Context, arg *container.B
 	var wg sync.WaitGroup
 	ids := utils.IDStore{}
 	var buildErr error
-	var aiBuildResult *BuildResult
 
 	// Channel to collect errors from async goroutines
 	errCh := make(chan error, len(bs.Steps))
@@ -300,17 +297,7 @@ func (bs *BuildSteps) runAllMatchingBuilds(ctx context.Context, arg *container.B
 		// Execute sync step and wait for completion
 		slog.Debug("Executing sync step", "step", buildCtx.build.Name(), "index", i)
 
-		buildType := buildCtx.build.BuildType()
-		if buildType != nil && *buildType == container.AI {
-			slog.Info("AI build step detected - ensure proper handling", "step", buildCtx.build.Name(), "ids", ids.Get())
 
-			// TODO: use Container Manager to get container logs
-			if aiCtx, err := GetLog(ctx, arg, arg.Custom.Strings("ai_context")...); err != nil {
-				slog.Error("Failed to get AI context logs", "error", err)
-			} else {
-				arg.Custom["ai_context"] = []string{aiCtx}
-			}
-		}
 
 		id, err := buildCtx.build.RunWithBuild(*arg)
 		ids.Add(id)
@@ -320,33 +307,6 @@ func (bs *BuildSteps) runAllMatchingBuilds(ctx context.Context, arg *container.B
 			buildErr = err
 		}
 
-		// Handle AI build step completion signal
-		if buildType != nil && *buildType == container.AI {
-			finishSignal := arg.Custom.String("ai_done_word")
-			if finishSignal != "" {
-				logs, logErr := GetLog(ctx, arg, id)
-				if logErr != nil {
-					slog.Error("Failed to get container logs", "error", logErr)
-					return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: logErr}
-				}
-
-				slog.Info("Checking AI output for finish signal", "signal", finishSignal)
-				if strings.Contains(logs, finishSignal) {
-					slog.Info("Finish signal detected in AI output - stopping further build steps", "signal", finishSignal)
-					if buildErr == nil {
-						aiBuildResult = &BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: nil}
-					} else {
-						aiBuildResult = &BuildResult{IDs: ids.Get(), Loop: container.BuildContinue, Error: nil}
-					}
-				} else {
-					// start full build again
-					break
-				}
-			}
-		} else if !bs.HasAI && buildErr != nil {
-			slog.Info("Stop build no ai step configured", "error", buildErr)
-			return BuildResult{IDs: ids.Get(), Loop: container.BuildStop, Error: buildErr}
-		}
 		slog.Debug("Completed sync step", "step", buildCtx.build.Name(), "index", i)
 	}
 	// Wait for all async steps to complete
@@ -361,10 +321,6 @@ func (bs *BuildSteps) runAllMatchingBuilds(ctx context.Context, arg *container.B
 			asyncErr = err
 		}
 		slog.Warn("Async build step error collected", "error", err)
-	}
-
-	if aiBuildResult != nil {
-		return *aiBuildResult
 	}
 
 	// Propagate async error if there was no sync error
@@ -410,30 +366,4 @@ func uniqueStrings(input []string) []string {
 		}
 	}
 	return result
-}
-
-func GetLog(ctx context.Context, arg *container.Build, ids ...string) (string, error) {
-	var logs []string
-
-	for _, id := range ids {
-		if id == "" {
-			continue
-		}
-
-		r, err := arg.RuntimeClient().ContainerLogs(ctx, id, true, true, false)
-		if err != nil {
-			slog.Error("Failed to get container logs", "error", err)
-			return "", fmt.Errorf("failed to get container logs for %s: %w", id, err)
-		}
-		defer r.Close()
-
-		data, err := io.ReadAll(r)
-		if err != nil {
-			slog.Error("Failed to read container logs", "error", err)
-			return "", fmt.Errorf("failed to read container logs for %s: %w", id, err)
-		}
-		logs = append(logs, string(data))
-	}
-
-	return strings.Join(logs, "\n"), nil
 }

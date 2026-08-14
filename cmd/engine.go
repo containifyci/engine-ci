@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containifyci/engine-ci/pkg/ai/claude"
 	"github.com/containifyci/engine-ci/pkg/autodiscovery"
 	"github.com/containifyci/engine-ci/pkg/build"
 	"github.com/containifyci/engine-ci/pkg/container"
@@ -93,33 +92,21 @@ func Engine(cmd *cobra.Command, _ []string) error {
 	InitBuildSteps()
 
 	groups := GetBuild(false)
-	aiConfig := detectAILoopConfig(groups)
-	buildSteps.HasAI = aiConfig.HasAI
-
-	// Execute build iterations (1 for normal mode, N for AI agent mode)
-	for i := 0; i < aiConfig.getMaxIterations(); i++ {
-		//TODO: caturing of container ids should be done in the lower level like in the cntainer manager itself maybe.
-		idStore := utils.IDStore{}
-		for _, group := range groups {
-			executeBuildGroup(group, &leader, &idStore, addr, aiConfig)
-		}
+	idStore := utils.IDStore{}
+	for _, group := range groups {
+		executeBuildGroup(group, &leader, &idStore, addr)
 	}
 	slog.Info("Finish waiting for all builds to complete")
 	return nil
 }
 
 // executeBuild executes a single build with proper context and error handling.
-// It handles leader assignment, AI context injection, command execution, and result tracking.
+// It handles leader assignment, command execution, and result tracking.
 // This function is designed to be called from a goroutine.
-func executeBuild(b *container.Build, leader *LeaderElection, idStore *utils.IDStore, addr network.Address, aiConfig AIConfig) {
+func executeBuild(b *container.Build, leader *LeaderElection, idStore *utils.IDStore, addr network.Address) {
 	time.Sleep(1 * time.Second)
 	b.Leader = leader
 	slog.Info("Starting build", "build", b, "steps", buildSteps.String())
-
-	// Inject AI context if this is an AI agent build
-	if aiConfig.Enabled && b.BuildType == container.AI && b.Custom.Bool("agent_mode", false) {
-		b.Custom["ai_context"] = idStore.Get()
-	}
 
 	c := NewCommand(*b, buildSteps)
 	result := c.Run(addr, RootArgs.Target, b)
@@ -127,9 +114,7 @@ func executeBuild(b *container.Build, leader *LeaderElection, idStore *utils.IDS
 
 	if result.Error != nil {
 		slog.Error("Executing command", "error", result.Error, "command", c)
-		if !aiConfig.Enabled {
-			os.Exit(1)
-		}
+		os.Exit(1)
 	}
 
 	if result.Loop == container.BuildStop {
@@ -142,16 +127,14 @@ func executeBuild(b *container.Build, leader *LeaderElection, idStore *utils.IDS
 
 // executeBuildGroup executes all builds in a group in parallel using goroutines.
 // It spawns a goroutine for each build and waits for all to complete before returning.
-func executeBuildGroup(group *container.BuildGroup, leader *LeaderElection, idStore *utils.IDStore, addr network.Address, aiConfig AIConfig) {
+func executeBuildGroup(group *container.BuildGroup, leader *LeaderElection, idStore *utils.IDStore, addr network.Address) {
 	wg := sync.WaitGroup{}
 
-	//TODO: check if ai build is specified and if then also if it matches.
-	//TODO: in general check if we can plan the build step here because we have the whole build groups available.
 	for _, b := range group.Builds {
 		wg.Add(1)
 		go func(b *container.Build) {
 			defer wg.Done()
-			executeBuild(b, leader, idStore, addr, aiConfig)
+			executeBuild(b, leader, idStore, addr)
 		}(b)
 	}
 
@@ -332,76 +315,7 @@ func GetDefaultBuildSteps(arg *container.Build) *build.BuildSteps {
 	return buildSteps
 }
 
-// AI Loop constants
-const (
-	AITerminationSignal  = "AI_DONE"
-	DefaultMaxIterations = 5
-)
 
-// AIConfig holds AI agent loop configuration and provides methods for loop control.
-// It encapsulates all AI-specific settings including the build configuration,
-// maximum iterations, and whether agent mode is enabled.
-type AIConfig struct {
-	Build         *container.Build
-	MaxIterations int
-	Enabled       bool
-	HasAI         bool
-}
-
-// newAIConfig creates a new AIConfig with default values
-func newAIConfig() AIConfig {
-	return AIConfig{
-		Enabled:       false,
-		MaxIterations: 1,
-		Build:         nil,
-		HasAI:         false,
-	}
-}
-
-// getMaxIterations returns the number of iterations to execute.
-// For AI mode, returns the configured MaxIterations.
-// For normal mode, returns 1 (single execution).
-func (c AIConfig) getMaxIterations() int {
-	if c.Enabled {
-		return c.MaxIterations
-	}
-	return 1
-}
-
-// detectAILoopConfig scans build groups for AI agent mode configuration.
-// It checks if any build has agent_mode enabled and returns an AIConfig with:
-// - Enabled: true if AI agent mode is detected and Claude API key is available
-// - MaxIterations: from build config or DefaultMaxIterations if not specified
-// - Build: reference to the AI build configuration
-func detectAILoopConfig(groups container.BuildGroups) AIConfig {
-	config := newAIConfig()
-
-	for _, group := range groups {
-		for _, b := range group.Builds {
-			if b.BuildType == container.AI && b.Custom.Bool("agent_mode", false) {
-				//TODO: how to check if the needed secrets are available
-				// maye check the b.Secrets definition if the key and values asre set propwerly ?
-				enabled, _ := b.Secrets.Available()
-				if enabled {
-					config.HasAI = true
-					config.Enabled = true
-					config.Build = b
-					maxIter := b.Custom.Int("max_iterations")
-					if maxIter > 0 {
-						config.MaxIterations = maxIter
-					} else {
-						config.MaxIterations = DefaultMaxIterations
-					}
-					slog.Info("AI agent mode detected",
-						"max_iterations", config.MaxIterations,
-						"app", b.App)
-					return config
-				}
-			}
-		}
-	}
-	return config
-}
 
 func InitBuildSteps() {
 	if buildSteps.IsNotInit() {
@@ -451,7 +365,6 @@ func InitBuildSteps() {
 		// Apply: Infrastructure changes
 		addStep(build.Apply, pulumi.New()) // Pulumi
 
-		addStep(build.PrePublish, claude.New()) // Claude AI
 
 		// Publish: Publishing, releases, notifications
 		addStep(build.Publish, goreleaser.New()) // Goreleaser

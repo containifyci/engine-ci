@@ -15,18 +15,6 @@ updates:
           - "minor"
           - "patch"
   - package-ecosystem: "docker"
-    directory: "pkg/ai/claude/alpine"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-    groups:
-      minor:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-  - package-ecosystem: "docker"
     directory: "pkg/gcloud"
     schedule:
       interval: "weekly"
