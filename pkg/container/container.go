@@ -113,10 +113,8 @@ func New(build Build) *Container {
 	_client := func() cri.ContainerManager {
 		client, err := cri.InitContainerRuntime()
 		if err != nil {
-			panic(fmt.Errorf("failed to detect container runtime: %w", err))
-			// slog.Error("Failed to detect container runtime", "error", err)
-			// // Return nil to allow caller to handle the error gracefully
-			// return nil
+			slog.Error("Failed to detect container runtime", "error", err)
+			os.Exit(1)
 		}
 		return client
 	}

@@ -19,8 +19,6 @@ on:
         required: false
       NGROK_AUTH_TOKEN:
         required: false
-      CI_CLAUDE_KEY:
-        required: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,10 +35,8 @@ jobs:
         include:
         - runtime: docker
           is_uploader: true
-          ai_enabled: true
         - runtime: podman
           is_uploader: false
-          ai_enabled: false
     permissions:
       contents: write # for checkout
       id-token: write # for authenticating to Google Cloud Platform
@@ -50,7 +46,6 @@ jobs:
       dockerhub_user: "containifyci"
       runtime: ${{ matrix.runtime }}
       upload_artifacts: ${{ matrix.is_uploader }}
-      ai_enabled: ${{ matrix.ai_enabled }}
       engine_command: "go run --tags containers_image_openpgp,exclude_graphdriver_btrfs main.go"
       install_binary: false
       remote_debug: true

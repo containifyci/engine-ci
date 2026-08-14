@@ -11,7 +11,7 @@ import (
 
 func TestCollectImagesCount(t *testing.T) {
 	images := CollectImages()
-	assert.Len(t, images, 14, "expected 14 intermediate images, got %d", len(images))
+	assert.Len(t, images, 13, "expected 13 intermediate images, got %d", len(images))
 }
 
 func TestCollectImagesUnique(t *testing.T) {
@@ -50,7 +50,7 @@ func TestCollectImagesKnownImages(t *testing.T) {
 		"golang-1.26.5-alpine-chromium",
 		"golang-1.26.5",
 		"golang-1.26.5-cgo",
-		"claude-26-alpine",
+
 		"gcloud",
 		"gh",
 		"maven-3-eclipse-temurin-17-alpine",

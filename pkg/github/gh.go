@@ -227,7 +227,7 @@ func (c *GithubContainer) Commit() (string, error) {
 	// 	return fmt.Errorf("no GitHub token (either CONTAINIFYCI_PAT_TOKEN or CONTAINIFYCI_GITHUB_TOKEN) available for commit")
 	// }
 
-	// Get commit message from KV (set by upstream step like Claude)
+	// Get commit message from KV (set by upstream step)
 	commitMsg, err := kv.GetValue(host, auth, kvKeyCommitMessage)
 	if err != nil {
 		slog.Warn("Failed to get commit message from KV", "error", err)

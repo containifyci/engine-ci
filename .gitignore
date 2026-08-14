@@ -18,11 +18,8 @@
 .DS_Store
 
 # build
-.claude
 artifacts.txt
 changed.txt
-claude-actions.log
-claude-output.log
 commit-message.txt
 cover.out
 coverage.out

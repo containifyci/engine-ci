@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/moby/moby/api/types/registry"
 
@@ -71,28 +72,73 @@ func NewPodmanManager() (*PodmanManager, error) {
 		return nil, fmt.Errorf("podman not found in PATH: %w", err)
 	}
 
-	output, err := exec.Command("podman", "-v").Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get podman version: %w", err)
-	}
-
 	var podmanSocket string
 
-	if strings.HasPrefix(strings.TrimSpace(string(output)), "podman version 3.") ||
-		strings.HasPrefix(strings.TrimSpace(string(output)), "podman version 4.") {
-		// Podman v3/v4: use 'podman info' to get the socket path
-		cmd, err := exec.Command("podman", "info", "-f", "{{ .Host.RemoteSocket.Path }}").Output()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get podman socket info: %w", err)
-		}
+	// Try to get socket via podman info (works for all versions on Linux)
+	if cmd, err := exec.Command("podman", "info", "-f", "{{ .Host.RemoteSocket.Path }}").Output(); err == nil {
 		podmanSocket = strings.TrimSpace(string(cmd))
-	} else {
-		// Podman v5/v6+: use 'podman machine inspect' to get the socket path
-		cmd, err := exec.Command("podman", "machine", "inspect", "--format", "{{ .ConnectionInfo.PodmanSocket.Path }}").Output()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get podman machine socket: %w", err)
+	}
+
+	if podmanSocket == "" {
+		// Podman v5/v6+ on macOS/Windows: try 'podman machine inspect'
+		if cmd, err := exec.Command("podman", "machine", "inspect", "--format", "{{ .ConnectionInfo.PodmanSocket.Path }}").Output(); err == nil && len(cmd) > 0 {
+			podmanSocket = strings.TrimSpace(string(cmd))
 		}
-		podmanSocket = strings.TrimSpace(string(cmd))
+	}
+
+	if podmanSocket == "" {
+		// Rootless podman socket (common on GitHub Actions runners)
+		if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
+			sock := filepath.Join(xdg, "podman", "podman.sock")
+			if _, err := os.Stat(sock); err == nil {
+				podmanSocket = sock
+			}
+		}
+	}
+
+	if podmanSocket == "" {
+		// Rootful podman socket paths
+		candidates := []string{
+			"/run/podman/podman.sock",
+			"/var/run/podman/podman.sock",
+		}
+		for _, sock := range candidates {
+			if _, err := os.Stat(sock); err == nil {
+				podmanSocket = sock
+				break
+			}
+		}
+	}
+
+	if podmanSocket == "" {
+		// Try DOCKER_HOST env var (podman sets this in docker-compatible mode)
+		if dh := os.Getenv("DOCKER_HOST"); dh != "" {
+			podmanSocket = strings.TrimPrefix(dh, "unix://")
+		}
+	}
+
+	if podmanSocket == "" {
+		// Try to start the podman socket service (e.g. on GitHub Actions runners
+		// where podman is installed but the socket service isn't running)
+		slog.Info("Podman socket not found, trying to start socket service...")
+		startCmd := exec.Command("systemctl", "--user", "start", "podman.socket")
+		if err := startCmd.Run(); err == nil {
+			// Wait for socket to appear
+			for i := 0; i < 5; i++ {
+				if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
+					sock := filepath.Join(xdg, "podman", "podman.sock")
+					if _, err := os.Stat(sock); err == nil {
+						podmanSocket = sock
+						break
+					}
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
+	}
+
+	if podmanSocket == "" {
+		return nil, fmt.Errorf("failed to find podman socket: tried podman info, machine inspect, rootless socket, rootful sockets, DOCKER_HOST, and socket activation")
 	}
 
 	conn, err := bindings.NewConnection(context.Background(), "unix://"+podmanSocket)
