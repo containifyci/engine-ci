@@ -16,15 +16,12 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/logger"
-	"github.com/docker/docker/api/types/build"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
+	"net/netip"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -50,7 +47,7 @@ func ToMounts(volumes []types.Volume) []mount.Mount {
 }
 
 func NewDockerManager() (*DockerManager, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	cli, err := client.New(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -72,23 +69,27 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 		WorkingDir: opts.WorkingDir,
 	}
 
-	portSet := nat.PortSet{
-		// "9000/tcp": struct{}{},
-	}
+	portSet := network.PortSet{}
 	config.ExposedPorts = portSet
 
-	portMap := nat.PortMap{
-		// "9000/tcp": []nat.PortBinding{portBinding},
-	}
+	portMap := network.PortMap{}
 
 	for _, p := range opts.ExposedPorts {
-		portBinding := nat.PortBinding{
-			HostIP:   p.Host.IP,
+		var hostIP netip.Addr
+		if p.Host.IP != "" {
+			if addr, err := netip.ParseAddr(p.Host.IP); err == nil {
+				hostIP = addr
+			}
+		}
+		portBinding := network.PortBinding{
+			HostIP:   hostIP,
 			HostPort: p.Host.Port,
 		}
-		// binding, set := p.ToPortBinding()
-		portMap[nat.Port(p.Container.String())] = []nat.PortBinding{portBinding}
-		portSet[nat.Port(p.Container.Port)] = struct{}{}
+		portStr := p.Container.Port + "/tcp"
+		if cport, err := network.ParsePort(portStr); err == nil {
+			portMap[cport] = []network.PortBinding{portBinding}
+			portSet[cport] = struct{}{}
+		}
 	}
 	config.ExposedPorts = portSet
 
@@ -149,7 +150,13 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 		}
 	}
 
-	containerResp, err := d.client.ContainerCreate(ctx, config, hostConfig, netConfig, platform, opts.Name)
+	containerResp, err := d.client.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config:           config,
+		HostConfig:       hostConfig,
+		NetworkingConfig: netConfig,
+		Platform:         platform,
+		Name:             opts.Name,
+	})
 	if err != nil {
 		return "", err
 	}
@@ -161,20 +168,20 @@ func (d *DockerManager) CreateContainer(ctx context.Context, opts *types.Contain
 
 func addHostDockerInternalIfLinuxDaemon(ctx context.Context, cli *client.Client, hc *container.HostConfig) error {
 	// Prefer daemon OS over runtime.GOOS (because you might talk to a remote daemon)
-	info, err := cli.Info(ctx)
+	info, err := cli.Info(ctx, client.InfoOptions{})
 	if err != nil {
 		return fmt.Errorf("docker info: %w", err)
 	}
 
 	// Docker returns "linux", "windows", etc.
-	if info.OSType == "linux" {
+	if info.Info.OSType == "linux" {
 		hc.ExtraHosts = append(hc.ExtraHosts, "host.docker.internal:host-gateway")
 	}
 	return nil
 }
 
 func (d *DockerManager) StartContainer(ctx context.Context, id string) error {
-	if err := d.client.ContainerStart(ctx, id, container.StartOptions{}); err != nil {
+	if _, err := d.client.ContainerStart(ctx, id, client.ContainerStartOptions{}); err != nil {
 		return err
 	}
 
@@ -182,11 +189,12 @@ func (d *DockerManager) StartContainer(ctx context.Context, id string) error {
 }
 
 func (d *DockerManager) StopContainer(ctx context.Context, id string, signal string) error {
-	return d.client.ContainerStop(ctx, id, container.StopOptions{Signal: signal})
+	_, err := d.client.ContainerStop(ctx, id, client.ContainerStopOptions{Signal: signal})
+	return err
 }
 
 func (d *DockerManager) CommitContainer(ctx context.Context, containerID string, opts types.CommitOptions) (string, error) {
-	commitResp, err := d.client.ContainerCommit(ctx, containerID, container.CommitOptions{
+	commitResp, err := d.client.ContainerCommit(ctx, containerID, client.ContainerCommitOptions{
 		Reference: opts.Reference,
 		Comment:   opts.Comment,
 		Changes:   opts.Changes,
@@ -198,11 +206,12 @@ func (d *DockerManager) CommitContainer(ctx context.Context, containerID string,
 }
 
 func (d *DockerManager) RemoveContainer(ctx context.Context, containerID string) error {
-	return d.client.ContainerRemove(ctx, containerID, container.RemoveOptions{})
+	_, err := d.client.ContainerRemove(ctx, containerID, client.ContainerRemoveOptions{})
+	return err
 }
 
 func (d *DockerManager) ContainerList(ctx context.Context, all bool) ([]*types.Container, error) {
-	containers, err := d.client.ContainerList(ctx, container.ListOptions{
+	listResult, err := d.client.ContainerList(ctx, client.ContainerListOptions{
 		All: all,
 	})
 	if err != nil {
@@ -210,7 +219,7 @@ func (d *DockerManager) ContainerList(ctx context.Context, all bool) ([]*types.C
 	}
 
 	var containerList []*types.Container
-	for _, container := range containers {
+	for _, container := range listResult.Items {
 		containerList = append(containerList, &types.Container{
 			ID:      container.ID,
 			Names:   container.Names,
@@ -244,7 +253,8 @@ func (d *DockerManager) CopyContentToContainer(ctx context.Context, id, content,
 		return err
 	}
 
-	return d.client.CopyToContainer(ctx, id, "/", tarBuf, container.CopyToContainerOptions{})
+	_, err := d.client.CopyToContainer(ctx, id, client.CopyToContainerOptions{DestinationPath: "/", Content: tarBuf})
+	return err
 }
 
 func (d *DockerManager) CopyToContainer(ctx context.Context, id, srcPath, dstPath string) error {
@@ -253,7 +263,7 @@ func (d *DockerManager) CopyToContainer(ctx context.Context, id, srcPath, dstPat
 		slog.Error("Failed to create tar archive", "error", err)
 		return err
 	}
-	err = d.client.CopyToContainer(ctx, id, "/", buf, container.CopyToContainerOptions{})
+	_, err = d.client.CopyToContainer(ctx, id, client.CopyToContainerOptions{DestinationPath: "/", Content: buf})
 	if err != nil {
 		slog.Error("Failed to copy to container", "error", err)
 		return err
@@ -267,7 +277,7 @@ func (d *DockerManager) CopyDirectorToContainer(ctx context.Context, id, srcPath
 		slog.Error("Failed to create tar archive", "error", err)
 		return err
 	}
-	err = d.client.CopyToContainer(ctx, id, dstPath, buf, container.CopyToContainerOptions{})
+	_, err = d.client.CopyToContainer(ctx, id, client.CopyToContainerOptions{DestinationPath: dstPath, Content: buf})
 	if err != nil {
 		slog.Error("Failed to copy to container", "error", err)
 		return err
@@ -373,7 +383,7 @@ func tarFile(srcPath, destPath string) (*bytes.Buffer, error) {
 }
 
 func (d *DockerManager) ExecContainer(ctx context.Context, id string, cmd []string, attachStdOut bool) (io.Reader, error) {
-	execResp, err := d.client.ContainerExecCreate(ctx, id, container.ExecOptions{
+	execResp, err := d.client.ExecCreate(ctx, id, client.ExecCreateOptions{
 		Cmd:          cmd,
 		AttachStdout: attachStdOut,
 		AttachStderr: attachStdOut,
@@ -382,7 +392,7 @@ func (d *DockerManager) ExecContainer(ctx context.Context, id string, cmd []stri
 		return nil, err
 	}
 
-	resp, err := d.client.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{
+	resp, err := d.client.ExecAttach(ctx, execResp.ID, client.ExecAttachOptions{
 		// Tty: attachStdOut,
 	})
 	if err != nil {
@@ -402,58 +412,58 @@ func (d *DockerManager) ExecContainer(ctx context.Context, id string, cmd []stri
 }
 
 func (d *DockerManager) InspectContainer(ctx context.Context, id string) (*types.ContainerConfig, error) {
-	container, err := d.client.ContainerInspect(ctx, id)
+	inspectResult, err := d.client.ContainerInspect(ctx, id, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	imageInfo, err := d.client.ImageInspect(ctx, container.Image)
+	imageInfo, err := d.client.ImageInspect(ctx, inspectResult.Container.Image)
 	if err != nil {
-		slog.Error("Failed to inspect image", "error", err, "imageId", container.Image)
+		slog.Error("Failed to inspect image", "error", err, "imageId", inspectResult.Container.Image)
 		return nil, fmt.Errorf("error inspecting image: %w", err)
 	}
 
 	return &types.ContainerConfig{
-		User:         container.Config.User,
+		User:         inspectResult.Container.Config.User,
 		ExposedPorts: nil,
-		Tty:          container.Config.Tty,
-		Env:          container.Config.Env,
-		Cmd:          container.Config.Cmd,
-		Image:        container.Config.Image,
+		Tty:          inspectResult.Container.Config.Tty,
+		Env:          inspectResult.Container.Config.Env,
+		Cmd:          inspectResult.Container.Config.Cmd,
+		Image:        inspectResult.Container.Config.Image,
 		Volumes:      nil,
-		WorkingDir:   container.Config.WorkingDir,
-		Entrypoint:   container.Config.Entrypoint,
+		WorkingDir:   inspectResult.Container.Config.WorkingDir,
+		Entrypoint:   inspectResult.Container.Config.Entrypoint,
 		Platform:     types.NewPlatform(imageInfo.Os, imageInfo.Architecture, imageInfo.Variant),
-		Name:         container.Name,
+		Name:         inspectResult.Container.Name,
 	}, nil
 }
 
 func (d *DockerManager) WaitContainer(ctx context.Context, id string, waitCondition string) (*int64, error) {
-	statusCh, errCh := d.client.ContainerWait(ctx, id, container.WaitCondition(waitCondition))
+	waitResult := d.client.ContainerWait(ctx, id, client.ContainerWaitOptions{Condition: container.WaitCondition(waitCondition)})
 	select {
-	case err := <-errCh:
-		if err != nil {
+	case err, ok := <-waitResult.Error:
+		if ok && err != nil {
 			return nil, err
 		}
-	case status := <-statusCh:
-		return &status.StatusCode, nil
+		return nil, fmt.Errorf("failed to wait for container")
+	case status, ok := <-waitResult.Result:
+		if ok {
+			return &status.StatusCode, nil
+		}
+		return nil, fmt.Errorf("failed to wait for container")
 	}
-	return nil, fmt.Errorf("failed to wait for container")
 }
 
 func (d *DockerManager) ListImage(ctx context.Context, imageName string) ([]string, error) {
-	images, err := d.client.ImageList(ctx, image.ListOptions{
-		Filters: filters.NewArgs(filters.KeyValuePair{
-			Key:   "reference",
-			Value: imageName,
-		}),
+	imageListResult, err := d.client.ImageList(ctx, client.ImageListOptions{
+		Filters: client.Filters{}.Add("reference", imageName),
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	var imageList []string
-	for _, img := range images {
+	for _, img := range imageListResult.Items {
 		imageList = append(imageList, img.ID)
 	}
 
@@ -461,8 +471,7 @@ func (d *DockerManager) ListImage(ctx context.Context, imageName string) ([]stri
 }
 
 func (d *DockerManager) PullImage(ctx context.Context, imageName string, authBase64 string, platform string) (io.ReadCloser, error) {
-	resp, err := d.client.ImagePull(ctx, imageName, image.PullOptions{
-		Platform:     platform,
+	resp, err := d.client.ImagePull(ctx, imageName, client.ImagePullOptions{
 		RegistryAuth: authBase64,
 	})
 	if err != nil {
@@ -472,11 +481,12 @@ func (d *DockerManager) PullImage(ctx context.Context, imageName string, authBas
 }
 
 func (d *DockerManager) TagImage(ctx context.Context, source, target string) error {
-	return d.client.ImageTag(ctx, source, target)
+	_, err := d.client.ImageTag(ctx, client.ImageTagOptions{Source: source, Target: target})
+	return err
 }
 
 func (d *DockerManager) PushImage(ctx context.Context, target string, authBase64 string) (io.ReadCloser, error) {
-	resp, err := d.client.ImagePush(ctx, target, image.PushOptions{
+	resp, err := d.client.ImagePush(ctx, target, client.ImagePushOptions{
 		RegistryAuth: authBase64,
 	})
 	if err != nil {
@@ -486,14 +496,14 @@ func (d *DockerManager) PushImage(ctx context.Context, target string, authBase64
 }
 
 func (d *DockerManager) RemoveImage(ctx context.Context, target string) error {
-	_, err := d.client.ImageRemove(ctx, target, image.RemoveOptions{})
+	_, err := d.client.ImageRemove(ctx, target, client.ImageRemoveOptions{})
 	return err
 }
 
 // CopyFileFromContainer reads a single file from a container and returns its content as a string.
 func (d *DockerManager) CopyFileFromContainer(ctx context.Context, id string, srcPath string) (string, error) {
 	// Create a reader for the tar archive
-	reader, _, err := d.client.CopyFromContainer(ctx, id, srcPath)
+	copyResult, err := d.client.CopyFromContainer(ctx, id, client.CopyFromContainerOptions{SourcePath: srcPath})
 
 	// reader, _, err := c.clientOld.CopyFromContainer(c.ctx, c.Resp.ID, srcPath)
 
@@ -506,10 +516,10 @@ func (d *DockerManager) CopyFileFromContainer(ctx context.Context, id string, sr
 		slog.Error("Failed to copy from container", "error", err)
 		os.Exit(1)
 	}
-	defer reader.Close()
+	defer copyResult.Content.Close()
 
 	// Extract the tar archive
-	tarReader := tar.NewReader(reader)
+	tarReader := tar.NewReader(copyResult.Content)
 	header, err := tarReader.Next()
 	if err == io.EOF {
 		slog.Error("File not found in container", "file", srcPath)
@@ -684,9 +694,8 @@ func (d *DockerManager) BuildImage(ctx context.Context, dockerfile []byte, image
 
 	platformSpec := types.ParsePlatform(platform)
 
-	resp, err := d.client.ImageBuild(ctx, tarReader, build.ImageBuildOptions{
+	resp, err := d.client.ImageBuild(ctx, tarReader, client.ImageBuildOptions{
 		Tags:       []string{imageName},
-		Platform:   platform,
 		Dockerfile: "Dockerfile",
 		//TODO add docker context that contains the folders and files that are referenced in the Dockerfile
 		// Context: ,
@@ -704,7 +713,7 @@ func (d *DockerManager) BuildImage(ctx context.Context, dockerfile []byte, image
 }
 
 func (d *DockerManager) ContainerLogs(ctx context.Context, id string, ShowStdout bool, ShowStderr bool, Follow bool) (io.ReadCloser, error) {
-	return d.client.ContainerLogs(ctx, id, container.LogsOptions{
+	return d.client.ContainerLogs(ctx, id, client.ContainerLogsOptions{
 		ShowStdout: ShowStdout,
 		ShowStderr: ShowStderr,
 		Follow:     Follow,
