@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 
-	dcontainer "github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 
 	"github.com/containifyci/engine-ci/cmd"
@@ -128,15 +127,15 @@ func containerAction(action containerActionFunc) http.HandlerFunc {
 }
 
 // func startContainer(ctx context.Context, w http.ResponseWriter, id string) error {
-// 	return dockerClient.ContainerStart(ctx, id, container.StartOptions{})
+// 	return dockerClient.ContainerStart(ctx, id, client.ContainerStartOptions{})
 // }
 
 // func stopContainer(ctx context.Context, w http.ResponseWriter, id string) error {
-// 	return dockerClient.ContainerStop(ctx, id, container.StopOptions{})
+// 	return dockerClient.ContainerStop(ctx, id, client.ContainerStopOptions{})
 // }
 
 func inspectContainer(ctx context.Context, w http.ResponseWriter, id string) error {
-	containerJSON, err := dockerClient.ContainerInspect(ctx, id)
+	containerJSON, err := dockerClient.ContainerInspect(ctx, id, client.ContainerInspectOptions{})
 	if err != nil {
 		return err
 	}
@@ -163,7 +162,7 @@ func streamLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	options := dcontainer.LogsOptions{
+	options := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
