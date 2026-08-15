@@ -16,11 +16,11 @@ import (
 	"github.com/containifyci/engine-ci/pkg/cri/types"
 	"github.com/containifyci/engine-ci/pkg/cri/utils"
 	"github.com/containifyci/engine-ci/pkg/logger"
+	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
-	"github.com/moby/moby/api/pkg/stdcopy"
 	"net/netip"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -47,7 +47,7 @@ func ToMounts(volumes []types.Volume) []mount.Mount {
 }
 
 func NewDockerManager() (*DockerManager, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	cli, err := client.New(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}

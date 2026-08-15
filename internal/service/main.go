@@ -21,7 +21,7 @@ var dockerClient *client.Client
 
 func main() {
 	var err error
-	dockerClient, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	dockerClient, err = client.New(client.FromEnv)
 	if err != nil {
 		log.Fatal(err)
 	}
