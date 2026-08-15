@@ -8,8 +8,8 @@ import (
 	"log"
 	"net/http"
 
-	dcontainer "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	dcontainer "github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 
 	"github.com/containifyci/engine-ci/cmd"
 	"github.com/containifyci/engine-ci/pkg/build"

@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/registry"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/registry"
 
 	"github.com/containifyci/engine-ci/pkg/cri"
 	"github.com/containifyci/engine-ci/pkg/logger"

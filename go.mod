@@ -10,8 +10,6 @@ require (
 	cloud.google.com/go/iam v1.13.0
 	github.com/containifyci/engine-ci/protos2 v0.26.6
 	github.com/containifyci/go-self-update v0.2.7
-	github.com/docker/docker v28.5.2+incompatible
-	github.com/docker/go-connections v0.8.1
 	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
@@ -19,6 +17,7 @@ require (
 	github.com/hashicorp/go-plugin v1.8.0
 	github.com/moby/buildkit v0.32.2
 	github.com/moby/moby/api v1.55.0
+	github.com/moby/moby/client v0.5.1
 	github.com/moby/term v0.5.2
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runtime-spec v1.3.0
@@ -67,6 +66,7 @@ require (
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.8 // indirect
+	github.com/docker/go-connections v0.8.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
@@ -103,9 +103,7 @@ require (
 	github.com/mistifyio/go-zfs/v4 v4.0.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.3.3 // indirect
-	github.com/moby/moby/client v0.5.1 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect
-	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/devices v0.1.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
@@ -186,3 +184,7 @@ require (
 // so the v1.2.1 pin and runtime-tools pin from the v5 era are no longer needed.
 
 replace go.podman.io/common => go.podman.io/common v0.68.1
+
+// docker/docker replaced with moby/moby sub-modules (api, client)
+// See: https://github.com/moby/moby/issues/45645
+exclude github.com/moby/moby v28.5.2+incompatible
