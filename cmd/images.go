@@ -22,7 +22,7 @@ to the containifyci Docker Hub registry.
 
 The output is a JSON array of objects, each describing one intermediate image
 (image name, checksum tag, full URI, Dockerfile path, build context dir and
-the build step name). Base images (e.g. golang:1.26.5, alpine:latest) are NOT
+the build step name). Base images (e.g. golang:1.26.6, alpine:latest) are NOT
 included — only the containifyci/* intermediate images that engine-ci itself
 produces.
 
