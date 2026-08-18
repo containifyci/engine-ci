@@ -18,7 +18,7 @@ func GetEnvWithDefault(key string, def func() string) string {
 }
 
 func Getenv(key string, envType string) string {
-	slog.Debug("get env", "key", key, "envtype", envType)
+	slog.Debug("get env", "envtype", envType)
 	switch envType {
 	case "local":
 		return os.Getenv(key + "_LOCAL")
@@ -34,7 +34,7 @@ func GetEnvs(key []string, envType string) string {
 			return v
 		}
 	}
-	slog.Warn("No environment variable found", "keys", key)
+	slog.Warn("No environment variable found", "key_count", len(key))
 	return ""
 }
 
@@ -62,10 +62,10 @@ func GetValue(value string, envType string) string {
 		cmd := strings.TrimPrefix(value, "cmd:")
 		env2, err := RunCommand(cmd)
 		if err != nil {
-			slog.Error("Error running command", "error", err, "command", cmd)
+			slog.Error("Error running command for secret", "error", err)
 			os.Exit(1)
 		}
-		slog.Info("Retrieved environment variable from command", "command", cmd)
+		slog.Info("Retrieved environment variable from command")
 		return *env2
 	}
 	if strings.HasPrefix(value, "mem:") {
@@ -73,7 +73,7 @@ func GetValue(value string, envType string) string {
 
 		val, ok := kv.NewKeyValueStore().GetVal(key)
 		if !ok {
-			slog.Warn("Key not found in memory", "key", key)
+			slog.Warn("Key not found in memory")
 			Getenv(key, envType)
 		}
 		return val
@@ -84,7 +84,7 @@ func GetValue(value string, envType string) string {
 func RunCommand(cmd string) (*string, error) {
 	out, err := exec.Command("sh", "-c", cmd).Output()
 	if err != nil {
-		slog.Error("Error running command", "error", err, "command", cmd)
+		slog.Error("Error running command", "error", err)
 		return nil, err
 	}
 	res := strings.TrimSuffix(string(out), "\n")
