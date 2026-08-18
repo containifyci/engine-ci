@@ -1,9 +1,9 @@
-FROM alpine:3.20
+FROM alpine:3.24
 
 LABEL org.opencontainers.image.url=https://github.com/SonarSource/sonar-scanner-cli-docker
 
 ARG SONAR_SCANNER_HOME=/opt/sonar-scanner
-ARG SONAR_SCANNER_VERSION=6.1.0.4477
+ARG SONAR_SCANNER_VERSION=8.1.0.6389
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk \
     HOME=/tmp \
     XDG_CONFIG_HOME=/tmp \

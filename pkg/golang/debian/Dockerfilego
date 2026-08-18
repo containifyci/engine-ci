@@ -1,4 +1,4 @@
-FROM golang:1.26.5
+FROM golang:1.26.6
 
 # Note: libbtrfs-dev is not needed since we build with exclude_graphdriver_btrfs tag
 RUN apt-get update && \
@@ -8,7 +8,7 @@ RUN apt-get update && \
   rm -rf /tmp/* /var/tmp/* && \
   rm -rf /var/lib/apt/lists/*
 
-RUN go install github.com/pact-foundation/pact-go/v2@v2.4.1 && \
+RUN go install github.com/pact-foundation/pact-go/v2@v2.7.0 && \
   pact-go -l DEBUG install && \
   go clean -cache && \
   go clean -modcache

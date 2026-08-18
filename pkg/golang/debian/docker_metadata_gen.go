@@ -5,14 +5,14 @@ package debian
 // Default Dockerfile (Dockerfilego)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "1.26.5"
+	ImageVersion = "1.26.6"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "1e85e8fff6276d3e0b3d3d69e74d22bad97dae6f6f44334372c38e252dc2af47"
+	DockerfileChecksum = "24e8ccf0d49587111ff73ea08c957d51b2e2c486fba81e80ba882960ce87e2b5"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM golang:1.26.5
+var DockerfileContent = `FROM golang:1.26.6
 
 # Note: libbtrfs-dev is not needed since we build with exclude_graphdriver_btrfs tag
 RUN apt-get update && \
@@ -22,7 +22,7 @@ RUN apt-get update && \
   rm -rf /tmp/* /var/tmp/* && \
   rm -rf /var/lib/apt/lists/*
 
-RUN go install github.com/pact-foundation/pact-go/v2@v2.4.1 && \
+RUN go install github.com/pact-foundation/pact-go/v2@v2.7.0 && \
   pact-go -l DEBUG install && \
   go clean -cache && \
   go clean -modcache
