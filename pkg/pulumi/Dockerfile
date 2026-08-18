@@ -1,9 +1,9 @@
-FROM pulumi/pulumi-go AS pulumi
+FROM pulumi/pulumi-go:3.258.0 AS pulumi
 
 ARG PULUMI_VERSION
-ARG GO_RUNTIME_VERSION=1.23.1
-ENV GO_RUNTIME_AMD64_SHA256 49bbb517cfa9eee677e1e7897f7cf9cfdbcf49e05f61984a2789136de359f9bd
-ENV GO_RUNTIME_ARM64_SHA256 faec7f7f8ae53fda0f3d408f52182d942cc89ef5b7d3d9f23ff117437d4b2d2f
+ARG GO_RUNTIME_VERSION=1.26.6
+ENV GO_RUNTIME_AMD64_SHA256 708effb774be8237570d0add163225abbdfaf4fca28b2611df167beba4feef89
+ENV GO_RUNTIME_ARM64_SHA256 d0507e9e9d7fe012aae570108cbd76c15de879e17130ab8cb90d4d7445cb1f2e
 
 WORKDIR /golang
 RUN apt-get update -y && \
@@ -30,7 +30,7 @@ RUN case $(uname -m) in \
     go version; \
     echo "${GO_RUNTIME_SHA256} /tmp/go.tgz" | sha256sum -c -
 
-FROM debian:11-slim
+FROM debian:12-slim
 
 RUN apt-get update -y && \
     apt-get install -y \

@@ -1,6 +1,6 @@
 FROM hashicorp/packer:full as builder
 
-FROM golang:1.26.5-alpine
+FROM golang:1.26.6-alpine
 
 COPY --from=builder /bin/packer /bin/packer
 
