@@ -1,4 +1,4 @@
-FROM golang:1.26.6
+FROM golang:1.27.0
 
 # Note: libbtrfs-dev is not needed since we build with exclude_graphdriver_btrfs tag
 RUN apt-get update && \
