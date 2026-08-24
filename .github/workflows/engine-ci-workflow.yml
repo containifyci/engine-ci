@@ -229,7 +229,7 @@ jobs:
             ${{ env.ARTIFACT_PATHS }}
 
       - name: SSH Access
-        uses: containifyci/.github/github-actions/remote-access-ssh@v1.3.28
+        uses: containifyci/.github/github-actions/remote-access-ssh@v1.3.31
         if: ${{ failure() && inputs.remote_debug && env.NGROK_AUTH_TOKEN != '' }}
         with:
           github_user: ${{ inputs.remote_debug_user }}
