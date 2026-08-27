@@ -90,15 +90,15 @@ func main() {
 
 func DockerFile() *protos2.ContainerFile {
 	return &protos2.ContainerFile{
-		Name: "golang-1.26.6-alpine-custom",
-		Content: `FROM golang:1.26.6-alpine
+		Name: "golang-1.27.0-alpine-custom",
+		Content: `FROM golang:1.27.0-alpine
 
 	RUN apk --no-cache add git openssh-client && \
 	  rm -rf /var/cache/apk/*
 
 	RUN go install github.com/wadey/gocovmerge@latest && \
 	  go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-	  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 && \
+	  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1 && \
 	  go clean -cache && \
 	  go clean -modcache
 	WORKDIR /app`,
