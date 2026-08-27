@@ -20,7 +20,9 @@ import (
 
 	"github.com/moby/moby/api/types/registry"
 
-	"go.podman.io/podman/v6/libpod/define"
+	"github.com/moby/moby/api/types/container"
+	spec "github.com/opencontainers/runtime-spec/specs-go"
+	nettypes "go.podman.io/common/libnetwork/types"
 	"go.podman.io/podman/v6/pkg/api/handlers"
 	"go.podman.io/podman/v6/pkg/bindings"
 	"go.podman.io/podman/v6/pkg/bindings/containers"
@@ -28,9 +30,6 @@ import (
 	"go.podman.io/podman/v6/pkg/bindings/manifests"
 	"go.podman.io/podman/v6/pkg/bindings/secrets"
 	"go.podman.io/podman/v6/pkg/specgen"
-	"github.com/moby/moby/api/types/container"
-	spec "github.com/opencontainers/runtime-spec/specs-go"
-	nettypes "go.podman.io/common/libnetwork/types"
 
 	buildahDefine "go.podman.io/buildah/define"
 
@@ -668,10 +667,7 @@ func (p *PodmanManager) InspectContainer(ctx context.Context, id string) (*types
 func (p *PodmanManager) WaitContainer(ctx context.Context, id string, waitCondition string) (*int64, error) {
 	res, err := containers.Wait(p.conn, id, &containers.WaitOptions{
 		// TODO convert waitCondition to podman wait condition
-		Condition: []define.ContainerStatus{
-			define.ContainerStateStopped,
-			define.ContainerStateExited,
-		},
+		Conditions: []string{"stopped"},
 	})
 	if err != nil {
 		return nil, err
