@@ -1,6 +1,6 @@
 module github.com/containifyci/engine-ci
 
-go 1.26.3
+go 1.27.0
 
 // replace github.com/containifyci/engine-ci/protos2 => ./protos2
 

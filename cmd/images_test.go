@@ -46,10 +46,10 @@ func TestCollectImagesKnownImages(t *testing.T) {
 	expected := []string{
 		"zig-3.24",
 		"goreleaser-zig-v2.17.1",
-		"golang-1.26.6-alpine",
-		"golang-1.26.6-alpine-chromium",
-		"golang-1.26.6",
-		"golang-1.26.6-cgo",
+		"golang-1.27.0-alpine",
+		"golang-1.27.0-alpine-chromium",
+		"golang-1.27.0",
+		"golang-1.27.0-cgo",
 
 		"gcloud",
 		"gh",
