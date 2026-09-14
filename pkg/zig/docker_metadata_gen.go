@@ -8,12 +8,12 @@ const (
 	ImageVersion = "3.24"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "ec665fd9892f1fec75a470f3fce76b05b2213f06fc1d9aae693aee69cb1520a2"
+	DockerfileChecksum = "b9410fb18b4a91013eea32c1c6f10d1b104baf135e8cf4fe3f3c7e1ab882f285"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
 var DockerfileContent = `FROM alpine:3.24
-ARG ZIG_VERSION=0.17.0-dev.1683+5ceec001b
+ARG ZIG_VERSION=0.17.0-dev.2131+d08989840
 
 RUN apk add --no-cache curl xz && \
     ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
