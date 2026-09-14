@@ -5,14 +5,14 @@ package debian
 // Default Dockerfile (Dockerfilego)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "1.27.0"
+	ImageVersion = "1.27.1"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "7484be3741b75a1ba41fc30077f2ee0ced3cbc0a130c904246e746df3dba0555"
+	DockerfileChecksum = "0462c47ba5d3930c433c596cd177e5f60120e6ced8bdcd267f51d5c7b0ead8b1"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM golang:1.27.0
+var DockerfileContent = `FROM golang:1.27.1
 
 # Note: libbtrfs-dev is not needed since we build with exclude_graphdriver_btrfs tag
 RUN apt-get update && \
