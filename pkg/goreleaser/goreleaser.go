@@ -28,7 +28,7 @@ var defaultGoreleaserConfig []byte
 var defaultZigGoreleaserConfig []byte
 
 const (
-	IMAGE             = "goreleaser/goreleaser:v2.17.1"
+	IMAGE             = "goreleaser/goreleaser:v2.18.1"
 	defaultConfigPath = "/tmp/.goreleaser-default.yaml"
 	zigCacheLocation  = "/root/.cache/zig"
 )
