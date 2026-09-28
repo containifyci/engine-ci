@@ -8,7 +8,7 @@ go 1.27.0
 
 require (
 	cloud.google.com/go/iam v1.13.0
-	github.com/containifyci/engine-ci/protos2 v0.27.4
+	github.com/containifyci/engine-ci/protos2 v0.27.5
 	github.com/containifyci/go-self-update v0.2.7
 	github.com/dusted-go/logging v1.3.0
 	github.com/gorilla/mux v1.8.1
