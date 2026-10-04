@@ -7,7 +7,7 @@ go 1.27.0
 // replace github.com/containifyci/engine-ci/client => ./client
 
 require (
-	cloud.google.com/go/iam v1.13.0
+	cloud.google.com/go/iam v1.14.0
 	github.com/containifyci/engine-ci/protos2 v0.27.5
 	github.com/containifyci/go-self-update v0.2.7
 	github.com/dusted-go/logging v1.3.0
@@ -15,7 +15,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/moby/buildkit v0.33.0
+	github.com/moby/buildkit v0.33.1
 	github.com/moby/moby/api v1.56.0
 	github.com/moby/moby/client v0.6.0
 	github.com/moby/term v0.5.2
@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	go.podman.io/buildah v1.45.1
 	go.podman.io/common v0.69.2
-	go.podman.io/podman/v6 v6.1.2
+	go.podman.io/podman/v6 v6.1.3
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/term v0.46.0
 	google.golang.org/api v0.299.0
