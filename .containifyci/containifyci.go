@@ -98,7 +98,7 @@ func DockerFile() *protos2.ContainerFile {
 
 	RUN go install github.com/wadey/gocovmerge@latest && \
 	  go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest && \
-	  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1 && \
+	  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 && \
 	  go clean -cache && \
 	  go clean -modcache
 	WORKDIR /app`,
