@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	BaseImage     = "python:3.14-slim-bookworm"
+	BaseImage     = "python:3.15-slim-bookworm"
 	CacheLocation = "/root/.cache/pip"
 )
 
@@ -50,12 +50,12 @@ func New() build.BuildStep {
 			container := new(build)
 			return container.Run()
 		},
-		MatchedFn: Matches,
-		ImagesFn:  Images,
+		MatchedFn:            Matches,
+		ImagesFn:             Images,
 		IntermediateImagesFn: build.SingleIntermediateImage(PythonImage, "pkg/python/Dockerfile.python"),
-		Name_:  "python",
-		Alias_: "build",
-		Async_: false,
+		Name_:                "python",
+		Alias_:               "build",
+		Async_:               false,
 	}
 }
 
@@ -117,7 +117,7 @@ func dockerFile(build container.Build) (*protos2.ContainerFile, error) {
 		os.Exit(1)
 	}
 	return &protos2.ContainerFile{
-		Name:    "python-3.14-slim-bookworm",
+		Name:    "python-3.15-slim-bookworm",
 		Content: string(dockerFile),
 	}, nil
 }

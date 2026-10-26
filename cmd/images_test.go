@@ -57,7 +57,7 @@ func TestCollectImagesKnownImages(t *testing.T) {
 		"packer",
 		"protobuf",
 		"pulumi-go",
-		"python-3.14-slim-bookworm",
+		"python-3.15-slim-bookworm",
 	}
 	for _, name := range expected {
 		img, ok := names[name]
