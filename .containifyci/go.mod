@@ -1,13 +1,13 @@
 module .containifyci
 
-go 1.25.5
+go 1.26.0
 
 // replace github.com/containifyci/engine-ci/protos2 => ../protos2
 // replace github.com/containifyci/engine-ci/client => ../client
 
 require (
 	github.com/containifyci/engine-ci/client v0.31.9
-	github.com/containifyci/engine-ci/protos2 v0.27.5
+	github.com/containifyci/engine-ci/protos2 v0.27.6
 )
 
 require (
@@ -19,11 +19,11 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/oklog/run v1.2.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
-	google.golang.org/grpc v1.84.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260817212433-ac3dfec99bb1 // indirect
+	google.golang.org/grpc v1.85.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
