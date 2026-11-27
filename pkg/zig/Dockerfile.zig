@@ -1,7 +1,7 @@
 FROM alpine:3.24
 ARG ZIG_VERSION=0.17.1
 
-RUN apk add --no-cache curl xz && \
+RUN apk add --no-cache curl xz python3 && \
     ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
     curl -L https://ziglang.org/builds/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz \
     | tar -xJ -C /usr/local && \
