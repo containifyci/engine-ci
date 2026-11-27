@@ -5,14 +5,14 @@ package debiancgo
 // Default Dockerfile (Dockerfilego)
 const (
 	// ImageVersion is the golang version extracted from the Dockerfile
-	ImageVersion = "1.27.2"
+	ImageVersion = "1.27.4"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "9aa62b393bc28f9ed46f2dc0b4398910855620aebace85969c86941768a21957"
+	DockerfileChecksum = "e5f7e05ea5f04a1549e00eebdc13c2f717ae0ea62eace7a474a2e3dcb650e369"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
-var DockerfileContent = `FROM golang:1.27.2
+var DockerfileContent = `FROM golang:1.27.4
 
 RUN apt-get update && \
     apt-get install -y clang build-essential \
