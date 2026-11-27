@@ -8,14 +8,14 @@ const (
 	ImageVersion = "3.24"
 
 	// DockerfileChecksum is the checksum of the Dockerfile content
-	DockerfileChecksum = "891d10a00c07bf4076132543eaf6ac75d4e5a237137ed921ad6bee4610aaac4a"
+	DockerfileChecksum = "f5a4837f6230be39a436775c910bc38de916c01a9384f040c1aa92ef3ef23c29"
 )
 
 // DockerfileContent contains the embedded Dockerfile content
 var DockerfileContent = `FROM alpine:3.24
 ARG ZIG_VERSION=0.17.1
 
-RUN apk add --no-cache curl xz && \
+RUN apk add --no-cache curl xz python3 && \
     ZIG_ARCH=$(uname -m | sed 's/arm64/aarch64/' | sed 's/amd64/x86_64/') && \
     curl -L https://ziglang.org/builds/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz \
     | tar -xJ -C /usr/local && \
